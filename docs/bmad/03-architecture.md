@@ -66,7 +66,7 @@ Aucune dépendance vers `reqwest`, `sqlx`, `actix_web`, `tokio`. Vérifié méca
 
 **BC2 Autorisation** — `Tier` (`Two | One`), `Action`, `ChangePlan`, `PlanFingerprint`, `ChangeToken`, `TokenState` (`Issued | Consumed | Expired`).
 
-**BC3 Bac à sable** — `SandboxLease`, `Ttl`, `SpendCap`, `SandboxProjectId` (type distinct de `ProductionProjectId`).
+**BC3 Bac à sable** — `SandboxLease`, `Ttl`, `SpendCap`, `SandboxProjectId` (type distinct de `ProductionProjectId`), `SandboxDerogation`, `DerogationWindow`, `ValidDerogation` (preuve non falsifiable, obtenue par confrontation à l'horloge).
 
 **BC4 Capacité** — `LoadCampaign`, `LoadStep`, `CapacityMeasurement`, `Provenance` (`Measured | Assumed`), `Prior`.
 
@@ -90,6 +90,7 @@ Les dix invariants du Brief §10, rendus **inconstructibles** plutôt que vérif
 | Une mesure porte sa provenance | `Provenance` non optionnel dans `CapacityMeasurement::new` |
 | Un secret ne franchit pas la sortie | `Redacted<T>` dont `Display` et `Serialize` rendent `«redacted»` ; les identifiants ne sont typés qu'ainsi |
 | Une campagne détruit toujours son bail | Garde RAII `LeaseGuard` avec `Drop`, doublée du chien de garde externe |
+| Aucun bail hors fenêtre de dérogation | `SandboxLease::new` exige un `ValidDerogation`, seul obtenable en confrontant `DerogationWindow` à `Clock`. Fail-closed : l'indétermination vaut expiration |
 
 Le choix `consume(self) -> ConsumedToken` mérite d'être souligné : il déplace l'invariant d'usage unique du domaine de l'exécution vers celui de la compilation. C'est la forme la plus forte de « codé dans le constructeur ».
 
@@ -209,6 +210,7 @@ Une rupture de contrat est un **point irréversible** : ADR et validation humain
 | Plan de changement | `ChangePlan` | `domain::authorization` |
 | Jeton de changement | `ChangeToken` / `ConsumedToken` | `domain::authorization` |
 | Bail de bac à sable | `SandboxLease` | `domain::sandbox` |
+| Fenêtre de dérogation | `DerogationWindow` / `ValidDerogation` | `domain::sandbox` |
 | Chien de garde | `LeaseWatchdog` | `infrastructure::sandbox` |
 | Campagne de charge | `LoadCampaign` | `domain::capacity` |
 | Mesure de capacité | `CapacityMeasurement` | `domain::capacity` |
@@ -290,13 +292,41 @@ Pyramide : beaucoup d'unitaires sur le domaine (pur, rapide, sans doublure), des
 **Alternatives écartées** : Diesel ou SeaORM (ajoutent une indirection sans bénéfice à cette taille) ; pas de base du tout (impossible dès qu'il faut révoquer un jeton).
 **Conséquences** : SQL visible et auditable. Chaque migration est un point irréversible exigeant validation humaine et livrant son `*.down.sql` au titre du plancher.
 
-### ADR-007 — Dérogation Tier 2 bornée pour les bacs à sable *(validation humaine requise)*
+### ADR-007 — Dérogation Tier 2 bornée et à durée limitée pour les bacs à sable *(validation humaine requise)*
 
-**Décision** : le provisionnement et la destruction d'infrastructure éphémère de test sont de Tier 2, sous six conditions cumulatives et non négociables.
-**Contexte** : la règle d'or impose Tier 1 au doute, et un bail est bien un `terraform apply`. Mais soumettre chaque campagne à une approbation humaine détruit l'objectif d'autonomie.
-**Alternatives écartées** : Tier 1 systématique (sûr, mais l'agent ne peut plus enchaîner de paliers sans interrompre le superviseur) ; Tier 2 non borné (inacceptable, ouvre la voie au glissement).
-**Conséquences** : les six conditions sont des **invariants de domaine**, pas des vérifications de surface, et `SandboxProjectId` est un type distinct de `ProductionProjectId` pour que la confusion ne compile pas. Toute extension de cette dérogation exige un nouvel ADR.
-**Statut** : approuvée par le superviseur le 2026-08-29, à contresigner au frontmatter.
+**Décision** : le provisionnement et la destruction d'infrastructure éphémère de test sont de Tier 2, sous **sept** conditions cumulatives et non négociables. La septième est une **fenêtre de validité** : la dérogation elle-même expire, et son renouvellement est un acte de Tier 1.
+
+| # | Condition |
+|---|---|
+| 1 | Projet OVH **dédié aux tests**, sur allowlist disjointe des projets de production |
+| 2 | TTL obligatoire sur chaque bail, avec chien de garde indépendant du processus |
+| 3 | Plafond de dépense par campagne, refus si dépassement projeté |
+| 4 | Aucune donnée de production, jeux synthétiques exclusivement |
+| 5 | Aucun enregistrement DNS sur un domaine de production |
+| 6 | Journalisation intégrale, auditable a posteriori |
+| 7 | **Fenêtre de validité de la dérogation**, expirée par défaut, renouvelable uniquement en Tier 1 |
+
+**Contexte** : la règle d'or impose Tier 1 au doute, et un bail est bien un `terraform apply`. Soumettre chaque campagne à une approbation humaine détruirait l'objectif d'autonomie. Mais une délégation d'autorité qui n'expire jamais cesse d'être une dérogation pour devenir un trou permanent : elle survit à la raison qui l'a justifiée, et personne n'a jamais à la redécider.
+
+**La septième condition traite ce risque en soumettant la dérogation au gate qu'elle relâche.** Le renouvellement passe par la passerelle d'ADR-008, exactement comme un `terraform apply` de production. L'autorité de déléguer n'est donc jamais elle-même déléguée.
+
+**Alternatives écartées** :
+- Tier 1 systématique sur chaque bail — sûr, mais l'agent ne peut plus enchaîner de paliers sans interrompre le superviseur.
+- Tier 2 permanent sous six conditions — c'était ma proposition initiale. Elle laissait la délégation devenir définitive par simple inertie, sans qu'aucun acte n'ait jamais à la reconduire.
+- Reconduction tacite avec alerte — l'alerte se rate, le silence vaut alors accord. La reconduction doit être un acte positif.
+
+**Conséquences** :
+- Les sept conditions sont des **invariants de domaine**, pas des vérifications de surface.
+- `SandboxProjectId` est un type distinct de `ProductionProjectId` : la confusion ne compile pas.
+- `SandboxLease::new` exige une preuve `ValidDerogation`, obtenable uniquement en confrontant la fenêtre à l'horloge. **Une dérogation expirée rend la location d'un bail inconstructible**, pas seulement refusée à l'exécution.
+- **Fail-closed** : si la validité ne peut pas être établie (stockage indisponible, horloge incohérente), la dérogation est réputée expirée. L'indétermination ne vaut jamais autorisation.
+- Une campagne dont la durée projetée dépasserait la fin de fenêtre est **refusée à l'admission**, comme pour le plafond de dépense. Une campagne n'est jamais interrompue à mi-parcours par l'expiration.
+- Un bail **n'est jamais prolongé** : il expire. Un nouveau bail peut être pris tant que la fenêtre est ouverte.
+- Toute extension de cette dérogation, y compris l'allongement de la fenêtre par défaut, exige un nouvel ADR.
+
+**Durée de la fenêtre** : **90 jours** par défaut, paramétrable. Ce choix aligne la revue sur une cadence trimestrielle, la même que les revues ISO 27001, et fait qu'au rythme de fabrication prévu le superviseur affronte la décision une fois, de façon signifiante, plutôt que jamais ou trop souvent. `[valeur à confirmer par le superviseur]`
+
+**Statut** : approuvée par le superviseur le 2026-08-29, **avec ajout de la septième condition à sa demande**. À contresigner au frontmatter.
 
 ### ADR-008 — La passerelle d'approbation est un environnement GitHub protégé *(point irréversible)*
 

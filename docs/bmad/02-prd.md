@@ -39,7 +39,7 @@ Le périmètre est complet et non découpé. Les treize premières exigences son
 
 ## 3. Périmètre — complet / Hors scope
 
-**Périmètre complet, décision du superviseur du 2026-08-29 : pas de découpage MVP.** Les six bounded contexts et les 24 exigences FR-001 à FR-024 sont dans le périmètre de cette gate et sont spécifiés au format long.
+**Périmètre complet, décision du superviseur du 2026-08-29 : pas de découpage MVP.** Les six bounded contexts et les 25 exigences FR-001 à FR-025 sont dans le périmètre de cette gate et sont spécifiés au format long.
 
 L'ordre des sprints reste un ordre de fabrication, pas un découpage de périmètre : rien n'est reporté, rien n'est conditionnel.
 
@@ -220,11 +220,13 @@ Le mapping terme → type Rust est un livrable de l'Architecte.
   - `Étant donné une demande de bail sans TTL, Quand je la soumets, Alors elle est refusée : un bail sans échéance n'existe pas.`
   - `Étant donné un identifiant de projet portant de la production, Quand je le passe à une demande de bail, Alors elle est refusée avant tout appel réseau.`
   - `Étant donné un plafond de dépense de 20 euros et une estimation à 35, Quand je soumets la demande, Alors elle est refusée à l'admission.`
+  - `Étant donné une dérogation dont la fenêtre a expiré, Quand je demande un bail, Alors il est refusé, quelles que soient les autres conditions.`
+  - `Étant donné une fenêtre qui se ferme dans deux heures et une campagne d'une durée projetée de six heures, Quand je demande le bail, Alors il est refusé à l'admission plutôt qu'interrompu en cours de route.`
 - **Classes de tests (4×N)** :
-  - `@happy` — bail nominal avec TTL et plafond, ressources provisionnées dans le projet de bac à sable
-  - `@negative` — TTL absent, plafond absent, estimation au-dessus du plafond, quota OVH atteint : quatre erreurs typées distinctes
-  - `@edge` — TTL minimal, TTL maximal, plafond à l'euro près, deux baux concurrents sur le même projet
-  - `@security` — **les six conditions d'ADR-007 vérifiées chacune par un test dédié** : projet sur allowlist de bac à sable, TTL présent, plafond présent, aucune donnée de production, aucun DNS de production, journalisation effective. La disjonction des deux listes de projets est prouvée.
+  - `@happy` — bail nominal dans une fenêtre ouverte, avec TTL et plafond, ressources provisionnées dans le projet de bac à sable
+  - `@negative` — TTL absent, plafond absent, estimation au-dessus du plafond, quota OVH atteint, fenêtre expirée : cinq erreurs typées distinctes
+  - `@edge` — TTL minimal, TTL maximal, plafond à l'euro près, deux baux concurrents, demande à la seconde exacte de fermeture de la fenêtre
+  - `@security` — **les sept conditions d'ADR-007 vérifiées chacune par un test dédié** : projet sur allowlist de bac à sable, TTL présent, plafond présent, aucune donnée de production, aucun DNS de production, journalisation effective, **fenêtre de dérogation ouverte**. La disjonction des deux listes de projets est prouvée. **Fail-closed prouvé** : stockage de la dérogation indisponible ou horloge incohérente entraînent le refus, jamais l'autorisation.
 - **Capacité du Brief rattachée** : §7 C4
 
 #### FR-015 — Détruire un bail, y compris après disparition du demandeur
@@ -347,6 +349,20 @@ Le mapping terme → type Rust est un livrable de l'Architecte.
   - `@security` — **`plain` refusé** (exigence OAuth 2.1), code à usage unique, **rotation inconditionnelle** du refresh token même si le reste de l'échange échoue, `redirect_uri` validée **avant tout rendu ou redirection**, refresh token persisté en hash SHA-256 uniquement
 - **Capacité du Brief rattachée** : §7 C8
 
+#### FR-025 — Renouveler la dérogation d'agir en Tier 2 sur les bacs à sable
+- **En tant que** superviseur **je veux** que l'autorité déléguée à l'agent expire d'elle-même **afin de** qu'elle soit reconduite par un acte, jamais par l'oubli.
+- **Critères d'acceptation (Gherkin)** :
+  - `Étant donné une fenêtre de dérogation expirée, Quand l'agent demande un bail, Alors il est refusé et l'agent est informé qu'un renouvellement Tier 1 est requis.`
+  - `Étant donné une demande de renouvellement, Quand elle est soumise, Alors elle emprunte la passerelle d'approbation Tier 1 comme n'importe quelle mutation de production.`
+  - `Étant donné un renouvellement approuvé, Quand la nouvelle fenêtre s'ouvre, Alors l'événement est journalisé avec son approbateur, sa date et sa durée.`
+  - `Étant donné un stockage de dérogation illisible, Quand la validité est évaluée, Alors elle est réputée expirée.`
+- **Classes de tests (4×N)** :
+  - `@happy` — fenêtre ouverte puis expirée, demande de renouvellement, approbation, nouvelle fenêtre active et journalisée
+  - `@negative` — renouvellement refusé par le relecteur, passerelle indisponible, durée demandée au-delà du maximum configuré : trois refus distincts
+  - `@edge` — renouvellement demandé avant expiration (la nouvelle fenêtre ne se cumule pas, elle remplace), renouvellement à la seconde exacte de l'expiration, deux renouvellements concurrents
+  - `@security` — **le renouvellement est un acte de Tier 1 et ne peut jamais être obtenu en Tier 2** ; aucun scope OAuth ne permet de l'accorder ; **fail-closed** sur toute indétermination ; une dérogation ne peut pas se renouveler elle-même
+- **Capacité du Brief rattachée** : §7 C11
+
 ### Module BC5 — Mise en ligne
 
 #### FR-024 — Mettre un projet en ligne après vérification des gates
@@ -380,6 +396,7 @@ Le mapping terme → type Rust est un livrable de l'Architecte.
 | NFR-12 | Sobriété | Binaire unique, sans runtime | 1 artefact, image distroless |
 | NFR-13 | Traçabilité | Actions Tier 1 avec empreinte, approbateur, horodatage | 100 % |
 | NFR-14 | Expiration garantie des baux | Baux survivants à leur TTL | 0 |
+| NFR-15 | **Fail-closed de la dérogation** | Baux accordés alors que la validité n'a pas pu être établie | 0 |
 
 ## 8. Frontend UX
 
@@ -439,6 +456,7 @@ Le socle de lecture n'a **aucune base de données** : le journal d'audit est un 
 | Code d'autorisation | `oauth_authorization_codes` | usage unique, 10 min, lié à `client_id` + `redirect_uri` + `code_challenge` |
 | Jeton de rafraîchissement | `oauth_refresh_tokens` | **hash SHA-256 en clé primaire**, jamais le jeton, révocable |
 | Bail de bac à sable | `sandbox_leases` | TTL et plafond **non nullables**, index sur l'échéance pour le chien de garde |
+| Dérogation bac à sable | `sandbox_derogations` | fenêtre de validité, approbateur, date d'octroi ; **aucune ligne = expirée**, jamais = autorisée |
 | Plan de changement | `change_plans` | empreinte, tier, état ; immuable après création |
 | Jeton de changement | `change_tokens` | lié à une empreinte, expirable, **consommé exactement une fois** |
 | Mesure de capacité | `capacity_measurements` | provenance `mesure` ou `supposition` **non nullable** |
@@ -487,7 +505,7 @@ Ce jalon n'est pas une livraison : c'est le point où la boucle de fabrication e
 
 ### 13.2 — Périmètre complet
 
-1. les 24 exigences FR-001 à FR-024 sont livrées, chacune avec ses quatre classes de tests au vert ;
+1. les 25 exigences FR-001 à FR-025 sont livrées, chacune avec ses quatre classes de tests au vert ;
 2. une campagne de charge complète s'exécute de bout en bout sur une infrastructure éphémère, et son bail est détruit y compris sous panique ;
 3. au moins trois constantes `[caler]` de l'abaque coût/capacité sont remplacées par du mesuré, provenance à l'appui ;
 4. une action Tier 1 traverse la passerelle d'approbation de bout en bout : plan, blocage, approbation humaine, exécution, compte rendu ;

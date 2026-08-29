@@ -263,7 +263,7 @@ Livre « la capacité de boucler ». Aucune story fonctionnelle ne démarre avan
   - `@happy` — bail nominal avec TTL et plafond
   - `@negative` — plafond dépassé à l'estimation : refus à l'admission
   - `@edge` — TTL minimal, TTL maximal, plafond à l'euro près
-  - `@security` — les six conditions d'ADR-007 vérifiées **chacune** par un test dédié, dont la disjonction des listes de projets
+  - `@security` — les **sept** conditions d'ADR-007 vérifiées **chacune** par un test dédié, dont la disjonction des listes de projets et le refus hors fenêtre de dérogation
 - **Couche** : Domain · **Taille** : L · **Tours** : 4 · **FR** : FR-014
 
 #### Story 5.2 — Chien de garde et destruction garantie *(FR-015)*
@@ -285,6 +285,20 @@ Livre « la capacité de boucler ». Aucune story fonctionnelle ne démarre avan
   - `@edge` — écart dû à une valeur générée (horodatage), convergence au deuxième tour
   - `@security` — la preuve ne divulgue aucune valeur d'état sensible
 - **Couche** : Domain + Application · **Taille** : M · **Tours** : 3 · **FR** : FR-016
+
+#### Story 5.4 — Fenêtre de dérogation et renouvellement Tier 1 *(FR-025)*
+- **En tant que** superviseur **je veux** que l'autorité déléguée expire d'elle-même **afin de** qu'elle soit reconduite par un acte et jamais par l'oubli.
+- **Critères Gherkin** :
+  - `Étant donné une fenêtre expirée, Quand l'agent demande un bail, Alors il est refusé et informé qu'un renouvellement Tier 1 est requis.`
+  - `Étant donné un stockage de dérogation illisible, Quand la validité est évaluée, Alors elle est réputée expirée.`
+  - `Étant donné un renouvellement approuvé, Quand la fenêtre s'ouvre, Alors l'événement est journalisé avec approbateur, date et durée.`
+- **Classes de tests** :
+  - `@happy` — fenêtre ouverte, expiration, renouvellement approuvé, nouvelle fenêtre active
+  - `@negative` — renouvellement refusé, passerelle indisponible, durée au-delà du maximum configuré
+  - `@edge` — renouvellement avant expiration (remplacement et non cumul), renouvellement à la seconde exacte, deux renouvellements concurrents
+  - `@security` — **le renouvellement est de Tier 1 et jamais obtenable en Tier 2** ; aucun scope OAuth ne l'accorde ; une dérogation ne peut pas se renouveler elle-même ; **fail-closed prouvé** sur stockage indisponible et horloge incohérente
+- **Couche** : Domain + Application · **Taille** : M · **Tours** : 3 · **FR** : FR-025
+- **Note** : c'est la story qui empêche la dérogation de devenir permanente. Sans elle, ADR-007 est un trou permanent plutôt qu'une délégation encadrée.
 
 ### Epic 6 — BC4 Capacité · Priorité **Should**
 
@@ -392,35 +406,35 @@ Tally établi story par story à partir des tailles et tours déclarés ci-dessu
 | Epic 2 — BC2 Autorisation | 2 | 2,00 | 7 |
 | Epic 3 — BC5 Exécution | 6 | 5,50 | 23 |
 | Epic 4 — Transport MCP | 2 | 1,75 | 7 |
-| Epic 5 — BC3 Bac à sable | 3 | 2,75 | 12 |
+| Epic 5 — BC3 Bac à sable | 4 | 3,50 | 15 |
 | Epic 6 — BC4 Capacité | 3 | 2,75 | 12 |
 | Epic 7 — Tier 1 | 2 | 2,00 | 10 |
 | Epic 8 — Accès distant | 3 | 2,50 | 12 |
 | Transverses (doc vivante, ITIL) | 2 | 1,50 | 5 |
-| **Sous-total spécifié** | **32** | **28,00** | **113** |
-| Émergence (~20 %, non spécifiée) | 6 | 5,60 | 23 |
-| **Total** | **38** | **33,60** | **136** |
+| **Sous-total spécifié** | **33** | **28,75** | **116** |
+| Émergence (~20 %, non spécifiée) | 6 | 5,75 | 23 |
+| **Total** | **39** | **34,50** | **139** |
 
-Répartition par couche dominante des 32 stories spécifiées (une story qui traverse plusieurs couches est comptée à sa couche la plus profonde) :
+Répartition par couche dominante des 33 stories spécifiées (une story qui traverse plusieurs couches est comptée à sa couche la plus profonde) :
 
 | Couche | Stories | Σ jours |
 |---|---|---|
-| Domain | 11 | 9,25 |
+| Domain | 12 | 10,00 |
 | Application | 7 | 6,25 |
 | Infrastructure | 9 | 8,25 |
 | Frontend | 0 | 0 |
 | IaC / CI / Monitoring | 5 | 4,25 |
 
-- **Coût superviseur** = 33,60 j ÷ ratio de supervision 3 ≈ **11,2 jours de superviseur**. C'est le poste dominant, conformément au §1 de l'abaque.
-- **Coût modèle** = 136 tours. À quelques centaines de milliers de tokens par tour, **de l'ordre de quelques dizaines d'euros**. Négligeable devant le poste superviseur, ce qui confirme l'heuristique de l'abaque : optimiser les tokens ne déplace presque rien.
+- **Coût superviseur** = 34,50 j ÷ ratio de supervision 3 ≈ **11,5 jours de superviseur**. C'est le poste dominant, conformément au §1 de l'abaque.
+- **Coût modèle** = 139 tours. À quelques centaines de milliers de tokens par tour, **de l'ordre de quelques dizaines d'euros**. Négligeable devant le poste superviseur, ce qui confirme l'heuristique de l'abaque : optimiser les tokens ne déplace presque rien.
 
 ### Comparaison à la target du Brief §17-18
 
 | | Brief (point 0) | Backlog détaillée | Écart |
 |---|---|---|---|
-| Stories | 28 à 34 | **38** | +12 % au-dessus de la borne haute |
-| Jours superviseur | 9 à 12 | **11,2** | dans la fourchette, proche de la borne haute |
-| Target de challenge | ≤ 12 j superviseur, périmètre complet | **11,2 j** | **tenue**, avec 7 % de marge |
+| Stories | 28 à 34 | **39** | +15 % au-dessus de la borne haute |
+| Jours superviseur | 9 à 12 | **11,5** | dans la fourchette, proche de la borne haute |
+| Target de challenge | ≤ 12 j superviseur, périmètre complet | **11,5 j** | **tenue**, avec 4 % de marge |
 
 **Décision du superviseur du 2026-08-29 : périmètre complet, pas de découpage MVP.**
 
@@ -429,7 +443,11 @@ Elle clôt l'arbitrage qui était ouvert dans la version précédente de ce livr
 1. **Le Sprint 0 n'est plus discutable.** Il l'était au motif qu'il pesait lourd devant une target MVP de 4 jours. Rapporté au périmètre complet, il représente 13 % de l'effort, ce qui est le prix normal d'un harnais.
 2. **La variable d'ajustement devient le ratio de supervision, pas le contenu.** L'abaque rappelle que ce ratio est le plafond du *répondre-de* et non un levier budgétaire : le tenir à 3 est une contrainte, et le franchir demanderait un pair supplémentaire, pas seulement plus d'agents.
 
-**Marge résiduelle : 0,8 jour de superviseur** sur une target de 12. C'est mince pour 38 stories. Le premier signal de dérive à surveiller est le nombre de tours réellement consommés par story dans le Sprint 0, qui recalera l'estimation de tous les suivants.
+**Marge résiduelle : 0,5 jour de superviseur** sur une target de 12, soit 4 %. Elle était de 0,8 jour avant l'ajout de la fenêtre de dérogation (story 5.4), qui coûte 0,75 jour.
+
+C'est très mince pour 39 stories, et il faut le dire franchement : à ce niveau, la target sera dépassée au premier imprévu qui ne rentre pas dans la réserve d'émergence. Deux réponses possibles, aucune ne consistant à rogner le contenu puisque le périmètre n'est plus négociable : relever la target en connaissance de cause, ou accepter que la réserve d'émergence de 20 % soit le vrai amortisseur et suivre sa consommation comme l'indicateur principal.
+
+Le premier signal de dérive à surveiller reste le nombre de tours réellement consommés par story dans le Sprint 0, qui recalera l'estimation de tous les suivants.
 
 ---
 

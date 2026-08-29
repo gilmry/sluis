@@ -81,6 +81,7 @@ Ordonnées de la plus réversible à la moins réversible, comme le demande la d
 | C8 | Obtenir l'approbation humaine d'un plan et en suivre l'exécution | nulle, c'est le point irréversible | 1 |
 | C9 | Mettre un projet en ligne après vérification des gates du plancher | nulle | 1 |
 | C10 | Tenir un journal d'audit inaltérable de tout ce qui précède | append-only par construction | 2 |
+| C11 | Renouveler la dérogation d'agir en Tier 2 sur les bacs à sable | nulle, c'est un acte d'autorité | 1 |
 
 ## 8. Glossaire métier (ubiquitous language DDD)
 
@@ -96,6 +97,8 @@ Ordonnées de la plus réversible à la moins réversible, comme le demande la d
 | **Jeton de changement** | Preuve d'approbation liée à une empreinte de plan, à durée de vie limitée, à usage unique. |
 | **Bail de bac à sable** | Droit d'occuper une infrastructure éphémère : projet, TTL, plafond de dépense. Expire toujours. |
 | **Chien de garde** | Processus indépendant qui détruit un bail expiré, même si le demandeur a disparu. |
+| **Dérogation** | L'autorisation, à durée limitée, d'agir en Tier 2 sur les bacs à sable. Expirée par défaut. Son renouvellement est un acte de Tier 1. |
+| **Fenêtre de validité** | Période pendant laquelle une dérogation produit ses effets. Hors fenêtre, aucun bail ne peut être loué. |
 | **Campagne de charge** | Suite ordonnée de paliers de charge appliquée à un déploiement, produisant des mesures. |
 | **Mesure de capacité** | Fait observé et daté : P99, débit, empreinte mémoire, jeu chaud, pression, coût réel. |
 | **Prior** | Constante supposée du modèle de coût, marquée `[caler]`, en attente d'être remplacée par une mesure. |
@@ -128,6 +131,7 @@ Candidats à coder dans les constructeurs, donc à rendre inconstructibles s'ils
 8. **Une mesure de capacité porte toujours sa provenance** : mesuré ou supposé, jamais ambigu (§9 de l'abaque).
 9. **Un secret ne franchit jamais la frontière de sortie**, quel que soit le chemin d'appel.
 10. **Une campagne ne se termine jamais sans destruction du bail**, y compris en cas de panique, d'arrêt du processus ou d'erreur du moteur.
+11. **Aucun bail ne peut être loué hors de la fenêtre de validité de la dérogation.** La dérogation est expirée par défaut ; l'incapacité à établir sa validité vaut expiration, jamais autorisation.
 
 ## 10bis. Flux multi-acteurs
 
@@ -138,6 +142,7 @@ Candidats à coder dans les constructeurs, donc à rendre inconstructibles s'ils
 | C6 Recalage | Agent | Superviseur en gate review | Méthode Foyer | Le rapport propose des valeurs mesurées, le superviseur décide de mettre à jour l'abaque |
 | C8 Mutation | Agent | **Superviseur via environnement GitHub protégé** | Projet cible | Plan → dispatch → blocage GitHub → approbation → exécution par le job → compte rendu |
 | C9 Mise en ligne | Agent | **Superviseur**, après gates vertes | Utilisateurs finaux | Vérification des gates, plan Tier 1, approbation, déploiement, rollback si tests post-déploiement rouges |
+| C11 Renouvellement | Agent (constate l'expiration) ou Superviseur | **Superviseur via environnement GitHub protégé** | Agent | La fenêtre expire, tout bail est refusé, une demande de renouvellement emprunte la passerelle Tier 1, la nouvelle fenêtre est journalisée avec son approbateur |
 
 ## 11. Fonctionnalités du périmètre
 
@@ -185,7 +190,8 @@ Ce qui attend un besoin réel, au titre de la progression YAGNI.
 | Risque | Probabilité | Impact | Mitigation |
 |---|---|---|---|
 | Sluis devient un contournement des garde-fous plutôt que leur exécuteur | Moyenne | **Critique** | Sluis ne détient aucun secret de mutation de production ; ils vivent dans GitHub Actions derrière un environnement protégé |
-| La dérogation Tier 2 sur les bacs à sable s'élargit par glissement | Moyenne | Élevé | Les six conditions sont des invariants de domaine, pas des vérifications de surface ; toute extension exige un ADR |
+| La dérogation Tier 2 sur les bacs à sable s'élargit par glissement | Moyenne | Élevé | Les sept conditions sont des invariants de domaine, pas des vérifications de surface ; toute extension exige un ADR |
+| La dérogation devient permanente par inertie faute d'être jamais redécidée | **Élevée sans mesure** | Élevé | Fenêtre de validité expirée par défaut, renouvelable uniquement en Tier 1 ; l'indétermination vaut expiration |
 | Un bail éphémère survit à son TTL et facture indéfiniment | Moyenne | Élevé | Chien de garde indépendant du processus demandeur, plus plafond de dépense contrôlé à l'admission |
 | Le protocole MCP évolue et le JSON-RPC écrit à la main dérive | Élevée | Moyen | Surface volontairement minimale, contract tests, version de protocole déclarée explicitement |
 | Le co-hébergement avec n8n élargit la surface d'attaque | Certaine | Moyen | Acceptable tant que Sluis ne détient pas les clés de mutation ; à revoir immédiatement si ce n'est plus vrai |

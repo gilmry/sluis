@@ -39,10 +39,12 @@ Conséquence : même compromis, Sluis ne peut pas muter la production. Il ne peu
 | Niveau | Portée | Confirmation |
 |---|---|---|
 | Tier 2 lecture | inventaire, coûts, plans, statuts, diagnostics | aucune |
-| Tier 2 écriture bornée | infrastructure éphémère de test, à TTL et plafond | confirmation d'appel côté client MCP |
+| Tier 2 écriture bornée | infrastructure éphémère de test, à TTL et plafond | confirmation d'appel côté client MCP, **dans une fenêtre de dérogation ouverte** |
 | Tier 1 | toute mutation de production, mise en ligne | environnement GitHub protégé |
 
-La dérogation du niveau intermédiaire est encadrée par six conditions cumulatives, codées comme invariants de domaine et non comme vérifications de surface. Voir ADR-007.
+La dérogation du niveau intermédiaire est encadrée par **sept conditions cumulatives**, codées comme invariants de domaine et non comme vérifications de surface.
+
+La septième mérite d'être lue à part : **la dérogation elle-même expire.** Elle est accordée pour une fenêtre limitée, elle est réputée expirée par défaut, et son renouvellement est un acte de Tier 1 qui emprunte la même passerelle qu'un `terraform apply` de production. Autrement dit, l'autorité de déléguer n'est jamais elle-même déléguée, et une dérogation ne peut pas devenir permanente par simple inertie. Voir ADR-007.
 
 ## Les deux scénarios cibles
 
@@ -64,7 +66,7 @@ Les livrables suivent la pipeline BMAD du framework Foyer. Chacun porte un front
 
 Le premier passage rendait CONCERNS à 88/100. Les trois incohérences sont closes : deux par rebouclage vers les personas concernés, une par décision du superviseur. Le second passage rend **PASS à 100/100**, avec deux réserves qui n'empêchent pas la sortie : une marge de 7 % sur la target de coût, et deux hypothèses à lever avant les Sprints 3 et 4.
 
-**Périmètre complet, pas de découpage MVP** (décision du superviseur, 2026-08-29) : les 24 exigences et les 10 capacités sont livrées. Les sprints ordonnent la fabrication, ils ne priorisent pas un abandon.
+**Périmètre complet, pas de découpage MVP** (décision du superviseur, 2026-08-29) : les 25 exigences et les 11 capacités sont livrées. Les sprints ordonnent la fabrication, ils ne priorisent pas un abandon.
 
 ## Architecture prévue
 
