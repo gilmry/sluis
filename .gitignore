@@ -9,3 +9,6 @@ kubeconfig
 /deploy.log
 /.deploy.lock
 /.deployed_rev
+/sluis.toml
+/sluis-audit.jsonl
+/sluis-oauth.json

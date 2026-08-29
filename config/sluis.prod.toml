@@ -1,0 +1,29 @@
+# Configuration de Sluis en production, copiée en `sluis.toml` par deploy.sh.
+#
+# Elle ne diffère de l'exemple que par les chemins d'écriture : dans le
+# conteneur, seul le volume monté sur /app/donnees est inscriptible.
+#
+# Ce fichier ne porte JAMAIS de secret. Les identifiants viennent
+# exclusivement de l'environnement, via le .env lu par docker compose.
+
+[ovh]
+endpoint = "https://eu.api.ovh.com/1.0"
+
+# Projets portant de la production. Lisibles, jamais mutables en Tier 2.
+projets_production = []
+
+# Projets dédiés aux bacs à sable. Première condition d'ADR-007 : cette liste
+# doit être DISJOINTE de la précédente, et Sluis refuse de démarrer sinon.
+projets_bac_a_sable = []
+
+[bac_a_sable]
+ttl_maximal_secondes = 21600
+plafond_depense = 20.0
+
+# Fenêtre de dérogation, en jours. 90 par décision du superviseur du
+# 2026-08-29, ouverte jusqu'au 2026-11-27.
+fenetre_derogation_jours = 90
+
+[journal]
+# Dans le volume : /app appartient à root et le processus tourne en nonroot.
+chemin = "/app/donnees/sluis-audit.jsonl"

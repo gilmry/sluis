@@ -61,11 +61,21 @@ run_deploy() {
 }
 
 install_cron() {
+  cd "$REPO_DIR"
   command -v docker >/dev/null || { echo "docker requis" >&2; exit 1; }
   docker network inspect ecosolva-web >/dev/null 2>&1 \
     || { echo "réseau ecosolva-web absent : le créer d'abord" >&2; exit 1; }
+  # C'est le fichier de production qui est copié, pas l'exemple : ses chemins
+  # d'écriture visent le volume, seul endroit inscriptible du conteneur.
   [ -f "$REPO_DIR/sluis.toml" ] \
-    || cp "$REPO_DIR/config/sluis.example.toml" "$REPO_DIR/sluis.toml"
+    || cp "$REPO_DIR/config/sluis.prod.toml" "$REPO_DIR/sluis.toml"
+  [ -f "$REPO_DIR/.env" ] \
+    || { echo ".env absent : cp .env.example .env, puis le remplir" >&2; exit 1; }
+  # Vérifie ici, une fois, ce que le cron ne pourrait que constater toutes les
+  # cinq minutes : une variable requise absente fait échouer cette commande
+  # avec le nom de la variable manquante.
+  docker compose --profile prod config -q \
+    || { echo "configuration incomplète : voir le message ci-dessus" >&2; exit 1; }
   ( crontab -l 2>/dev/null | grep -v "$CRON_MARKER" || true
     echo "$CRON_SCHEDULE cd $REPO_DIR && ./deploy.sh --run # $CRON_MARKER"
   ) | crontab -

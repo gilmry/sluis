@@ -12,6 +12,24 @@ services:
     restart: unless-stopped
     environment:
       SLUIS_CONFIG: /app/sluis.toml
+      # Traefik termine le TLS et parle au conteneur en clair sur le réseau
+      # interne. Le service n'écoute donc qu'en HTTP, sur le port des labels.
+      SLUIS_ECOUTE: 0.0.0.0:8080
+      # L'issuer OAuth doit être l'URL publique, celle que le client MCP
+      # verra : un issuer qui ne correspond pas au domaine fait échouer la
+      # découverte côté client, et le symptôme est illisible.
+      SLUIS_BASE_URL: https://${SLUIS_DOMAIN:-sluis.ecosolva.org}
+      # Journal d'audit et dépôt OAuth vivent dans le volume. /app appartient
+      # à root et le processus tourne en nonroot : y écrire est impossible,
+      # et Sluis refuse de démarrer s'il ne peut pas tracer.
+      SLUIS_DEPOT_OAUTH: /app/donnees/sluis-oauth.json
+      # Les trois valeurs suivantes n'ont aucune valeur par défaut, ici comme
+      # dans le code : la syntaxe « :? » fait échouer le déploiement avec un
+      # message lisible plutôt que de laisser le conteneur redémarrer en
+      # boucle sur une variable absente.
+      SLUIS_SECRET_SIGNATURE: ${SLUIS_SECRET_SIGNATURE:?absent du .env — openssl rand -base64 32}
+      SLUIS_IDENTIFIANT: ${SLUIS_IDENTIFIANT:?absent du .env — identifiant du superviseur}
+      SLUIS_EMPREINTE_MOT_DE_PASSE: ${SLUIS_EMPREINTE_MOT_DE_PASSE:?absent du .env — sha256 du mot de passe, pas le mot de passe}
       # Les trois identifiants OVH viennent de l'environnement, jamais du
       # fichier de configuration : un secret dans un fichier finit dans Git.
       OVH_APPLICATION_KEY: ${OVH_APPLICATION_KEY:-}
@@ -20,11 +38,19 @@ services:
       OVH_ENDPOINT: ${OVH_ENDPOINT:-https://eu.api.ovh.com/1.0}
       # Ce jeton n'ouvre qu'un droit : déclencher un workflow. Il ne donne
       # aucun accès à l'infrastructure, qui reste derrière l'environnement
-      # GitHub protégé (ADR-008).
+      # GitHub protégé (ADR-008). Aucun outil ne le consomme encore.
       SLUIS_GITHUB_TOKEN: ${SLUIS_GITHUB_TOKEN:-}
     volumes:
       - ./sluis.toml:/app/sluis.toml:ro
       - sluis_donnees:/app/donnees
+    # Rien d'autre que le volume n'a besoin d'être inscriptible. Un système de
+    # fichiers en lecture seule rend inoffensive une écriture qu'on n'a pas
+    # prévue, y compris celle d'un attaquant.
+    read_only: true
+    # Pas de `no-new-privileges` ici : sur un Docker installé par snap, il fait
+    # échouer la transition de profil AppArmor et le conteneur ne démarre pas,
+    # avec un « operation not permitted » à l'exec qui ne désigne rien. Le gain
+    # serait de toute façon nul sur une image distroless sans binaire setuid.
     networks:
       - ecosolva-web
     labels:

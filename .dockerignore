@@ -1,0 +1,16 @@
+# Le contexte de build ne doit porter que les sources. Sans cette liste, le
+# target/ de la machine de développement est copié dans l'image : cargo voit
+# alors des artefacts plus récents que les sources et ne recompile rien, si
+# bien que l'image embarque les ébauches vides de l'étage de cache.
+/target
+/.git
+/.github
+/donnees
+/deploy.log
+/.deploy.lock
+/.deployed_rev
+/.env
+/sluis.toml
+/sluis-audit.jsonl
+/sluis-oauth.json
+**/*.rs.bk
