@@ -108,7 +108,7 @@ La mise en ligne exige la vérification des gates du plancher (secrets, SBOM, sc
 11 FR sur 24 sans matrice au livrable 02. Voir §7bis.
 **Remédiation** : deux options. Soit compléter les 11 FR au format long (coût : ~1 h). Soit déclarer formellement au PRD §3 que FR-014 à FR-024 sont hors du périmètre de cette gate et feront l'objet d'un second passage BMAD avant leur sprint, ce qui est cohérent avec la progression YAGNI affirmée à l'Architecture Couche 5.
 
-**I-3 — Dépassement de la target MVP de 42 %** *(→ superviseur, pas un persona)*
+**I-3 — Dépassement de la target MVP de 37 %** *(→ superviseur, pas un persona)*
 Le Brief §18 fixe une target de challenge à 4 jours de superviseur pour le MVP ; la backlog en produit 5,7. Ce n'est pas une incohérence entre livrables mais un écart assumé et signalé par le Scrum Master, avec trois options chiffrées. Il appartient au superviseur de trancher, c'est précisément l'objet d'une gate review.
 
 **I-4 — Hypothèses bloquantes non levées** *(→ superviseur)*
@@ -123,7 +123,7 @@ Avant passage en Phase 2 (chef de projet : WBS, Gantt, coût).
 
 1. ~~Corriger I-1~~ — **fait**. C'était le seul défaut de traçabilité réel, et il relevait de l'Architecte, pas du superviseur.
 2. **Trancher I-2** en gate review. Je recommande la seconde option : déclarer FR-014 à FR-024 hors périmètre de cette gate. Détailler maintenant onze exigences dont les trois premières dépendent d'hypothèses non levées produirait de la spécification qui vieillira avant d'être exécutée, ce que la progression YAGNI déconseille.
-3. **Trancher I-3** en gate review. Je rejoins la recommandation du Scrum Master : réduire le périmètre du MVP plutôt que le Sprint 0. Sortir la story 3.6 et la moitié de la 3.5 ramène le MVP à ~4,5 jours sans compromettre le critère d'acceptation du PRD §13. Réduire le Sprint 0 reviendrait à reléguer le harnais de contract testing, exactement l'erreur que `contrat-api.md` documente comme ayant déjà coûté un NO-GO.
+3. **Trancher I-3** en gate review. Je rejoins la recommandation du Scrum Master : réduire le périmètre du MVP plutôt que le Sprint 0. Sortir la story 3.6 et la moitié de la 3.5 ramène le MVP à ~4,7 jours sans compromettre le critère d'acceptation du PRD §13. Réduire le Sprint 0 reviendrait à reléguer le harnais de contract testing, exactement l'erreur que `contrat-api.md` documente comme ayant déjà coûté un NO-GO.
 4. **Ne pas lever H1 et H2 maintenant.** Elles ne bloquent pas le MVP, et les lever prématurément consommerait du superviseur pour un besoin qui n'existe pas encore.
 5. **Contresigner ADR-007** au frontmatter. La dérogation Tier 2 sur les bacs à sable a été approuvée oralement le 2026-08-29 ; elle doit porter une signature écrite, car c'est le seul assouplissement d'un garde-fou existant dans tout le dispositif.
 

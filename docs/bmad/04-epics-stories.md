@@ -383,33 +383,51 @@ Livre « la capacité de boucler ». Aucune story fonctionnelle ne démarre avan
 
 ## Estimation chiffrée du projet
 
-| Couche | Stories | Σ jours (wall-clock) | Σ tours (tokens) |
-|---|---|---|---|
-| Domain | 8 | 6,5 | 25 |
-| Application | 7 | 5,5 | 26 |
-| Infrastructure | 8 | 7,0 | 31 |
-| Frontend | 0 | 0 | 0 |
-| IaC / CI / Monitoring | 5 | 3,75 | 13 |
-| Transverses + émergence | 8 | 4,0 | 13 |
-| **Total** | **36** | **26,75** | **108** |
+Tally établi story par story à partir des tailles et tours déclarés ci-dessus.
 
-- **Coût superviseur** = 26,75 j ÷ ratio de supervision 3 ≈ **9 jours de superviseur**. C'est le poste dominant, conformément au §1 de l'abaque.
-- **Coût modèle** = 108 tours. À quelques centaines de milliers de tokens par tour, **de l'ordre de quelques dizaines d'euros**. Négligeable devant le poste superviseur, ce qui confirme l'heuristique de l'abaque : optimiser les tokens ne déplace presque rien.
+| Sprint / Epic | Stories | Σ jours | Σ tours |
+|---|---|---|---|
+| Sprint 0 — Fondations | 5 | 4,25 | 14 |
+| Epic 1 — BC1 Inventaire | 4 | 3,00 | 11 |
+| Epic 2 — BC2 Autorisation | 2 | 2,00 | 7 |
+| Epic 3 — BC5 Exécution | 6 | 5,50 | 23 |
+| Epic 4 — Transport MCP | 2 | 1,75 | 7 |
+| Epic 5 — BC3 Bac à sable | 3 | 2,75 | 12 |
+| Epic 6 — BC4 Capacité | 3 | 2,75 | 12 |
+| Epic 7 — Tier 1 | 2 | 2,00 | 10 |
+| Epic 8 — Accès distant | 3 | 2,50 | 12 |
+| Transverses (doc vivante, ITIL) | 2 | 1,50 | 5 |
+| **Sous-total spécifié** | **32** | **28,00** | **113** |
+| Émergence (~20 %, non spécifiée) | 6 | 5,60 | 23 |
+| **Total** | **38** | **33,60** | **136** |
+
+Répartition par couche dominante des 32 stories spécifiées (une story qui traverse plusieurs couches est comptée à sa couche la plus profonde) :
+
+| Couche | Stories | Σ jours |
+|---|---|---|
+| Domain | 11 | 9,25 |
+| Application | 7 | 6,25 |
+| Infrastructure | 9 | 8,25 |
+| Frontend | 0 | 0 |
+| IaC / CI / Monitoring | 5 | 4,25 |
+
+- **Coût superviseur** = 33,60 j ÷ ratio de supervision 3 ≈ **11,2 jours de superviseur**. C'est le poste dominant, conformément au §1 de l'abaque.
+- **Coût modèle** = 136 tours. À quelques centaines de milliers de tokens par tour, **de l'ordre de quelques dizaines d'euros**. Négligeable devant le poste superviseur, ce qui confirme l'heuristique de l'abaque : optimiser les tokens ne déplace presque rien.
 
 ### Comparaison à la target du Brief §17-18
 
 | | Brief (point 0) | Backlog détaillée | Écart |
 |---|---|---|---|
-| Stories | 28 à 34 | **36** | +6 % au-dessus de la borne haute |
-| Jours superviseur | 9 à 12 | **9** | dans la fourchette, borne basse |
-| Target MVP | ≤ 4 j superviseur | **Sprints 0 à 2 = 17 j ÷ 3 ≈ 5,7 j** | **dépassement de 42 %** |
+| Stories | 28 à 34 | **38** | +12 % au-dessus de la borne haute |
+| Jours superviseur | 9 à 12 | **11,2** | dans la fourchette, proche de la borne haute |
+| Target MVP | ≤ 4 j superviseur | **Sprints 0 à 2 = 16,5 j ÷ 3 = 5,5 j** | **dépassement de 37 %** |
 
-**Le dépassement de la target MVP est le signal principal de ce livrable.** Il vient presque entièrement du Sprint 0, qui pèse 4,25 jours à lui seul, dont 2 pour le harnais de contract testing et la gate de pureté.
+**Le dépassement de la target MVP est le signal principal de ce livrable.** Il vient pour l'essentiel du Sprint 0, qui pèse 4,25 jours à lui seul, dont 2 pour le harnais de contract testing et la gate de pureté du domaine.
 
 Trois lectures possibles, à trancher par le superviseur en gate review :
 
-1. **Accepter le dépassement.** Le Sprint 0 est un investissement non récurrent qui bénéficiera à tous les projets Maury ultérieurs. La target de 4 jours était un prior, pas une mesure.
-2. **Réduire le périmètre du MVP** en sortant l'écart déclaré/réel (story 3.6) et les statuts Helm/ArgoCD (partie de 3.5), ce qui ramène à ~4,5 jours. Le critère d'acceptation du PRD §13 reste tenu.
+1. **Accepter le dépassement.** Le Sprint 0 est un investissement non récurrent qui bénéficiera aux projets Maury ultérieurs. La target de 4 jours était un prior, pas une mesure.
+2. **Réduire le périmètre du MVP** en sortant l'écart déclaré/réel (story 3.6) et la moitié des statuts de la story 3.5, ce qui ramène le MVP à ~4,7 jours. Le critère d'acceptation du PRD §13 reste tenu.
 3. **Refuser de réduire le Sprint 0.** C'est ma recommandation en tant que Scrum Master : la story 0.3 est ce qui rend l'archétype API-first tenable, et `contrat-api.md` documente qu'un contrat non matérialisé a déjà coûté un NO-GO en production. La reléguer serait exactement l'erreur que le skill décrit.
 
 Recommandation retenue : **option 2 puis 1**, réduire le périmètre plutôt que le harnais.
