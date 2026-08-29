@@ -113,9 +113,11 @@ infrastructure/  ovh · process · fs_inventory · github · loadtest · mcp · 
 
 La pureté du domaine n'est pas une convention mais un job de CI qui échoue.
 
-## Déploiement prévu
+## Déploiement
 
 Deux modes. En local, un binaire en transport stdio déclaré dans un `.mcp.json`. Sur serveur, un service en transport Streamable HTTP derrière Traefik, avec OAuth 2.1 + PKCE, image construite en CI et tirée depuis GHCR, déploiement GitOps idempotent.
+
+Le mode serveur est décrit pas à pas dans [docs/DEMARRAGE.md](docs/DEMARRAGE.md), vérification et dépannage compris.
 
 ## Généalogie
 
