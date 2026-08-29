@@ -12,7 +12,11 @@ authors = ["Gilles Maury <gilmry@gmail.com>"]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 schemars = "1"
+sha1 = "0.10"
+sha2 = "0.10"
+ureq = { version = "3", features = ["json"] }
 thiserror = "2"
+toml = "0.9"
 
 
 [profile.release]
@@ -20,3 +24,11 @@ lto = true
 opt-level = 3
 codegen-units = 1
 strip = true
+
+[[bin]]
+name = "sluis-mcp"
+path = "src/bin/sluis_mcp.rs"
+
+[[bin]]
+name = "sluis"
+path = "src/bin/sluis.rs"

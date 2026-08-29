@@ -1,0 +1,34 @@
+# Configuration de Sluis. Copier en `sluis.toml` et adapter.
+#
+# Ce fichier ne porte JAMAIS de secret. Les trois identifiants OVH viennent
+# exclusivement de l'environnement : OVH_APPLICATION_KEY, OVH_APPLICATION_SECRET
+# et OVH_CONSUMER_KEY. Un secret déposé dans un fichier de configuration finit
+# dans un dépôt Git, c'est une question de temps.
+
+[ovh]
+endpoint = "https://eu.api.ovh.com/1.0"
+
+# Projets portant de la production. Lisibles, jamais mutables en Tier 2.
+projets_production = []
+
+# Projets dédiés aux bacs à sable. Première condition d'ADR-007 : cette liste
+# doit être DISJOINTE de la précédente, et Sluis refuse de démarrer sinon.
+projets_bac_a_sable = []
+
+[bac_a_sable]
+# Durée de vie maximale d'un bail. Au-delà, la demande est refusée à l'admission.
+ttl_maximal_secondes = 21600
+
+# Plafond de dépense par campagne. Une estimation au-dessus est refusée avant
+# tout provisionnement, pas découverte sur la facture.
+plafond_depense = 20.0
+
+# Fenêtre de dérogation, en jours. 90 par décision du superviseur du 2026-08-29.
+# Paramétrable, non supprimable : une fenêtre absente vaut fenêtre fermée, et
+# aucun bail ne peut alors être loué (septième condition d'ADR-007).
+fenetre_derogation_jours = 90
+
+[journal]
+# Journal d'audit append-only. Sluis refuse d'exécuter un outil s'il ne peut
+# pas écrire ici : un appel non traçable ne doit pas avoir lieu.
+chemin = "sluis-audit.jsonl"

@@ -11,7 +11,42 @@
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::json;
-use sluis::infrastructure::mcp::{contrat::Contrat, ContratOutil, RegistreOutils};
+use sluis::domain::{AppError, Tier};
+use sluis::infrastructure::mcp::{contrat::Contrat, ContratOutil, Outil, RegistreOutils};
+
+/// Enveloppe un contrat pour en faire un outil enregistrable. L'exécution est
+/// sans effet : le harnais ne teste que le contrat, pas le métier.
+struct OutilDeContrat<T>(Contrat<T>);
+
+impl<T> ContratOutil for OutilDeContrat<T>
+where
+    T: schemars::JsonSchema + serde::de::DeserializeOwned + Send + Sync,
+{
+    fn nom(&self) -> &'static str {
+        self.0.nom()
+    }
+    fn description(&self) -> &'static str {
+        self.0.description()
+    }
+    fn schema(&self) -> serde_json::Value {
+        self.0.schema()
+    }
+    fn desérialiser(&self, arguments: &serde_json::Value) -> Result<(), String> {
+        self.0.desérialiser(arguments)
+    }
+}
+
+impl<T> Outil for OutilDeContrat<T>
+where
+    T: schemars::JsonSchema + serde::de::DeserializeOwned + Send + Sync,
+{
+    fn tier(&self) -> Tier {
+        Tier::Two
+    }
+    fn appeler(&self, _arguments: &serde_json::Value) -> Result<serde_json::Value, AppError> {
+        Ok(json!({}))
+    }
+}
 
 // ─────────────────────────────────────────────────────────────
 // Types de démonstration du harnais
@@ -42,9 +77,11 @@ struct ArgumentsOuverts {
 fn registre_de_demonstration() -> RegistreOutils {
     let mut registre = RegistreOutils::new();
     registre
-        .enregistrer(Box::new(Contrat::<ArgumentsConformes>::new(
-            "outil_de_demonstration",
-            "Outil de démonstration du harnais de contrat.",
+        .enregistrer(Box::new(OutilDeContrat(
+            Contrat::<ArgumentsConformes>::new(
+                "outil_de_demonstration",
+                "Outil de démonstration du harnais de contrat.",
+            ),
         )))
         .expect("enregistrement");
     registre
@@ -228,16 +265,17 @@ fn edge_un_registre_vide_ne_fait_pas_croire_a_une_verification() {
 #[test]
 fn edge_un_outil_sans_nom_est_refuse_au_demarrage() {
     let mut registre = RegistreOutils::new();
-    let resultat = registre.enregistrer(Box::new(Contrat::<ArgumentsConformes>::new("", "d")));
+    let resultat = registre.enregistrer(Box::new(OutilDeContrat(
+        Contrat::<ArgumentsConformes>::new("", "d"),
+    )));
     assert!(resultat.is_err(), "un outil sans nom doit être refusé");
 }
 
 #[test]
 fn edge_un_doublon_de_nom_est_refuse_au_demarrage() {
     let mut registre = registre_de_demonstration();
-    let resultat = registre.enregistrer(Box::new(Contrat::<ArgumentsConformes>::new(
-        "outil_de_demonstration",
-        "doublon",
+    let resultat = registre.enregistrer(Box::new(OutilDeContrat(
+        Contrat::<ArgumentsConformes>::new("outil_de_demonstration", "doublon"),
     )));
     assert!(resultat.is_err(), "deux outils de même nom sont ambigus");
 }

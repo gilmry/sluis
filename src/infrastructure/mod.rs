@@ -4,4 +4,10 @@
 //! processus. Le domaine n'en connaît rien, et un test de CI le prouve.
 
 pub mod audit;
+pub mod bac_a_sable;
+pub mod diagnostic;
+pub mod fs_inventaire;
 pub mod mcp;
+pub mod ovh;
+pub mod process;
+pub mod yaml_plat;

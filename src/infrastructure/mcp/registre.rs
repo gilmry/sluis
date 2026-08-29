@@ -5,7 +5,7 @@
 //! sur l'appel qui échoue ; un refus au démarrage empêche le service de partir.
 
 use crate::domain::AppError;
-use crate::infrastructure::mcp::ContratOutil;
+use crate::infrastructure::mcp::Outil;
 
 /// Registre des outils exposés par `tools/list`.
 ///
@@ -14,7 +14,7 @@ use crate::infrastructure::mcp::ContratOutil;
 /// main, qui vieillirait dès le premier outil ajouté.
 #[derive(Default)]
 pub struct RegistreOutils {
-    outils: Vec<Box<dyn ContratOutil>>,
+    outils: Vec<Box<dyn Outil>>,
 }
 
 impl RegistreOutils {
@@ -28,7 +28,7 @@ impl RegistreOutils {
     /// Refuse un nom vide, un schéma absent ou un doublon. Ces trois refus ont
     /// lieu au démarrage : un service qui part est un service dont le contrat
     /// tient.
-    pub fn enregistrer(&mut self, outil: Box<dyn ContratOutil>) -> Result<(), AppError> {
+    pub fn enregistrer(&mut self, outil: Box<dyn Outil>) -> Result<(), AppError> {
         if outil.nom().trim().is_empty() {
             return Err(AppError::Configuration {
                 detail: "outil sans nom".to_string(),
@@ -50,8 +50,16 @@ impl RegistreOutils {
     }
 
     /// Tous les outils enregistrés, pour `tools/list` comme pour les tests.
-    pub fn outils(&self) -> &[Box<dyn ContratOutil>] {
+    pub fn outils(&self) -> &[Box<dyn Outil>] {
         &self.outils
+    }
+
+    /// Retrouve un outil par son nom.
+    pub fn trouver(&self, nom: &str) -> Option<&dyn Outil> {
+        self.outils
+            .iter()
+            .find(|o| o.nom() == nom)
+            .map(|o| o.as_ref())
     }
 
     /// Nombre d'outils enregistrés.
