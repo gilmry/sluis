@@ -108,6 +108,7 @@ Ports en traits, un par préoccupation, volontairement étroits (ISP).
 | `ArgoCdClient` | `app_status`, `sync` | `process::ArgoCd` |
 | `LoadTestRunner` | `run_step` | `loadtest::Wrk` |
 | `ApprovalGateway` | `submit`, `poll` | `github::Actions` |
+| `GateChecker` | `floor_status` (secrets, SBOM, scan d'image, retour de migration) | `github::Checks` + `process::Scanner` |
 | `AuditLog` | `append` (uniquement) | `audit::Jsonl` |
 | `Clock` | `now` | système, ou figé en test |
 | `OAuthRepository` | clients, codes, jetons | PostgreSQL |
@@ -214,6 +215,8 @@ Une rupture de contrat est un **point irréversible** : ADR et validation humain
 | Prior | `Prior` | `domain::capacity` |
 | Convergence | `ConvergenceProof` | `domain::execution` |
 | Passerelle d'approbation | `ApprovalGateway` (port) | `application::ports` |
+| Gate du plancher | `FloorGate` + port `GateChecker` | `domain::execution` / `application::ports` |
+| Prior | `Prior` | `domain::capacity` |
 
 ## Stratégie de tests
 

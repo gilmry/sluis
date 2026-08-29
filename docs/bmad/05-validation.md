@@ -19,17 +19,17 @@ signature_humaine:
 
 ## Statut global : **CONCERNS**
 
-**Fidelity score : 87/100.** Au-dessus du seuil de 80, donc éligible au PASS sur le score seul. Mais une case obligatoire du §7bis échoue, ce qui interdit le PASS en l'état.
+**Fidelity score : 88/100.** Au-dessus du seuil de 80, donc éligible au PASS sur le score seul. Mais une case obligatoire du §7bis échoue, ce qui interdit le PASS en l'état.
 
 ### Détail du calcul
 
 | Terme | Numérateur / dénominateur | Points |
 |---|---|---|
 | Capacités du Brief couvertes en PRD | 10 / 10 | 25,00 |
-| FR couvertes en Architecture | 23 / 24 | 23,96 |
+| FR couvertes en Architecture | 24 / 24 | 25,00 |
 | FR couvertes en Stories | 24 / 24 | 25,00 |
 | Matrice 4×N présente **dans le PRD** | 52 / 96 | 13,54 |
-| **Total** | | **87,50 → 87** |
+| **Total** | | **88,54 → 88** |
 
 Le terme faible est le dernier, et il est la cause du verdict.
 
@@ -52,7 +52,7 @@ Le terme faible est le dernier, et il est la cause du verdict.
 ## 3. Traçabilité
 
 - Brief → PRD (toute capacité a ses exigences) : ☑ — 10/10, table de correspondance vérifiée capacité par capacité.
-- PRD → Architecture (toute exigence a sa couche) : ☐ — **23/24**. Voir incohérence I-1.
+- PRD → Architecture (toute exigence a sa couche) : ☑ — 24/24 après remédiation de I-1.
 - PRD → Stories (toute exigence a ses stories) : ☑ — 24/24, chaque FR est rattachée à au moins une story qui la nomme.
 
 ## 4. Architecture hexagonale
@@ -62,7 +62,7 @@ Le terme faible est le dernier, et il est la cause du verdict.
 
 ## 5. Glossaire → code (mapping présent) : ☑
 
-14 termes mappés vers des types nommés et localisés à l'Architecture. Deux termes du glossaire ne sont pas mappés : *Gate du plancher* et *Prior*. *Prior* apparaît bien comme type `Prior` dans `domain::capacity` mais n'est pas dans la table de mapping ; *Gate du plancher* n'a aucun type. Voir I-1.
+16 termes sur 16 mappés vers des types nommés et localisés à l'Architecture, après remédiation de I-1.
 
 ## 6. BDD + Documentation Vivante (flux critiques couverts) : ☑
 
@@ -100,9 +100,9 @@ Cibles différenciées par couche, 95 % sur le domaine, et une contrainte struct
 
 ## 10. Incohérences détectées
 
-**I-1 — FR-024 n'a pas d'élément d'architecture dédié** *(→ Architecte)*
-La mise en ligne exige la vérification des gates du plancher (secrets, SBOM, scan d'image, fichier de retour de migration). Aucun port `GateChecker` n'existe dans la table des ports de la Couche 2, et *Gate du plancher* est absent du mapping glossaire → code. La story 7.2 en dépend pourtant explicitement dans sa classe `@security`.
-**Remédiation** : ajouter un port `GateChecker` et son entrée de mapping. Coût estimé : 15 minutes.
+**I-1 — FR-024 n'avait pas d'élément d'architecture dédié** *(→ Architecte)* — **RÉSOLUE**
+La mise en ligne exige la vérification des gates du plancher (secrets, SBOM, scan d'image, fichier de retour de migration). Aucun port `GateChecker` n'existait dans la table des ports de la Couche 2, et *Gate du plancher* était absent du mapping glossaire → code, alors que la story 7.2 en dépend explicitement dans sa classe `@security`.
+**Remédiation appliquée** : port `GateChecker` ajouté à la Couche 2, entrées `Gate du plancher` et `Prior` ajoutées au mapping glossaire → code.
 
 **I-2 — Matrice 4×N incomplète dans le PRD** *(→ Product Manager)*
 11 FR sur 24 sans matrice au livrable 02. Voir §7bis.
@@ -121,7 +121,7 @@ Le PRD H3 note que le superviseur a mentionné `n8n.ecosolva com` alors que la c
 
 Avant passage en Phase 2 (chef de projet : WBS, Gantt, coût).
 
-1. **Corriger I-1** (port `GateChecker` et mapping). C'est le seul défaut de traçabilité réel, et il coûte quinze minutes.
+1. ~~Corriger I-1~~ — **fait**. C'était le seul défaut de traçabilité réel, et il relevait de l'Architecte, pas du superviseur.
 2. **Trancher I-2** en gate review. Je recommande la seconde option : déclarer FR-014 à FR-024 hors périmètre de cette gate. Détailler maintenant onze exigences dont les trois premières dépendent d'hypothèses non levées produirait de la spécification qui vieillira avant d'être exécutée, ce que la progression YAGNI déconseille.
 3. **Trancher I-3** en gate review. Je rejoins la recommandation du Scrum Master : réduire le périmètre du MVP plutôt que le Sprint 0. Sortir la story 3.6 et la moitié de la 3.5 ramène le MVP à ~4,5 jours sans compromettre le critère d'acceptation du PRD §13. Réduire le Sprint 0 reviendrait à reléguer le harnais de contract testing, exactement l'erreur que `contrat-api.md` documente comme ayant déjà coûté un NO-GO.
 4. **Ne pas lever H1 et H2 maintenant.** Elles ne bloquent pas le MVP, et les lever prématurément consommerait du superviseur pour un besoin qui n'existe pas encore.
@@ -129,9 +129,9 @@ Avant passage en Phase 2 (chef de projet : WBS, Gantt, coût).
 
 ---
 
-**Verdict : CONCERNS.** Reboucler vers l'Architecte pour I-1, et vers le superviseur pour la décision sur I-2 et I-3. Les trois remédiations représentent moins d'une demi-journée cumulée.
+**Verdict : CONCERNS.** I-1 est résolue par rebouclage vers l'Architecte. Restent **deux décisions qui appartiennent au superviseur** et à personne d'autre : I-2 (périmètre de la matrice 4×N) et I-3 (dépassement de la target MVP). Aucune ne se tranche par un calcul.
 
-Une fois I-1 corrigée et I-2 tranchée, le score passe à **92/100** dans l'option « déclarer hors périmètre » (le dénominateur du terme 4×N devient 52/52) et le verdict à **PASS**.
+Une fois I-2 tranchée dans l'option « déclarer hors périmètre » (le dénominateur du terme 4×N devient 52/52), le score passe à **100/100** et le verdict à **PASS**. Dans l'option « détailler les 11 FR », il y passe aussi, au prix d'environ une heure.
 
 ---
 
