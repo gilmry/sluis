@@ -75,6 +75,21 @@ les cinq minutes, compare `main` à `origin/main` et ne fait rien tant que rien
 n'a bougé. Le serveur ne construit jamais d'image, il tire celle que la CI a
 poussée sur GHCR.
 
+**Qui exécute le cron.** Sur une machine où Docker exige `sudo`, lancez
+`sudo ./deploy.sh` : le cron s'installe alors pour root, seul compte capable de
+parler au démon. Deux conséquences à traiter d'un coup, sans quoi la boucle
+échoue toutes les cinq minutes en silence dans `deploy.log` :
+
+```sh
+# root n'a pas la clé SSH du dépôt. Le dépôt étant public, le fetch passe en
+# HTTPS ; le push reste en SSH pour l'humain qui travaille sur la machine.
+git remote set-url origin https://github.com/gilmry/sluis.git
+git remote set-url --push origin git@github.com:gilmry/sluis.git
+
+# root refuse d'opérer sur un dépôt qui ne lui appartient pas
+sudo git config --global --add safe.directory "$PWD"
+```
+
 ## Vérification
 
 ```sh
