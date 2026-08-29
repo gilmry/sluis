@@ -10,10 +10,10 @@ authors = ["Gilles Maury <gilmry@gmail.com>"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "1"
 thiserror = "2"
 
-[dev-dependencies]
-serde_json = "1"
 
 [profile.release]
 lto = true
