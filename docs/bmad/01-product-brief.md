@@ -139,27 +139,25 @@ Candidats à coder dans les constructeurs, donc à rendre inconstructibles s'ils
 | C8 Mutation | Agent | **Superviseur via environnement GitHub protégé** | Projet cible | Plan → dispatch → blocage GitHub → approbation → exécution par le job → compte rendu |
 | C9 Mise en ligne | Agent | **Superviseur**, après gates vertes | Utilisateurs finaux | Vérification des gates, plan Tier 1, approbation, déploiement, rollback si tests post-déploiement rouges |
 
-## 11. Fonctionnalités MVP
+## 11. Fonctionnalités du périmètre
 
-Le strict nécessaire pour valider la proposition de valeur, c'est-à-dire pour démontrer qu'un agent peut décrire une infrastructure réelle sans saisie manuelle.
+**Décision du superviseur du 2026-08-29 : le périmètre est complet, sans découpage MVP.** Les dix capacités du §7 sont livrées. L'ordre ci-dessous est un ordre de fabrication, pas une priorisation qui autoriserait un abandon.
 
-- Serveur MCP en transport stdio, avec `initialize`, `tools/list`, `tools/call`
-- `sluis_doctor` : état des binaires et des identifiants, sans jamais planter sur une absence
-- `sluis_inventory` : matrice topologies × environnements × profils, découverte depuis un dépôt
-- `sluis_cluster_profiles` : description des profils et de leur contrat Day 1 / Day 2
-- Lecture OVH : projets, instances, coûts courants, enregistrements DNS
-- `tf_plan` en lecture seule, statuts Helm, rendu Kustomize, statut ArgoCD
-- Journal d'audit append-only de tous les appels
-- Contrat d'outils matérialisé et prouvé par des contract tests
+**Socle de lecture** — serveur MCP en transport stdio (`initialize`, `tools/list`, `tools/call`) · `sluis_doctor` · `sluis_inventory` · `sluis_cluster_profiles` · lecture OVH (projets, instances, coûts, DNS) · `tf_plan`, statuts Helm, rendu Kustomize, statut ArgoCD · écart déclaré/réel · journal d'audit append-only · contrat d'outils matérialisé et prouvé par des contract tests.
 
-## 12. Fonctionnalités post-MVP
+**Écriture bornée** — baux de bac à sable avec TTL et plafond · chien de garde indépendant · preuve de convergence · campagnes de charge en paliers · mesures avec provenance · rapport de recalage des priors de l'abaque.
 
-- Baux de bac à sable, chien de garde TTL, plafond de dépense
-- Campagnes de charge et rapport de recalage des priors
-- Plans de changement, jetons, passerelle GitHub à environnement protégé
-- OAuth 2.1 + PKCE, transport Streamable HTTP, scopes, déploiement serveur
-- Mise en ligne avec vérification des gates du plancher
-- Support d'un second fournisseur d'infrastructure (le domaine est déjà agnostique, seul l'adaptateur change)
+**Tier 1** — plans de changement empreintés · jetons à usage unique · passerelle GitHub à environnement protégé · mise en ligne avec vérification des gates du plancher et rollback.
+
+**Accès distant** — OAuth 2.1 + PKCE, transport Streamable HTTP, scopes, déploiement sur le serveur ecosolva.
+
+## 12. Hors périmètre
+
+Ce qui attend un besoin réel, au titre de la progression YAGNI.
+
+- Support d'un second fournisseur d'infrastructure. Le domaine est agnostique par construction, seul l'adaptateur manquerait.
+- Multi-location pour des organisations tierces isolées.
+- Toute interface utilisateur au-delà du formulaire de connexion OAuth.
 
 ## 13. Dimensionnement projet
 
@@ -167,7 +165,7 @@ Le strict nécessaire pour valider la proposition de valeur, c'est-à-dire pour 
 |---|---|
 | Bounded Contexts | 6 |
 | Entités domain estimées | ~26 (≈4-5 par BC) |
-| Outils MCP estimés (l'équivalent d'endpoints ici) | ~24 au total, dont 13 au MVP |
+| Outils MCP estimés (l'équivalent d'endpoints ici) | ~24, tous dans le périmètre |
 | Endpoints HTTP hors MCP | 5 (discovery, register, authorize ×2, token) |
 | Catégorie projet | **Moyen** (5-10 BC) |
 
@@ -230,8 +228,8 @@ Les non-négociables.
 - **Seed** : hérité à stack égale de KoproGo, Elevia et derniere-chance (Rust hexagonal, Actix, OAuth MCP déjà écrit deux fois). Ce n'est pas une estimation à froid, ce qui resserre la fourchette vers le bas.
 - **Calibrage stories** : `total ≈ scénarios BDD ÷ 4`. Avec ~24 outils et 5 endpoints, à 4 classes chacun, l'ordre de grandeur est de **28 à 34 stories**.
 - **Coût superviseur** : à 0,5 à 1 jour par story et un ratio de supervision de 3, l'ordre de grandeur est de **9 à 12 jours de superviseur**. C'est le poste dominant.
-- **Coût modèle** : ~3 tours par story, ~28 stories, soit ~85 tours. À quelques centaines de milliers de tokens par tour, l'ordre de grandeur reste **sous les 50 €**, donc négligeable devant le poste superviseur, conformément au §1 de l'abaque.
-- **Target de challenge** : **tenir le MVP (§11) sous 4 jours de superviseur**. C'est l'enveloppe à défendre, et l'écart à cette cible est le premier signal de dérive.
+- **Coût modèle** : ~3 tours par story, ~30 stories, soit ~90 tours. À quelques centaines de milliers de tokens par tour, l'ordre de grandeur reste **sous les 50 €**, donc négligeable devant le poste superviseur, conformément au §1 de l'abaque.
+- **Target de challenge** : **tenir le périmètre complet sous 12 jours de superviseur**, borne haute de la fourchette. Le périmètre n'étant pas négociable par décision du superviseur, c'est le ratio de supervision qui devient la variable d'ajustement, pas le contenu. L'écart à cette cible est le premier signal de dérive.
 
 > Estimation = prior incertain, resserré story après story par le CSI. Les chiffres ci-dessus sont des `[caler]` au même titre que ceux de l'abaque : ils demandent à être remplacés par du mesuré dès le premier jalon.
 

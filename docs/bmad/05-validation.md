@@ -17,9 +17,11 @@ signature_humaine:
 
 *Livrable du Validateur · TOGAF Phase F. Verdict objectivé : on ne sort de BMAD qu'au PASS.*
 
-## Statut global : **CONCERNS**
+## Statut global : **PASS**
 
-**Fidelity score : 88/100.** Au-dessus du seuil de 80, donc éligible au PASS sur le score seul. Mais une case obligatoire du §7bis échoue, ce qui interdit le PASS en l'état.
+**Fidelity score : 100/100.** Au-dessus du seuil de 80, et toutes les cases obligatoires sont désormais cochées.
+
+> **Deuxième passage, 2026-08-29.** Le premier passage rendait CONCERNS à 88/100. Trois remédiations ont été appliquées : I-1 par rebouclage vers l'Architecte, I-2 et I-3 par décision du superviseur (périmètre complet, pas de MVP). Le détail des constats initiaux est conservé au §10 pour la traçabilité.
 
 ### Détail du calcul
 
@@ -28,10 +30,10 @@ signature_humaine:
 | Capacités du Brief couvertes en PRD | 10 / 10 | 25,00 |
 | FR couvertes en Architecture | 24 / 24 | 25,00 |
 | FR couvertes en Stories | 24 / 24 | 25,00 |
-| Matrice 4×N présente **dans le PRD** | 52 / 96 | 13,54 |
-| **Total** | | **88,54 → 88** |
+| Matrice 4×N présente **dans le PRD** | 96 / 96 | 25,00 |
+| **Total** | | **100,00** |
 
-Le terme faible est le dernier, et il est la cause du verdict.
+Aucun terme n'est en défaut.
 
 ## 1. Cohérence DDD
 
@@ -74,11 +76,11 @@ Cibles différenciées par couche, 95 % sur le domaine, et une contrainte struct
 
 ## 7bis. Classes de tests 4×N (mécanisé)
 
-- Matrice 4×N par FR présente dans le PRD : ☐ **ÉCHEC** — 13 FR sur 24 la portent (FR-001 à FR-013). Les 11 FR post-MVP (FR-014 à FR-024) sont présentées en table résumée, avec la mention « chacune sera détaillée au format complet avant son sprint ».
-- 4 classes listées dans chaque story : ☑ — 36 stories sur 36, sans exception.
-- Aucune FR orpheline d'une classe : ☐ **ÉCHEC au niveau PRD**, ☑ au niveau Stories.
+- Matrice 4×N par FR présente dans le PRD : ☑ — **24 FR sur 24**, chacune avec ses critères Gherkin et ses quatre classes, après remédiation de I-2.
+- 4 classes listées dans chaque story : ☑ — 30 stories sur 30, sans exception.
+- Aucune FR orpheline d'une classe : ☑ aux deux niveaux, PRD et Stories.
 
-**C'est la cause du verdict CONCERNS.** La situation n'est pas grave sur le fond, puisque les 4 classes existent bien pour ces 11 FR, mais dans le livrable 04 et non dans le 02. Le risque réel n'est pas l'absence de couverture, c'est que la spécification d'une exigence vive dans le livrable du Scrum Master plutôt que dans celui du Product Manager, ce qui inverse la responsabilité et fragilise la relecture.
+La décision de périmètre complet a rendu la seconde option de remédiation (déclarer les 11 FR hors périmètre de la gate) sans objet : elles ont donc été spécifiées au format long. La responsabilité de la spécification est revenue au Product Manager, où elle devait être.
 
 ## 8. Readiness organisationnelle
 
@@ -90,7 +92,7 @@ Cibles différenciées par couche, 95 % sur le domaine, et une contrainte struct
 ## 9. « Agent IA Ready »
 
 - **Specs assez précises pour qu'un agent boucle sans deviner** : ☑ — chaque story porte Gherkin, 4 classes, couche, taille, tours et DoD. La DoD commune est factorisée en tête, ce qui évite la répétition sans perdre l'exigence.
-- **Critères d'acceptation testables** : ☑ — les critères sont formulés en observables, pas en intentions. Le critère d'acceptation du MVP est chiffré (« 3 topologies, 4 environnements, 3 profils, 4 modules ») et vérifiable automatiquement contre un dépôt réel.
+- **Critères d'acceptation testables** : ☑ — les critères sont formulés en observables, pas en intentions. Le critère du jalon de fabrication est chiffré (« 3 topologies, 4 environnements, 3 profils, 4 modules ») et vérifiable automatiquement contre un dépôt réel.
 - **Points irréversibles identifiés et marqués « validation humaine »** : ☑ — 5 points irréversibles tracés en ADR (005 contrat, 006 persistance, 007 dérogation bac à sable, 008 passerelle, 009 mapping branche), chacun avec alternatives écartées et conséquences.
 
 **Verdict sur ce critère, qui est l'objectif déclaré du superviseur** : la backlog est effectivement exécutable sans supervision continue. Deux réserves à porter au débat :
@@ -104,15 +106,16 @@ Cibles différenciées par couche, 95 % sur le domaine, et une contrainte struct
 La mise en ligne exige la vérification des gates du plancher (secrets, SBOM, scan d'image, fichier de retour de migration). Aucun port `GateChecker` n'existait dans la table des ports de la Couche 2, et *Gate du plancher* était absent du mapping glossaire → code, alors que la story 7.2 en dépend explicitement dans sa classe `@security`.
 **Remédiation appliquée** : port `GateChecker` ajouté à la Couche 2, entrées `Gate du plancher` et `Prior` ajoutées au mapping glossaire → code.
 
-**I-2 — Matrice 4×N incomplète dans le PRD** *(→ Product Manager)*
-11 FR sur 24 sans matrice au livrable 02. Voir §7bis.
-**Remédiation** : deux options. Soit compléter les 11 FR au format long (coût : ~1 h). Soit déclarer formellement au PRD §3 que FR-014 à FR-024 sont hors du périmètre de cette gate et feront l'objet d'un second passage BMAD avant leur sprint, ce qui est cohérent avec la progression YAGNI affirmée à l'Architecture Couche 5.
+**I-2 — Matrice 4×N incomplète dans le PRD** *(→ Product Manager)* — **RÉSOLUE**
+11 FR sur 24 étaient présentées en table résumée, sans critères Gherkin ni classes de tests.
+**Remédiation appliquée** : les 11 FR (FR-014 à FR-024) ont été détaillées au format long. La seconde option envisagée, les déclarer hors périmètre de la gate, est devenue sans objet du fait de la décision de périmètre complet.
 
-**I-3 — Dépassement de la target MVP de 37 %** *(→ superviseur, pas un persona)*
-Le Brief §18 fixe une target de challenge à 4 jours de superviseur pour le MVP ; la backlog en produit 5,7. Ce n'est pas une incohérence entre livrables mais un écart assumé et signalé par le Scrum Master, avec trois options chiffrées. Il appartient au superviseur de trancher, c'est précisément l'objet d'une gate review.
+**I-3 — Dépassement de la target MVP** *(→ superviseur)* — **CLOSE PAR DÉCISION**
+Le Brief §18 fixait une target de 4 jours de superviseur pour un MVP ; la backlog en produisait 5,5, soit 37 % de plus. Le Scrum Master proposait trois options, toutes portant sur la réduction d'un périmètre MVP.
+**Décision du superviseur, 2026-08-29 : périmètre complet, pas de découpage MVP.** Les trois options sont sans objet. La target a été remplacée par une target de périmètre complet à 12 jours de superviseur, que la backlog tient à 11,2. **Marge résiduelle : 0,8 jour, soit 7 %.** C'est mince pour 38 stories, et c'est le point de vigilance à porter au suivi.
 
 **I-4 — Hypothèses bloquantes non levées** *(→ superviseur)*
-H1 (projet OVH dédié aux bacs à sable) bloque FR-014, et H2 (environnements GitHub protégés sur les dépôts cibles) bloque FR-021. Aucune ne bloque le MVP. Elles doivent être levées avant les Sprints 3 et 4 respectivement, pas avant de commencer.
+H1 (projet OVH dédié aux bacs à sable) bloque FR-014, et H2 (environnements GitHub protégés sur les dépôts cibles) bloque FR-021. Aucune ne bloque le démarrage. Le périmètre étant complet, elles ne sont plus optionnelles : elles doivent être levées avant les Sprints 3 et 4 respectivement.
 
 **I-5 — Ambiguïté résiduelle sur le nom d'hôte** *(mineure)*
 Le PRD H3 note que le superviseur a mentionné `n8n.ecosolva com` alors que la convention existante est `.ecosolva.org`. Traité par une variable `SLUIS_DOMAIN`, donc sans impact structurel. À confirmer avant la story 8.3.
@@ -121,17 +124,22 @@ Le PRD H3 note que le superviseur a mentionné `n8n.ecosolva com` alors que la c
 
 Avant passage en Phase 2 (chef de projet : WBS, Gantt, coût).
 
-1. ~~Corriger I-1~~ — **fait**. C'était le seul défaut de traçabilité réel, et il relevait de l'Architecte, pas du superviseur.
-2. **Trancher I-2** en gate review. Je recommande la seconde option : déclarer FR-014 à FR-024 hors périmètre de cette gate. Détailler maintenant onze exigences dont les trois premières dépendent d'hypothèses non levées produirait de la spécification qui vieillira avant d'être exécutée, ce que la progression YAGNI déconseille.
-3. **Trancher I-3** en gate review. Je rejoins la recommandation du Scrum Master : réduire le périmètre du MVP plutôt que le Sprint 0. Sortir la story 3.6 et la moitié de la 3.5 ramène le MVP à ~4,7 jours sans compromettre le critère d'acceptation du PRD §13. Réduire le Sprint 0 reviendrait à reléguer le harnais de contract testing, exactement l'erreur que `contrat-api.md` documente comme ayant déjà coûté un NO-GO.
-4. **Ne pas lever H1 et H2 maintenant.** Elles ne bloquent pas le MVP, et les lever prématurément consommerait du superviseur pour un besoin qui n'existe pas encore.
+1. ~~Corriger I-1~~ — **fait** (port `GateChecker`).
+2. ~~Trancher I-2~~ — **tranché** : les 11 FR sont spécifiées au format long, la décision de périmètre complet ayant écarté l'option « hors périmètre ».
+3. ~~Trancher I-3~~ — **tranché** : périmètre complet. **Point de vigilance conservé** : la marge sur la target n'est plus que de 0,8 jour de superviseur. Le nombre de tours réellement consommés dans le Sprint 0 doit être mesuré et servir à recaler l'estimation de tous les sprints suivants, conformément au §9 de l'abaque.
+4. **Lever H1 et H2 avant les Sprints 3 et 4.** Le périmètre étant complet, elles ne sont plus optionnelles : H1 (projet OVH dédié aux bacs à sable) conditionne FR-014, H2 (environnements GitHub protégés) conditionne FR-021. Aucune ne bloque le démarrage, les deux bloquent l'achèvement.
 5. **Contresigner ADR-007** au frontmatter. La dérogation Tier 2 sur les bacs à sable a été approuvée oralement le 2026-08-29 ; elle doit porter une signature écrite, car c'est le seul assouplissement d'un garde-fou existant dans tout le dispositif.
 
 ---
 
-**Verdict : CONCERNS.** I-1 est résolue par rebouclage vers l'Architecte. Restent **deux décisions qui appartiennent au superviseur** et à personne d'autre : I-2 (périmètre de la matrice 4×N) et I-3 (dépassement de la target MVP). Aucune ne se tranche par un calcul.
+**Verdict : PASS.** Les trois incohérences sont closes : I-1 par rebouclage vers l'Architecte, I-2 par rebouclage vers le Product Manager, I-3 par décision du superviseur.
 
-Une fois I-2 tranchée dans l'option « déclarer hors périmètre » (le dénominateur du terme 4×N devient 52/52), le score passe à **100/100** et le verdict à **PASS**. Dans l'option « détailler les 11 FR », il y passe aussi, au prix d'environ une heure.
+Conformément à la condition de sortie de `BMAD-Conception.md`, la sortie validée déclenche la Phase 2 (chef de projet : WBS, Gantt, coût). Ce passage est une décision engageante : **il reste au superviseur à signer les cinq frontmatters et à contresigner ADR-007**, seule dérogation à un garde-fou existant du dispositif.
+
+Deux réserves accompagnent ce PASS sans l'empêcher :
+
+- **Marge de 7 % sur la target**, à surveiller dès le Sprint 0.
+- **H1 et H2 non levées**, bloquantes pour l'achèvement des Sprints 3 et 4, pas pour le démarrage.
 
 ---
 

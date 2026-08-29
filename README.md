@@ -60,9 +60,11 @@ Les livrables suivent la pipeline BMAD du framework Foyer. Chacun porte un front
 | [02](docs/bmad/02-prd.md) | PRD | Product Manager | à signer |
 | [03](docs/bmad/03-architecture.md) | Architecture + ADR | Architecte | à signer |
 | [04](docs/bmad/04-epics-stories.md) | Epics & Stories | Scrum Master | à signer |
-| [05](docs/bmad/05-validation.md) | Validation | Validateur | **CONCERNS**, 87/100 |
+| [05](docs/bmad/05-validation.md) | Validation | Validateur | **PASS**, 100/100 |
 
-Le rapport de validation rend un verdict CONCERNS, pas PASS : trois remédiations sont ouvertes, pour moins d'une demi-journée cumulée. Voir [§10](docs/bmad/05-validation.md).
+Le premier passage rendait CONCERNS à 88/100. Les trois incohérences sont closes : deux par rebouclage vers les personas concernés, une par décision du superviseur. Le second passage rend **PASS à 100/100**, avec deux réserves qui n'empêchent pas la sortie : une marge de 7 % sur la target de coût, et deux hypothèses à lever avant les Sprints 3 et 4.
+
+**Périmètre complet, pas de découpage MVP** (décision du superviseur, 2026-08-29) : les 24 exigences et les 10 capacités sont livrées. Les sprints ordonnent la fabrication, ils ne priorisent pas un abandon.
 
 ## Architecture prévue
 

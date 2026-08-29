@@ -247,7 +247,7 @@ Livre « la capacité de boucler ». Aucune story fonctionnelle ne démarre avan
   - `@security` — **le filtre de rédaction s'applique à la frontière du transport**, prouvé par un outil de test renvoyant volontairement un secret
 - **Couche** : Infrastructure · **Taille** : M · **Tours** : 3
 
-**Jalon MVP atteint à la fin de la story 4.2.** Critère d'acceptation : PRD §13.
+**Jalon de fabrication à la fin de la story 4.2** : la boucle est prouvée de bout en bout sur le socle de lecture. Ce n'est pas une livraison et rien ne s'arrête ici. Critère : PRD §13.1.
 
 ---
 
@@ -321,7 +321,7 @@ Livre « la capacité de boucler ». Aucune story fonctionnelle ne démarre avan
 
 ## Sprint 4 — Approbation et mise en ligne
 
-### Epic 7 — BC2/BC5 Tier 1 · Priorité **Must** (mais après le MVP)
+### Epic 7 — BC2/BC5 Tier 1 · Priorité **Must**
 
 #### Story 7.1 — Passerelle GitHub à environnement protégé *(FR-021)*
 - **Critères Gherkin** :
@@ -420,17 +420,16 @@ Répartition par couche dominante des 32 stories spécifiées (une story qui tra
 |---|---|---|---|
 | Stories | 28 à 34 | **38** | +12 % au-dessus de la borne haute |
 | Jours superviseur | 9 à 12 | **11,2** | dans la fourchette, proche de la borne haute |
-| Target MVP | ≤ 4 j superviseur | **Sprints 0 à 2 = 16,5 j ÷ 3 = 5,5 j** | **dépassement de 37 %** |
+| Target de challenge | ≤ 12 j superviseur, périmètre complet | **11,2 j** | **tenue**, avec 7 % de marge |
 
-**Le dépassement de la target MVP est le signal principal de ce livrable.** Il vient pour l'essentiel du Sprint 0, qui pèse 4,25 jours à lui seul, dont 2 pour le harnais de contract testing et la gate de pureté du domaine.
+**Décision du superviseur du 2026-08-29 : périmètre complet, pas de découpage MVP.**
 
-Trois lectures possibles, à trancher par le superviseur en gate review :
+Elle clôt l'arbitrage qui était ouvert dans la version précédente de ce livrable. Les trois options qui y étaient proposées portaient toutes sur la réduction d'un périmètre MVP ; elles sont sans objet. Deux conséquences directes :
 
-1. **Accepter le dépassement.** Le Sprint 0 est un investissement non récurrent qui bénéficiera aux projets Maury ultérieurs. La target de 4 jours était un prior, pas une mesure.
-2. **Réduire le périmètre du MVP** en sortant l'écart déclaré/réel (story 3.6) et la moitié des statuts de la story 3.5, ce qui ramène le MVP à ~4,7 jours. Le critère d'acceptation du PRD §13 reste tenu.
-3. **Refuser de réduire le Sprint 0.** C'est ma recommandation en tant que Scrum Master : la story 0.3 est ce qui rend l'archétype API-first tenable, et `contrat-api.md` documente qu'un contrat non matérialisé a déjà coûté un NO-GO en production. La reléguer serait exactement l'erreur que le skill décrit.
+1. **Le Sprint 0 n'est plus discutable.** Il l'était au motif qu'il pesait lourd devant une target MVP de 4 jours. Rapporté au périmètre complet, il représente 13 % de l'effort, ce qui est le prix normal d'un harnais.
+2. **La variable d'ajustement devient le ratio de supervision, pas le contenu.** L'abaque rappelle que ce ratio est le plafond du *répondre-de* et non un levier budgétaire : le tenir à 3 est une contrainte, et le franchir demanderait un pair supplémentaire, pas seulement plus d'agents.
 
-Recommandation retenue : **option 2 puis 1**, réduire le périmètre plutôt que le harnais.
+**Marge résiduelle : 0,8 jour de superviseur** sur une target de 12. C'est mince pour 38 stories. Le premier signal de dérive à surveiller est le nombre de tours réellement consommés par story dans le Sprint 0, qui recalera l'estimation de tous les suivants.
 
 ---
 

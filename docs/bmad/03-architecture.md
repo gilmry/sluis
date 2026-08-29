@@ -143,7 +143,7 @@ Middleware dans les adaptateurs (extracteur `Bearer`, filtre de rédaction en so
 - **Conteneur** : image **distroless** en production, binaire unique statique.
 - **Configuration et durcissement** : idempotents, derrière `ConfigRunner`. Ansible aujourd'hui, salt-ssh visé par `convergence-iac.md` : l'abstraction rend la bascule non structurante.
 - **GitOps** : la branche `main` est la source de vérité, cron toutes les 5 minutes, `deploy.sh --run`, fast-forward only, verrou `flock`, révision déployée mémorisée. Le serveur ne construit rien, il tire depuis GHCR.
-- **Progression YAGNI** : le MVP n'a ni base de données ni serveur HTTP. PostgreSQL et Traefik n'apparaissent qu'avec FR-023.
+- **Progression YAGNI** : le socle de lecture n'a ni base de données ni serveur HTTP. PostgreSQL et Traefik n'apparaissent qu'avec FR-023.
 - **Rollback** si les tests post-déploiement échouent. La sortie n'est jamais un état non vérifié.
 
 ### Mapping ISO 27001 → IaC
