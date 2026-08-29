@@ -1,0 +1,11 @@
+/target
+**/*.rs.bk
+.env
+*.tfstate*
+*.pem
+*.key
+kubeconfig
+/config/sluis.toml
+/deploy.log
+/.deploy.lock
+/.deployed_rev
