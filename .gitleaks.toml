@@ -1,0 +1,29 @@
+title = "Sluis — configuration gitleaks"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "ovh-application-secret"
+description = "Secret d'application OVH"
+regex = '''(?i)ovh_application_secret\s*[:=]\s*['\"]?[a-z0-9]{32}['\"]?'''
+tags = ["ovh", "secret"]
+
+[[rules]]
+id = "ovh-consumer-key"
+description = "Consumer key OVH"
+regex = '''(?i)ovh_consumer_key\s*[:=]\s*['\"]?[a-z0-9]{32}['\"]?'''
+tags = ["ovh", "secret"]
+
+[allowlist]
+description = """
+Le marqueur de rédaction et les valeurs de test ne sont pas des secrets.
+La liste reste courte à dessein : chaque entrée est un trou dans le plancher.
+"""
+regexes = [
+  '''«redacted»''',
+  '''SECRET-QUI-NE-DOIT-JAMAIS-SORTIR''',
+]
+paths = [
+  '''docs/bmad/.*\.md''',
+]

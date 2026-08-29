@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  plancher:
+    name: Plancher mécanique
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks doit voir l'historique, pas seulement le dernier commit :
+          # un secret poussé puis retiré reste fuité.
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Formatage
+        run: cargo fmt --check
+
+      - name: Clippy, avertissements bloquants
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      # La gate de pureté du domaine est un test d'intégration, donc rejouée
+      # ici sans outillage supplémentaire. Elle est nommée à part pour que son
+      # échec soit lisible dans l'interface plutôt que noyé dans la suite.
+      - name: Pureté du domaine
+        run: cargo test --test purete_domaine
+
+      - name: Tests
+        run: cargo test --all-features
+
+      # Aucune étape ci-dessus ne dépend de terraform, ansible, helm, kubectl,
+      # kustomize ni argocd : c'est NFR-06, et c'est ce qui permet à la CI de
+      # tourner sur une machine nue.
+      - name: Secrets (diff et historique)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Nomenclature CycloneDX
+        run: |
+          cargo install cargo-cyclonedx --locked
+          cargo cyclonedx --format json
+
+      - name: Publier la nomenclature
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: "**/*.cdx.json"
+          if-no-files-found: error
+
+  vulnerabilites:
+    name: Vulnérabilités des dépendances
+    runs-on: ubuntu-latest
+    # Exigence de jalon, pas plancher : produit un rapport, ne casse pas le
+    # build. Un finding est un jugement de triage, le bloquer le ferait
+    # contourner plutôt que corriger (gates.md).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit
