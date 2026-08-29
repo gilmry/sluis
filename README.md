@@ -2,7 +2,7 @@
 
 > L'écluse. Un orchestrateur d'infrastructure OVH exposé comme serveur MCP, qui laisse un agent IA mesurer, proposer et déployer sans jamais pouvoir nuire.
 
-**État : conception. Aucun code n'est encore écrit.** Ce dépôt ne contient pour l'instant que les livrables de conception BMAD, en attente de signature.
+**État : conception validée, fabrication en cours.** La gate BMAD a été franchie le 2026-08-29 : les cinq livrables sont signés, le Sprint 0 est ouvert.
 
 ---
 
@@ -63,6 +63,8 @@ Les livrables suivent la pipeline BMAD du framework Foyer. Chacun porte un front
 | [03](docs/bmad/03-architecture.md) | Architecture + ADR | Architecte | à signer |
 | [04](docs/bmad/04-epics-stories.md) | Epics & Stories | Scrum Master | à signer |
 | [05](docs/bmad/05-validation.md) | Validation | Validateur | **PASS**, 100/100 |
+
+Les cinq sont **signés au 2026-08-29**, ADR-006 et ADR-007 contresignés.
 
 Le premier passage rendait CONCERNS à 88/100. Les trois incohérences sont closes : deux par rebouclage vers les personas concernés, une par décision du superviseur. Le second passage rend **PASS à 100/100**, avec deux réserves qui n'empêchent pas la sortie : une marge de 7 % sur la target de coût, et deux hypothèses à lever avant les Sprints 3 et 4.
 

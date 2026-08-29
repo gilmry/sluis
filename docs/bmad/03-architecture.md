@@ -7,10 +7,11 @@ version: 0.1.0-draft
 genere_le: 2026-08-29
 depend_de: 02-prd.md
 signature_humaine:
-  nom:
-  role:
-  date:
-  verdict:
+  nom: Gilles Maury
+  role: Superviseur
+  date: 2026-08-29
+  verdict: accepté
+  canal: accord donné en session
 ---
 
 # Architecture Technique — Sluis
@@ -324,9 +325,11 @@ Pyramide : beaucoup d'unitaires sur le domaine (pur, rapide, sans doublure), des
 - Un bail **n'est jamais prolongé** : il expire. Un nouveau bail peut être pris tant que la fenêtre est ouverte.
 - Toute extension de cette dérogation, y compris l'allongement de la fenêtre par défaut, exige un nouvel ADR.
 
-**Durée de la fenêtre** : **90 jours** par défaut, paramétrable. Ce choix aligne la revue sur une cadence trimestrielle, la même que les revues ISO 27001, et fait qu'au rythme de fabrication prévu le superviseur affronte la décision une fois, de façon signifiante, plutôt que jamais ou trop souvent. `[valeur à confirmer par le superviseur]`
+**Durée de la fenêtre** : **90 jours**, confirmée par le superviseur le 2026-08-29. Ce choix aligne la revue sur une cadence trimestrielle, la même que les revues ISO 27001, et fait qu'au rythme de fabrication prévu le superviseur affronte la décision une fois, de façon signifiante, plutôt que jamais ou trop souvent. La valeur reste paramétrable ; la changer par configuration ne relâche pas la contrainte, seule sa suppression exigerait un nouvel ADR.
 
-**Statut** : approuvée par le superviseur le 2026-08-29, **avec ajout de la septième condition à sa demande**. À contresigner au frontmatter.
+**Première fenêtre** : ouverte le **2026-08-29**, close le **2026-11-27**. Passé cette date et sans renouvellement Tier 1, tout bail est refusé.
+
+**Statut** : **approuvée et contresignée** par le superviseur le 2026-08-29, avec ajout de la septième condition à sa demande.
 
 ### ADR-008 — La passerelle d'approbation est un environnement GitHub protégé *(point irréversible)*
 

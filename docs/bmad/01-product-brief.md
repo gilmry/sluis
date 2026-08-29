@@ -6,10 +6,11 @@ projet: Sluis
 version: 0.1.0-draft
 genere_le: 2026-08-29
 signature_humaine:
-  nom:
-  role:
-  date:
-  verdict:
+  nom: Gilles Maury
+  role: Superviseur
+  date: 2026-08-29
+  verdict: accepté
+  canal: accord donné en session
 ---
 
 # Product Brief — Sluis

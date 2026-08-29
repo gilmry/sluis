@@ -7,10 +7,11 @@ version: 0.1.0-draft
 genere_le: 2026-08-29
 depend_de: [01-product-brief.md, 02-prd.md, 03-architecture.md, 04-epics-stories.md]
 signature_humaine:
-  nom:
-  role:
-  date:
-  verdict:
+  nom: Gilles Maury
+  role: Superviseur
+  date: 2026-08-29
+  verdict: accepté
+  canal: accord donné en session
 ---
 
 # Rapport de Validation croisée — Sluis
@@ -117,13 +118,12 @@ Le Brief §18 fixait une target de 4 jours de superviseur pour un MVP ; la backl
 **I-4 — Hypothèses bloquantes non levées** *(→ superviseur)*
 H1 (projet OVH dédié aux bacs à sable) bloque FR-014, et H2 (environnements GitHub protégés sur les dépôts cibles) bloque FR-021. Aucune ne bloque le démarrage. Le périmètre étant complet, elles ne sont plus optionnelles : elles doivent être levées avant les Sprints 3 et 4 respectivement.
 
-**I-6 — Durée de la fenêtre de dérogation non fixée** *(→ superviseur, mineure mais bloquante pour la story 5.4)*
-ADR-007 propose **90 jours** par défaut, aligné sur une cadence de revue trimestrielle, et marque la valeur `[à confirmer par le superviseur]`. Le mécanisme ne dépend pas du chiffre, mais la story 5.4 a besoin d'une valeur pour son test `@negative` sur la durée maximale configurée.
-**Remédiation** : confirmer ou corriger la durée avant le Sprint 3. Coût : une phrase.
+**I-6 — Durée de la fenêtre de dérogation non fixée** *(→ superviseur)* — **CLOSE**
+**Décision du superviseur, 2026-08-29 : 90 jours.** Première fenêtre ouverte le 2026-08-29, close le 2026-11-27. La story 5.4 dispose de la valeur dont son test `@negative` avait besoin.
 
-**I-7 — La marge sur la target tombe à 4 %** *(→ superviseur)*
+**I-7 — La marge sur la target tombe à 4 %** *(→ superviseur)* — **CLOSE PAR DÉCISION**
 L'ajout de la story 5.4 coûte 0,75 jour et ramène la marge de 0,8 à 0,5 jour de superviseur sur une target de 12. Le périmètre n'étant plus négociable, le contenu ne peut plus servir d'amortisseur.
-**Remédiation** : deux options, aucune ne consistant à rogner le périmètre. Soit relever la target en connaissance de cause, soit acter que la réserve d'émergence de 20 % est le vrai amortisseur et suivre sa consommation comme indicateur principal. **Ma recommandation : la seconde**, car elle ne déplace pas la cible et rend la dérive observable au lieu de l'absorber silencieusement.
+**Décision du superviseur, 2026-08-29 : recommandation retenue.** La target reste à 12 jours et **la réserve d'émergence de 20 % est actée comme l'amortisseur**. Sa consommation devient l'**indicateur de pilotage principal** : c'est elle, et non le nombre de jours écoulés, qui signale la dérive. Elle est suivie dès le Sprint 0 et rapportée à chaque fin de sprint.
 
 **I-5 — Ambiguïté résiduelle sur le nom d'hôte** *(mineure)*
 Le PRD H3 note que le superviseur a mentionné `n8n.ecosolva com` alors que la convention existante est `.ecosolva.org`. Traité par une variable `SLUIS_DOMAIN`, donc sans impact structurel. À confirmer avant la story 8.3.
@@ -148,11 +148,13 @@ Conformément à la condition de sortie de `BMAD-Conception.md`, la sortie valid
 
 **Note du Validateur sur la septième condition.** Elle corrige un défaut que le premier passage n'avait pas vu : ADR-007 déléguait une autorité sans jamais prévoir qu'elle soit redécidée. Une dérogation permanente n'est plus une dérogation, c'est une règle, et elle aurait fini par survivre à la raison qui la justifiait sans que personne n'ait à en répondre. La rendre expirée par défaut et renouvelable uniquement par le gate qu'elle relâche est la construction la plus solide du dispositif : **l'autorité de déléguer n'est elle-même jamais déléguée.**
 
-Trois réserves accompagnent ce PASS sans l'empêcher :
+**Gate review du 2026-08-29 : les cinq livrables sont signés par le superviseur et ADR-007 est contresigné.** I-6 et I-7 sont closes par décision. BMAD est franchi.
 
-- **Marge de 4 % sur la target** (I-7), à surveiller dès le Sprint 0.
-- **Durée de la fenêtre à confirmer** (I-6), avant le Sprint 3.
-- **H1 et H2 non levées**, bloquantes pour l'achèvement des Sprints 3 et 4, pas pour le démarrage.
+Une seule réserve subsiste, et elle ne bloque pas le démarrage :
+
+- **H1 et H2 non levées.** H1 (projet OVH dédié aux bacs à sable) conditionne l'achèvement du Sprint 3, H2 (environnements GitHub protégés sur les dépôts cibles) celui du Sprint 4. Le périmètre étant complet, elles ne sont plus optionnelles : elles bloquent l'achèvement, pas le départ.
+
+**Indicateur de pilotage retenu** : la consommation de la réserve d'émergence (20 %, soit 6 stories et 5,75 jours), rapportée à chaque fin de sprint. La marge sur la target n'étant que de 0,5 jour, c'est cette réserve, et non le calendrier, qui absorbe l'imprévu.
 
 ---
 
