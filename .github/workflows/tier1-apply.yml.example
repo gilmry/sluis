@@ -1,0 +1,61 @@
+# Gabarit à déposer dans le dépôt CIBLE, pas dans Sluis.
+#
+# C'est la moitié GitHub d'ADR-008. Sluis déclenche ce workflow en passant
+# l'empreinte du plan ; le travail est lié à un environnement protégé, donc
+# GitHub le bloque et notifie les relecteurs requis. À l'approbation seulement,
+# la mutation s'exécute — avec des secrets qui vivent ICI, et jamais dans Sluis.
+#
+# Propriété obtenue : un Sluis compromis ne peut que demander. Il n'a pas les
+# clés. Ne jamais retirer la ligne `environment:`, c'est elle qui porte le gate.
+
+name: Tier 1 — mutation approuvée
+
+on:
+  workflow_dispatch:
+    inputs:
+      empreinte:
+        description: "Empreinte du plan de changement (liée à l'approbation)"
+        required: true
+      action:
+        description: "terraform_apply, helm_upgrade, mise_en_ligne…"
+        required: true
+      environnement:
+        description: "dev, integration, staging, production"
+        required: true
+      cible:
+        description: "Cible du plan"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  appliquer:
+    runs-on: ubuntu-latest
+    # ─────────────────────────────────────────────────────────
+    # LE GATE. L'environnement doit être configuré dans les réglages du dépôt
+    # avec « Required reviewers ». Sans cette ligne, le travail s'exécute sans
+    # approbation et toute la garantie d'ADR-008 tombe.
+    environment: ${{ inputs.environnement }}
+    # ─────────────────────────────────────────────────────────
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tracer la demande
+        run: |
+          echo "Empreinte    : ${{ inputs.empreinte }}"
+          echo "Action       : ${{ inputs.action }}"
+          echo "Environnement: ${{ inputs.environnement }}"
+          echo "Cible        : ${{ inputs.cible }}"
+          echo "Approuvé par : ${{ github.actor }}"
+
+      - name: Appliquer
+        env:
+          # Ces secrets vivent dans GitHub Actions. Sluis ne les voit jamais.
+          OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
+          KUBECONFIG_CONTENU: ${{ secrets.KUBECONFIG }}
+        run: |
+          echo "Remplacer par la commande réelle, par exemple :"
+          echo "  terraform -chdir=${{ inputs.cible }} apply -auto-approve"
+          echo "L'empreinte ${{ inputs.empreinte }} doit être vérifiée ici contre"
+          echo "le plan, pour qu'une approbation ne vaille que pour ce plan."

@@ -5,8 +5,10 @@
 
 pub mod audit;
 pub mod bac_a_sable;
+pub mod charge;
 pub mod diagnostic;
 pub mod fs_inventaire;
+pub mod github;
 pub mod mcp;
 pub mod ovh;
 pub mod process;

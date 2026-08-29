@@ -24,6 +24,33 @@ signature_humaine:
 
 ---
 
+## Avancement au 2026-08-29
+
+| Sprint | Stories | État |
+|---|---|---|
+| Sprint 0 — Fondations | 5/5 | **livré**, `make ci` vert, CI GitHub verte |
+| Sprint 1 — Inventaire, Autorisation | 6/6 | **livré** |
+| Sprint 2 — Exécution, Transport MCP | 8/8 | **livré** |
+| Sprint 3 — Bac à sable, Capacité | 7/7 | **livré** |
+| Sprint 4 — Tier 1, Accès distant | 2/5 | passerelle et mise en ligne livrées ; OAuth, transport HTTP et déploiement à finir |
+
+Le critère d'acceptation du PRD §13.1 est atteint : `sluis_inventory` ressort
+3 topologies, 4 environnements, 3 profils et 4 modules d'une arborescence de
+référence, sans aucune saisie.
+
+**Écarts assumés par rapport au livrable, chacun documenté dans le code :**
+
+- La gate de pureté du domaine est un **test d'intégration** et non un script
+  externe : elle tourne à l'identique en local et en CI, ne dépend d'aucun
+  outillage absent, et ne se contourne pas par `--no-verify`.
+- Le client OVH utilise **`ureq` et non un client asynchrone**, et les tests un
+  **serveur d'essai sur `TcpListener` et non wiremock** : les deux évitent un
+  runtime tokio pour un gain nul, ce que la sobriété de la méthode recommande.
+- La lecture YAML est un **sous-ensemble écrit à la main**, Sluis ne lisant que
+  cinq clés d'un contrat connu.
+
+---
+
 ## Sprint 0 — Fondations *(la story habilitante — précède tout)*
 
 Livre « la capacité de boucler ». Aucune story fonctionnelle ne démarre avant que ce sprint soit vert.

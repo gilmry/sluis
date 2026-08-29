@@ -1,0 +1,45 @@
+# Déploiement de Sluis sur le serveur ecosolva.
+#
+# Convention reprise telle quelle de derniere-chance et d'Elevia : réseau
+# Traefik externe et partagé, image tirée depuis GHCR, le serveur ne construit
+# rien. Voir deploy.sh pour la boucle GitOps.
+
+services:
+  sluis:
+    profiles: ["prod"]
+    image: ${SLUIS_IMAGE:-ghcr.io/gilmry/sluis/server:latest}
+    container_name: sluis
+    restart: unless-stopped
+    environment:
+      SLUIS_CONFIG: /app/sluis.toml
+      # Les trois identifiants OVH viennent de l'environnement, jamais du
+      # fichier de configuration : un secret dans un fichier finit dans Git.
+      OVH_APPLICATION_KEY: ${OVH_APPLICATION_KEY:-}
+      OVH_APPLICATION_SECRET: ${OVH_APPLICATION_SECRET:-}
+      OVH_CONSUMER_KEY: ${OVH_CONSUMER_KEY:-}
+      OVH_ENDPOINT: ${OVH_ENDPOINT:-https://eu.api.ovh.com/1.0}
+      # Ce jeton n'ouvre qu'un droit : déclencher un workflow. Il ne donne
+      # aucun accès à l'infrastructure, qui reste derrière l'environnement
+      # GitHub protégé (ADR-008).
+      SLUIS_GITHUB_TOKEN: ${SLUIS_GITHUB_TOKEN:-}
+    volumes:
+      - ./sluis.toml:/app/sluis.toml:ro
+      - sluis_donnees:/app/donnees
+    networks:
+      - ecosolva-web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ecosolva-web"
+      - "traefik.http.routers.sluis.rule=Host(`${SLUIS_DOMAIN:-sluis.ecosolva.org}`)"
+      - "traefik.http.routers.sluis.entrypoints=websecure"
+      - "traefik.http.routers.sluis.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sluis.loadbalancer.server.port=8080"
+
+volumes:
+  sluis_donnees:
+
+networks:
+  # Réseau partagé avec Elevia et derniere-chance. Créé hors de ce dépôt
+  # (`docker network create ecosolva-web`), jamais possédé par lui.
+  ecosolva-web:
+    external: true

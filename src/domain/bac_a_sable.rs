@@ -174,9 +174,7 @@ impl BailBacASable {
     ) -> Result<Self, AppError> {
         if ttl > ttl_maximal {
             return Err(AppError::Configuration {
-                detail: format!(
-                    "TTL demandé {ttl} au-delà du maximum configuré {ttl_maximal}"
-                ),
+                detail: format!("TTL demandé {ttl} au-delà du maximum configuré {ttl_maximal}"),
             });
         }
         if estimation_depense > plafond.montant() {

@@ -5,4 +5,6 @@
 //! porte parfois un invariant à elle seule, comme [`ports::AuditLog`] qui
 //! n'expose qu'`append` et rend donc l'altération inexprimable.
 
+pub mod campagne;
+pub mod mise_en_ligne;
 pub mod ports;

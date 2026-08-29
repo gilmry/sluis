@@ -102,8 +102,7 @@ impl RegistreBaux {
         let Ok(mut baux) = self.baux.lock() else {
             return Vec::new();
         };
-        let (echus, vivants): (Vec<_>, Vec<_>) =
-            baux.drain(..).partition(|b| b.expire(maintenant));
+        let (echus, vivants): (Vec<_>, Vec<_>) = baux.drain(..).partition(|b| b.expire(maintenant));
         *baux = vivants;
         echus
     }

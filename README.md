@@ -2,7 +2,15 @@
 
 > L'écluse. Un orchestrateur d'infrastructure OVH exposé comme serveur MCP, qui laisse un agent IA mesurer, proposer et déployer sans jamais pouvoir nuire.
 
-**État : conception validée, fabrication en cours.** La gate BMAD a été franchie le 2026-08-29 : les cinq livrables sont signés, le Sprint 0 est ouvert.
+**État : fabrication en cours.** Gate BMAD franchie le 2026-08-29, les cinq livrables sont signés. Sprints 0 à 2 livrés, Sprints 3 et 4 en cours.
+
+```
+Sprint 0  Fondations                    ██████████  5/5
+Sprint 1  Inventaire · Autorisation     ██████████  6/6
+Sprint 2  Exécution · Transport MCP     ██████████  8/8
+Sprint 3  Bac à sable · Capacité        ███████░░░  en cours
+Sprint 4  Tier 1 · Accès distant        ████░░░░░░  en cours
+```
 
 ---
 
@@ -70,7 +78,23 @@ Le premier passage rendait CONCERNS à 88/100. Les trois incohérences sont clos
 
 **Périmètre complet, pas de découpage MVP** (décision du superviseur, 2026-08-29) : les 25 exigences et les 11 capacités sont livrées. Les sprints ordonnent la fabrication, ils ne priorisent pas un abandon.
 
-## Architecture prévue
+## Utilisation
+
+```sh
+# Diagnostic : ce que la machine sait faire, sans rien révéler des identifiants
+cargo run --bin sluis -- doctor
+
+# Matrice d'infrastructure d'un dépôt, découverte sans aucune saisie
+cargo run --bin sluis -- inventory /chemin/vers/infrastructure
+
+# Serveur MCP, à déclarer dans un .mcp.json
+cargo run --bin sluis-mcp
+```
+
+Sur une machine à petite racine, passer par un conteneur :
+`make ci CARGO=kcargo`.
+
+## Architecture
 
 Rust 2021, hexagonale stricte, archétype **stateful × API-first**.
 
