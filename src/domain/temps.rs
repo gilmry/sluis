@@ -15,7 +15,7 @@ use std::fmt;
 use serde::Serialize;
 
 /// Un instant, en secondes depuis l'époque Unix.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, serde::Deserialize)]
 pub struct Horodatage(i64);
 
 impl Horodatage {

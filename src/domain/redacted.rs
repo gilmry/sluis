@@ -33,7 +33,8 @@ pub const MARQUEUR: &str = "«redacted»";
 /// assert_eq!(format!("{cle}"), "«redacted»");
 /// assert_eq!(cle.exposer(), "valeur-sensible");
 /// ```
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(transparent)]
 pub struct Redacted<T> {
     valeur: T,
 }

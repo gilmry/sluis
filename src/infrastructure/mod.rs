@@ -10,6 +10,8 @@ pub mod diagnostic;
 pub mod fs_inventaire;
 pub mod github;
 pub mod mcp;
+pub mod oauth_depot;
 pub mod ovh;
 pub mod process;
+pub mod serveur_http;
 pub mod yaml_plat;

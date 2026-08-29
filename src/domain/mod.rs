@@ -12,6 +12,8 @@ pub mod convergence;
 pub mod diagnostic;
 pub mod error;
 pub mod inventaire;
+pub mod jeton_acces;
+pub mod oauth;
 pub mod ovh;
 pub mod redacted;
 pub mod temps;
@@ -29,6 +31,11 @@ pub use diagnostic::{EtatBinaire, Identifiant, Moteur, RapportDiagnostic};
 pub use error::AppError;
 pub use inventaire::{
     Cellule, Environnement, MatriceInfrastructure, ModuleTerraform, ProfilCluster, Topologie,
+};
+pub use jeton_acces::{hmac_sha256, Revendications};
+pub use oauth::{
+    base64url_sans_remplissage, empreinte_sha256, verifier_pkce, ClientOAuth, CodeAutorisation,
+    DemandeCode, JetonRafraichissement, Portee,
 };
 pub use ovh::{
     CoutCourant, EnregistrementDns, InstanceOvh, ListeAutorisation, ProjetBacASable, ProjetOvh,

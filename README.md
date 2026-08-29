@@ -2,15 +2,19 @@
 
 > L'écluse. Un orchestrateur d'infrastructure OVH exposé comme serveur MCP, qui laisse un agent IA mesurer, proposer et déployer sans jamais pouvoir nuire.
 
-**État : fabrication en cours.** Gate BMAD franchie le 2026-08-29, les cinq livrables sont signés. Sprints 0 à 2 livrés, Sprints 3 et 4 en cours.
+**État : fabrication terminée.** Gate BMAD franchie le 2026-08-29, les cinq livrables sont signés. Sprints 0 à 2 livrés, Sprints 3 et 4 en cours.
 
 ```
 Sprint 0  Fondations                    ██████████  5/5
 Sprint 1  Inventaire · Autorisation     ██████████  6/6
 Sprint 2  Exécution · Transport MCP     ██████████  8/8
-Sprint 3  Bac à sable · Capacité        ███████░░░  en cours
-Sprint 4  Tier 1 · Accès distant        ████░░░░░░  en cours
+Sprint 3  Bac à sable · Capacité        ██████████  7/7
+Sprint 4  Tier 1 · Accès distant        ██████████  5/5
 ```
+
+**31 stories livrées, 187 tests verts.** Restent deux hypothèses à lever avant
+de pouvoir prouver le dispositif contre du réel : un projet OVH dédié aux bacs
+à sable (H1), et un environnement GitHub protégé sur les dépôts cibles (H2).
 
 ---
 
@@ -81,6 +85,9 @@ Le premier passage rendait CONCERNS à 88/100. Les trois incohérences sont clos
 ## Utilisation
 
 ```sh
+# Serveur MCP distant (OAuth 2.1 + PKCE, transport Streamable HTTP)
+cargo run --bin sluis-server
+
 # Diagnostic : ce que la machine sait faire, sans rien révéler des identifiants
 cargo run --bin sluis -- doctor
 

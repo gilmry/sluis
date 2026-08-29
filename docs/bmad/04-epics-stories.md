@@ -32,7 +32,9 @@ signature_humaine:
 | Sprint 1 — Inventaire, Autorisation | 6/6 | **livré** |
 | Sprint 2 — Exécution, Transport MCP | 8/8 | **livré** |
 | Sprint 3 — Bac à sable, Capacité | 7/7 | **livré** |
-| Sprint 4 — Tier 1, Accès distant | 2/5 | passerelle et mise en ligne livrées ; OAuth, transport HTTP et déploiement à finir |
+| Sprint 4 — Tier 1, Accès distant | 5/5 | **livré** |
+
+**Les 31 stories sont livrées.** 187 tests, `make ci` vert, clippy en `-D warnings`.
 
 Le critère d'acceptation du PRD §13.1 est atteint : `sluis_inventory` ressort
 3 topologies, 4 environnements, 3 profils et 4 modules d'une arborescence de
@@ -48,6 +50,24 @@ référence, sans aucune saisie.
   runtime tokio pour un gain nul, ce que la sobriété de la méthode recommande.
 - La lecture YAML est un **sous-ensemble écrit à la main**, Sluis ne lisant que
   cinq clés d'un contrat connu.
+- Le serveur HTTP utilise **`tiny_http`**, synchrone, pour la même raison.
+- Le dépôt OAuth est **persisté sur fichier et non dans PostgreSQL**, contrairement
+  à ce que prévoyait ADR-006. Le volume est de quelques clients et quelques
+  jetons, et `sqlx` en vérification à la compilation exigerait une base vivante
+  au build, ce qui contredirait NFR-06. La durabilité de la révocation et
+  l'atomicité de la consommation d'un code sont conservées, et le port rend la
+  bascule sans effet sur le reste du code.
+- Le jeton d'accès est un **jeton signé HMAC-SHA256 maison** plutôt qu'un JWT :
+  le format complet de JWT apporterait des algorithmes inutilisés et une
+  négociation dont on ne veut pas. Il n'est, comme un JWT, jamais persisté.
+
+**Ce qui reste hors de portée d'un test automatique**, et attend H1 et H2 :
+
+- une campagne de charge contre une infrastructure OVH réellement provisionnée
+  (H1 : projet OVH dédié aux bacs à sable) ;
+- un cycle d'approbation Tier 1 de bout en bout contre un environnement GitHub
+  réellement protégé (H2). La passerelle est écrite et testée par doublure, mais
+  le blocage effectif du travail par GitHub ne se prouve que sur un vrai dépôt.
 
 ---
 

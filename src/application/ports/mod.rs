@@ -7,6 +7,7 @@ mod gates;
 mod horloge;
 mod inventaire;
 mod moteurs;
+mod oauth;
 mod ovh;
 mod passerelle;
 
@@ -19,5 +20,6 @@ pub use inventaire::DepotInventaire;
 pub use moteurs::{
     Executeur, MoteurArgocd, MoteurHelm, MoteurKustomize, MoteurTerraform, SortieProcessus,
 };
+pub use oauth::DepotOAuth;
 pub use ovh::FournisseurOvh;
 pub use passerelle::{EtatApprobation, PasserelleApprobation};
