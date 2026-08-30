@@ -8,8 +8,8 @@
 
 use std::sync::Arc;
 
-use crate::application::ports::{MoteurCharge, ReglagePalier};
-use crate::domain::{AppError, MesureCapacite, Palier};
+use crate::application::ports::{DestructeurBail, MoteurCharge, Provisionneur, ReglagePalier};
+use crate::domain::{AppError, BailBacASable, CibleEphemere, MesureCapacite, Palier};
 
 /// L'escalier de charge par défaut, calqué sur le corpus existant.
 pub fn escalier_par_defaut() -> Vec<ReglagePalier> {
@@ -41,6 +41,15 @@ pub struct ResultatCampagne {
     pub paliers_joues: Vec<Palier>,
     /// Palier où la campagne s'est arrêtée, le cas échéant.
     pub interrompue_a: Option<Palier>,
+    /// Cible chargée, quand la campagne a provisionné elle-même.
+    pub cible: Option<CibleEphemere>,
+    /// Motif d'un échec de destruction.
+    ///
+    /// Porté par le résultat plutôt que remonté en erreur : les mesures d'une
+    /// campagne réussie ne doivent pas disparaître parce que le nettoyage a
+    /// échoué. L'inverse serait pire encore, taire l'échec, d'où ce champ que
+    /// l'appelant ne peut pas ignorer sans le décider.
+    pub echec_destruction: Option<String>,
 }
 
 /// Conduit une campagne.
@@ -105,7 +114,58 @@ impl Campagne {
             mesures,
             paliers_joues,
             interrompue_a,
+            cible: None,
+            echec_destruction: None,
         }
+    }
+
+    /// Conduit une campagne de bout en bout : admission, provisionnement,
+    /// escalier, destruction.
+    ///
+    /// **La destruction a lieu sur tous les chemins de sortie**, y compris
+    /// celui qu'on oublie d'ordinaire : l'échec du provisionnement. Un apply
+    /// interrompu a pu créer des ressources avant de rendre son erreur, et ne
+    /// pas les détruire, c'est facturer.
+    ///
+    /// Ce cas d'usage ne remplace pas la garde RAII de l'appelant, il la
+    /// double. La garde couvre ce qu'aucun code de sortie ne couvre, la
+    /// panique ; celle-ci couvre ce qu'une garde seule rendrait implicite,
+    /// l'ordre des opérations. Les deux appellent le même destructeur, qui est
+    /// idempotent pour cette raison.
+    pub fn conduire(
+        &self,
+        bail: &BailBacASable,
+        provisionneur: &dyn Provisionneur,
+        destructeur: &dyn DestructeurBail,
+        escalier: &[ReglagePalier],
+        secondes_avant_fermeture_fenetre: i64,
+    ) -> Result<ResultatCampagne, AppError> {
+        // Avant toute ressource : ce qui peut être refusé l'est ici, alors
+        // qu'il n'y a encore rien à nettoyer.
+        self.verifier_admission(
+            Self::duree_totale(escalier),
+            secondes_avant_fermeture_fenetre,
+        )?;
+
+        let cible = match provisionneur.provisionner(bail) {
+            Ok(cible) => cible,
+            Err(erreur) => {
+                // On ne remonte pas avant d'avoir nettoyé. L'échec de
+                // destruction est signalé sans masquer la cause première.
+                if let Err(echec) = destructeur.detruire(bail) {
+                    eprintln!(
+                        "sluis : provisionnement échoué et destruction impossible ({echec}) — \
+                         le chien de garde reprendra la main à l'échéance"
+                    );
+                }
+                return Err(erreur);
+            }
+        };
+
+        let mut resultat = self.jouer(cible.adresse(), escalier);
+        resultat.echec_destruction = destructeur.detruire(bail).err().map(|e| e.to_string());
+        resultat.cible = Some(cible);
+        Ok(resultat)
     }
 
     /// Durée totale de l'escalier, en secondes.

@@ -232,3 +232,40 @@ impl BailBacASable {
         self.plafond
     }
 }
+
+/// Une cible provisionnée, prête à recevoir de la charge.
+///
+/// Ne peut pas exister sans adresse : une campagne lancée contre une adresse
+/// vide mesurerait le vide, et rendrait des chiffres qu'on croirait valides.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CibleEphemere {
+    adresse: String,
+    sorties: Vec<(String, String)>,
+}
+
+impl CibleEphemere {
+    /// Construit la cible à partir des sorties du module.
+    pub fn new(
+        adresse: impl Into<String>,
+        sorties: Vec<(String, String)>,
+    ) -> Result<Self, AppError> {
+        let adresse = adresse.into();
+        if adresse.trim().is_empty() {
+            return Err(AppError::Configuration {
+                detail: "adresse de cible vide : une campagne sans cible mesurerait le vide"
+                    .to_string(),
+            });
+        }
+        Ok(Self { adresse, sorties })
+    }
+
+    /// Adresse de la cible.
+    pub fn adresse(&self) -> &str {
+        &self.adresse
+    }
+
+    /// Toutes les sorties du module, conservées pour le compte rendu.
+    pub fn sorties(&self) -> &[(String, String)] {
+        &self.sorties
+    }
+}

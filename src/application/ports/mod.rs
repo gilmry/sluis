@@ -10,6 +10,7 @@ mod moteurs;
 mod oauth;
 mod ovh;
 mod passerelle;
+mod provisionnement;
 
 pub use audit_log::AuditLog;
 pub use charge::{MoteurCharge, ReglagePalier};
@@ -23,3 +24,4 @@ pub use moteurs::{
 pub use oauth::DepotOAuth;
 pub use ovh::FournisseurOvh;
 pub use passerelle::{EtatApprobation, PasserelleApprobation};
+pub use provisionnement::{DestructeurBail, Provisionneur};

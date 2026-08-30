@@ -21,7 +21,9 @@ pub mod valeur_sure;
 
 pub use audit::{AuditEntry, Tier};
 pub use autorisation::{Action, Empreinte, JetonChangement, JetonConsomme, PlanChangement};
-pub use bac_a_sable::{BailBacASable, DerogationValide, FenetreDerogation, PlafondDepense};
+pub use bac_a_sable::{
+    BailBacASable, CibleEphemere, DerogationValide, FenetreDerogation, PlafondDepense,
+};
 pub use capacite::{
     verifier_coherence_latences, MesureCapacite, Palier, Prior, Provenance, RapportRecalage,
     Recalage,

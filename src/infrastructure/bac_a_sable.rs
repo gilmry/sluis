@@ -16,14 +16,13 @@
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use crate::domain::{AppError, BailBacASable, Horodatage};
+use crate::application::ports::{MoteurTerraform, Provisionneur};
 
-/// Détruit une infrastructure éphémère.
-pub trait DestructeurBail: Send + Sync {
-    /// Détruit le bail. Doit être idempotent : le chien de garde et la garde
-    /// RAII peuvent tous deux l'appeler pour le même bail.
-    fn detruire(&self, bail: &BailBacASable) -> Result<(), AppError>;
-}
+// Le port vit dans `application::ports` ; il reste visible ici parce que la
+// garde RAII et le chien de garde, qui sont des mécanismes d'infrastructure,
+// s'en servent, et parce que les appelants le nomment depuis ce module.
+pub use crate::application::ports::DestructeurBail;
+use crate::domain::{AppError, BailBacASable, CibleEphemere, Horodatage, ValeurSure};
 
 /// Garde RAII : détruit le bail à la sortie de portée, panique comprise.
 pub struct GardeBail {
@@ -170,5 +169,64 @@ impl ChienDeGarde {
     /// Nombre d'échecs de destruction.
     pub fn echecs(&self) -> usize {
         self.echecs.load(Ordering::SeqCst)
+    }
+}
+
+/// Provisionne et détruit une infrastructure éphémère avec Terraform.
+///
+/// Un seul module jetable, donné à la construction : le bac à sable n'a pas
+/// vocation à décrire des topologies, il en loue une, la charge et l'efface.
+pub struct BacASableTerraform<M: MoteurTerraform> {
+    moteur: M,
+    module: ValeurSure,
+    sortie_adresse: String,
+}
+
+impl<M: MoteurTerraform> BacASableTerraform<M> {
+    /// Construit l'adaptateur.
+    ///
+    /// `sortie_adresse` nomme la sortie du module qui porte l'adresse à
+    /// charger, par exemple `vps_ip`.
+    pub fn new(moteur: M, module: ValeurSure, sortie_adresse: impl Into<String>) -> Self {
+        Self {
+            moteur,
+            module,
+            sortie_adresse: sortie_adresse.into(),
+        }
+    }
+}
+
+impl<M: MoteurTerraform> Provisionneur for BacASableTerraform<M> {
+    fn provisionner(&self, bail: &BailBacASable) -> Result<CibleEphemere, AppError> {
+        // L'ordre n'est pas cosmétique : un apply sans init échoue sur un
+        // module dont les fournisseurs ne sont pas téléchargés, et lire les
+        // sorties avant l'apply rendrait celles du tour précédent.
+        self.moteur.initialiser(&self.module)?;
+        self.moteur.appliquer(&self.module, bail)?;
+        let sorties = self.moteur.sorties(&self.module)?;
+
+        let adresse = sorties
+            .iter()
+            .find(|(nom, _)| nom == &self.sortie_adresse)
+            .map(|(_, valeur)| valeur.clone())
+            .ok_or_else(|| AppError::Configuration {
+                detail: format!(
+                    "le module ne déclare aucune sortie « {} » : sans adresse, \
+                     la campagne n'a pas de cible",
+                    self.sortie_adresse
+                ),
+            })?;
+
+        CibleEphemere::new(adresse, sorties)
+    }
+}
+
+impl<M: MoteurTerraform> DestructeurBail for BacASableTerraform<M> {
+    fn detruire(&self, _bail: &BailBacASable) -> Result<(), AppError> {
+        // Idempotent par construction : `terraform destroy` sur un état déjà
+        // vide rend « 0 destroyed » et réussit. La garde RAII et le chien de
+        // garde peuvent donc réclamer la même destruction sans qu'un nettoyage
+        // réussi se lise comme une panne.
+        self.moteur.detruire(&self.module).map(|_| ())
     }
 }
