@@ -46,6 +46,17 @@ impl GardeBail {
         &self.bail
     }
 
+    /// Désarme la garde : la destruction est **acquise par ailleurs**.
+    ///
+    /// À n'appeler qu'après une destruction réussie, sans quoi le filet est
+    /// retiré alors que l'infrastructure existe encore. Le pendant est utile :
+    /// si la destruction a échoué, ne pas désarmer laisse la garde retenter à
+    /// la sortie de portée, ce qui donne une seconde chance sans rien coder de
+    /// plus.
+    pub fn desarmer(&self) {
+        self.detruit.store(true, Ordering::SeqCst);
+    }
+
     /// Détruit explicitement, avant la fin de portée.
     pub fn detruire_maintenant(&self) -> Result<(), AppError> {
         if self.detruit.swap(true, Ordering::SeqCst) {

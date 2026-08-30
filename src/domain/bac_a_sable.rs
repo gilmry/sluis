@@ -124,6 +124,46 @@ impl FenetreDerogation {
         })
     }
 
+    /// Sceau de la fenêtre, pour la persistance.
+    ///
+    /// Le sceau tient, à la relecture, le rôle que le jeton consommé tient à
+    /// l'ouverture : il n'est calculable qu'avec le secret de signature du
+    /// serveur. Persister une fenêtre sans lui reviendrait à faire d'une
+    /// écriture de fichier un acte de Tier 1.
+    pub fn sceau(&self, secret: &[u8]) -> String {
+        let message = format!(
+            "{}|{}|{}",
+            self.ouverte_le.secondes(),
+            self.close_le.secondes(),
+            self.approbateur
+        );
+        let empreinte = crate::domain::hmac_sha256(secret, message.as_bytes());
+        empreinte.iter().map(|o| format!("{o:02x}")).collect()
+    }
+
+    /// Restaure une fenêtre persistée, **sur vérification de son sceau**.
+    ///
+    /// Réservée à la relecture d'un dépôt. Un sceau qui ne correspond pas fait
+    /// échouer la restauration, donc referme la fenêtre : c'est le
+    /// comportement voulu, y compris quand la cause est une rotation du secret
+    /// plutôt qu'une falsification. Fail-closed, un nouvel acte de Tier 1 est
+    /// alors requis.
+    pub fn restaurer(
+        ouverte_le: Horodatage,
+        close_le: Horodatage,
+        approbateur: String,
+        sceau: &str,
+    ) -> FenetreScellee {
+        FenetreScellee {
+            fenetre: Self {
+                ouverte_le,
+                close_le,
+                approbateur,
+            },
+            sceau: sceau.to_string(),
+        }
+    }
+
     /// Instant d'ouverture.
     pub fn ouverte_le(&self) -> Horodatage {
         self.ouverte_le
@@ -267,5 +307,37 @@ impl CibleEphemere {
     /// Toutes les sorties du module, conservées pour le compte rendu.
     pub fn sorties(&self) -> &[(String, String)] {
         &self.sorties
+    }
+}
+
+/// Une fenêtre lue d'un dépôt, pas encore admise.
+///
+/// Ce type existe pour qu'aucune fenêtre restaurée ne puisse être utilisée
+/// sans que son sceau ait été confronté au secret : la seule façon d'obtenir
+/// la [`FenetreDerogation`] qu'elle contient est [`FenetreScellee::ouvrir`],
+/// qui vérifie.
+#[derive(Debug)]
+pub struct FenetreScellee {
+    fenetre: FenetreDerogation,
+    sceau: String,
+}
+
+impl FenetreScellee {
+    /// Vérifie le sceau et rend la fenêtre.
+    pub fn ouvrir(self, secret: &[u8]) -> Result<FenetreDerogation, AppError> {
+        let attendu = self.fenetre.sceau(secret);
+        // Comparaison des empreintes plutôt que des chaînes : pas de
+        // court-circuit qui révélerait, par le temps de réponse, jusqu'où le
+        // sceau fourni était juste.
+        let fourni = crate::domain::hmac_sha256(b"cmp", self.sceau.as_bytes());
+        let calcule = crate::domain::hmac_sha256(b"cmp", attendu.as_bytes());
+        if fourni != calcule {
+            return Err(AppError::TierViolation {
+                raison: "sceau de la fenêtre de dérogation invalide : la fenêtre est tenue \
+                         pour fermée, et un renouvellement de Tier 1 est requis"
+                    .to_string(),
+            });
+        }
+        Ok(self.fenetre)
     }
 }
