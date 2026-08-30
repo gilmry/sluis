@@ -19,7 +19,9 @@ use std::process::Command;
 use crate::application::ports::{
     Executeur, MoteurArgocd, MoteurHelm, MoteurKustomize, MoteurTerraform, SortieProcessus,
 };
-use crate::domain::{AppError, PlanTerraform, StatutArgocd, StatutHelm, ValeurSure};
+use crate::domain::{
+    AppError, BailBacASable, MutationTerraform, PlanTerraform, StatutArgocd, StatutHelm, ValeurSure,
+};
 
 /// Les seuls exécutables que Sluis a le droit de lancer.
 pub const EXECUTABLES_AUTORISES: &[&str] = &[
@@ -83,6 +85,27 @@ impl<E: Executeur> Terraform<E> {
     pub fn new(executeur: E) -> Self {
         Self { executeur }
     }
+
+    /// Lance terraform dans le module et traduit un code non nul en erreur.
+    ///
+    /// Un seul endroit fait cette traduction : disséminée, elle finirait par
+    /// diverger, et une commande finirait par avaler son propre échec.
+    fn executer_terraform(
+        &self,
+        module: &ValeurSure,
+        arguments: &[String],
+    ) -> Result<String, AppError> {
+        let sortie = self
+            .executeur
+            .executer("terraform", arguments, Some(module.valeur()))?;
+        if !sortie.reussi() {
+            return Err(AppError::ServiceTiers {
+                service: "terraform".to_string(),
+                detail: format!("code {} : {}", sortie.code, sortie.erreur.trim()),
+            });
+        }
+        Ok(sortie.sortie)
+    }
 }
 
 /// Analyse la ligne de résumé d'un plan Terraform.
@@ -121,6 +144,46 @@ pub fn analyser_resume_plan(sortie: &str) -> PlanTerraform {
     }
 }
 
+/// Analyse la ligne de résumé d'une mutation Terraform.
+///
+/// Deux formats, un seul analyseur :
+/// `Apply complete! Resources: 3 added, 1 changed, 0 destroyed.`
+/// `Destroy complete! Resources: 3 destroyed.`
+///
+/// Chaque nombre est rattaché au verbe qui le suit, jamais à sa position : un
+/// destroy ne rend qu'un seul chiffre, et le lire comme des créations
+/// inverserait le sens du compte rendu.
+pub fn analyser_resume_mutation(sortie: &str) -> MutationTerraform {
+    let mut creations = 0;
+    let mut modifications = 0;
+    let mut destructions = 0;
+
+    for ligne in sortie.lines() {
+        let Some((_, reste)) = ligne.trim().split_once("Resources:") else {
+            continue;
+        };
+        for morceau in reste.split(',') {
+            let mots: Vec<&str> = morceau.split_whitespace().collect();
+            let Some(nombre) = mots.first().and_then(|n| n.parse::<u32>().ok()) else {
+                continue;
+            };
+            if morceau.contains("added") {
+                creations = nombre;
+            } else if morceau.contains("changed") {
+                modifications = nombre;
+            } else if morceau.contains("destroyed") {
+                destructions = nombre;
+            }
+        }
+    }
+    MutationTerraform {
+        creations,
+        modifications,
+        destructions,
+        brut: sortie.to_string(),
+    }
+}
+
 impl<E: Executeur> MoteurTerraform for Terraform<E> {
     fn plan(&self, module: &ValeurSure) -> Result<PlanTerraform, AppError> {
         // `-detailed-exitcode` est délibérément absent : il rend 2 quand des
@@ -143,6 +206,82 @@ impl<E: Executeur> MoteurTerraform for Terraform<E> {
             });
         }
         Ok(analyser_resume_plan(&sortie.sortie))
+    }
+
+    fn initialiser(&self, module: &ValeurSure) -> Result<(), AppError> {
+        self.executer_terraform(
+            module,
+            &[
+                "init".to_string(),
+                "-no-color".to_string(),
+                "-input=false".to_string(),
+            ],
+        )
+        .map(|_| ())
+    }
+
+    fn appliquer(
+        &self,
+        module: &ValeurSure,
+        _bail: &BailBacASable,
+    ) -> Result<MutationTerraform, AppError> {
+        // Aucun `-lock=false` : deux apply concurrents sur le même état
+        // produiraient une infrastructure que plus aucun état ne décrit.
+        let sortie = self.executer_terraform(
+            module,
+            &[
+                "apply".to_string(),
+                "-auto-approve".to_string(),
+                "-no-color".to_string(),
+                "-input=false".to_string(),
+            ],
+        )?;
+        Ok(analyser_resume_mutation(&sortie))
+    }
+
+    fn detruire(&self, module: &ValeurSure) -> Result<MutationTerraform, AppError> {
+        let sortie = self.executer_terraform(
+            module,
+            &[
+                "destroy".to_string(),
+                "-auto-approve".to_string(),
+                "-no-color".to_string(),
+                "-input=false".to_string(),
+            ],
+        )?;
+        Ok(analyser_resume_mutation(&sortie))
+    }
+
+    fn sorties(&self, module: &ValeurSure) -> Result<Vec<(String, String)>, AppError> {
+        let sortie = self.executer_terraform(
+            module,
+            &[
+                "output".to_string(),
+                "-json".to_string(),
+                "-no-color".to_string(),
+            ],
+        )?;
+        let brut: serde_json::Value =
+            serde_json::from_str(&sortie).map_err(|e| AppError::Analyse {
+                quoi: "sorties terraform".to_string(),
+                detail: e.to_string(),
+            })?;
+        let Some(objet) = brut.as_object() else {
+            return Ok(Vec::new());
+        };
+        Ok(objet
+            .iter()
+            .map(|(nom, declaration)| {
+                let valeur = declaration
+                    .get("value")
+                    .map(|v| match v {
+                        serde_json::Value::String(texte) => texte.clone(),
+                        autre => autre.to_string(),
+                    })
+                    .unwrap_or_default();
+                (nom.clone(), valeur)
+            })
+            .collect())
     }
 }
 

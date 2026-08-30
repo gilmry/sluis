@@ -95,6 +95,30 @@ impl PlanTerraform {
     }
 }
 
+/// Résultat d'une mutation Terraform réellement appliquée.
+///
+/// Distinct de [`PlanTerraform`] à dessein : un plan annonce, une mutation
+/// constate. Les confondre ferait qu'un « 3 to add » jamais appliqué se lirait
+/// comme trois ressources créées.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct MutationTerraform {
+    /// Ressources créées.
+    pub creations: u32,
+    /// Ressources modifiées.
+    pub modifications: u32,
+    /// Ressources détruites.
+    pub destructions: u32,
+    /// Sortie brute, conservée pour l'audit.
+    pub brut: String,
+}
+
+impl MutationTerraform {
+    /// Vrai si la mutation n'a touché aucune ressource.
+    pub fn sans_effet(&self) -> bool {
+        self.creations == 0 && self.modifications == 0 && self.destructions == 0
+    }
+}
+
 /// Statut d'une release Helm.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct StatutHelm {

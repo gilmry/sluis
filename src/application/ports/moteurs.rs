@@ -1,6 +1,8 @@
 //! Ports des moteurs d'exécution externes.
 
-use crate::domain::{AppError, PlanTerraform, StatutArgocd, StatutHelm, ValeurSure};
+use crate::domain::{
+    AppError, BailBacASable, MutationTerraform, PlanTerraform, StatutArgocd, StatutHelm, ValeurSure,
+};
 
 /// Sortie brute d'un processus.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,6 +44,37 @@ pub trait Executeur: Send + Sync {
 pub trait MoteurTerraform: Send + Sync {
     /// Produit un plan, **sans rien appliquer**.
     fn plan(&self, module: &ValeurSure) -> Result<PlanTerraform, AppError>;
+
+    /// Prépare le module : fournisseurs et état distant.
+    fn initialiser(&self, module: &ValeurSure) -> Result<(), AppError>;
+
+    /// Applique.
+    ///
+    /// **Le bail n'est pas utilisé par l'implémentation, il est exigé par le
+    /// type.** C'est la garantie centrale de cette signature : il n'existe
+    /// aucun chemin d'appel qui applique sans qu'un [`BailBacASable`] ait été
+    /// loué, donc sans dérogation valide, sans TTL et sans plafond. Une
+    /// vérification équivalente écrite dans le corps de la méthode serait
+    /// contournable par un second appelant ; celle-ci ne l'est pas.
+    ///
+    /// Hors bac à sable, Sluis ne mute pas : il demande, par la passerelle
+    /// d'ADR-008.
+    fn appliquer(
+        &self,
+        module: &ValeurSure,
+        bail: &BailBacASable,
+    ) -> Result<MutationTerraform, AppError>;
+
+    /// Détruit, **sans rien exiger**.
+    ///
+    /// L'asymétrie avec `appliquer` est délibérée. Le chien de garde détruit
+    /// des baux échus, donc dont la dérogation peut avoir expiré : réclamer
+    /// une preuve de validité ici rendrait le nettoyage impossible au moment
+    /// précis où il devient obligatoire.
+    fn detruire(&self, module: &ValeurSure) -> Result<MutationTerraform, AppError>;
+
+    /// Lit les sorties déclarées du module, par exemple l'adresse de la cible.
+    fn sorties(&self, module: &ValeurSure) -> Result<Vec<(String, String)>, AppError>;
 }
 
 /// Pilote Helm.

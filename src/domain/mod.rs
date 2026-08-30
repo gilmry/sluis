@@ -43,4 +43,4 @@ pub use ovh::{
 };
 pub use redacted::Redacted;
 pub use temps::{Duree, Horodatage};
-pub use valeur_sure::{PlanTerraform, StatutArgocd, StatutHelm, ValeurSure};
+pub use valeur_sure::{MutationTerraform, PlanTerraform, StatutArgocd, StatutHelm, ValeurSure};
