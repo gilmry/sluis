@@ -52,6 +52,22 @@ pub struct ResultatCampagne {
     pub echec_destruction: Option<String>,
 }
 
+/// Ce qu'une campagne doit savoir du projet mesuré.
+///
+/// Regroupé plutôt qu'égrené en paramètres : ces quatre valeurs viennent
+/// toutes de la même source, la déclaration de charge du dépôt, et les séparer
+/// inviterait à en oublier une.
+pub struct PlanCampagne<'a> {
+    /// Paliers à jouer, dans l'ordre.
+    pub escalier: &'a [ReglagePalier],
+    /// Sortie du module Terraform qui porte l'adresse.
+    pub sortie_adresse: &'a str,
+    /// Chemin HTTP que l'escalier frappe.
+    pub chemin: &'a str,
+    /// Marge restante avant que la fenêtre de dérogation ne ferme.
+    pub secondes_avant_fermeture_fenetre: i64,
+}
+
 /// Conduit une campagne.
 pub struct Campagne {
     moteur: Arc<dyn MoteurCharge>,
@@ -137,17 +153,16 @@ impl Campagne {
         bail: &BailBacASable,
         provisionneur: &dyn Provisionneur,
         destructeur: &dyn DestructeurBail,
-        escalier: &[ReglagePalier],
-        secondes_avant_fermeture_fenetre: i64,
+        plan: &PlanCampagne<'_>,
     ) -> Result<ResultatCampagne, AppError> {
         // Avant toute ressource : ce qui peut être refusé l'est ici, alors
         // qu'il n'y a encore rien à nettoyer.
         self.verifier_admission(
-            Self::duree_totale(escalier),
-            secondes_avant_fermeture_fenetre,
+            Self::duree_totale(plan.escalier),
+            plan.secondes_avant_fermeture_fenetre,
         )?;
 
-        let cible = match provisionneur.provisionner(bail) {
+        let cible = match provisionneur.provisionner(bail, plan.sortie_adresse) {
             Ok(cible) => cible,
             Err(erreur) => {
                 // On ne remonte pas avant d'avoir nettoyé. L'échec de
@@ -162,7 +177,10 @@ impl Campagne {
             }
         };
 
-        let mut resultat = self.jouer(cible.adresse(), escalier);
+        // L'URL est composée ici, à partir de ce que le projet a déclaré :
+        // l'adresse vient du module qu'il fournit, le chemin de sa déclaration.
+        let url = format!("http://{}{}", cible.adresse(), plan.chemin);
+        let mut resultat = self.jouer(&url, plan.escalier);
         resultat.echec_destruction = destructeur.detruire(bail).err().map(|e| e.to_string());
         resultat.cible = Some(cible);
         Ok(resultat)

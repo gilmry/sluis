@@ -9,13 +9,18 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use sluis::application::campagne::{escalier_par_defaut, Campagne};
+use sluis::application::campagne::{escalier_par_defaut, Campagne, PlanCampagne};
 use sluis::application::ports::{DestructeurBail, MoteurCharge, Provisionneur, ReglagePalier};
 use sluis::domain::{
-    Action, AppError, BailBacASable, CibleEphemere, Duree, Environnement, FenetreDerogation,
-    Horodatage, JetonChangement, JetonConsomme, ListeAutorisation, MesureCapacite, Palier,
-    PlafondDepense, PlanChangement, Tier,
+    Action, AppError, BailBacASable, CibleEphemere, DemandeBail, Duree, Environnement,
+    FenetreDerogation, Horodatage, JetonChangement, JetonConsomme, ListeAutorisation,
+    MesureCapacite, Palier, PlafondDepense, PlanChangement, Tier,
 };
+
+/// Le module que porte un bail de test.
+fn module_du_bail() -> sluis::domain::ValeurSure {
+    sluis::domain::ValeurSure::new("depots/projet/infra/bac-a-sable").expect("module")
+}
 
 const MAINTENANT: Horodatage = Horodatage::new(1_000_000);
 
@@ -48,10 +53,13 @@ fn bail() -> BailBacASable {
     let liste = ListeAutorisation::new(Vec::new(), vec!["bac-koprogo".to_string()]).expect("liste");
     BailBacASable::louer(
         &derogation,
-        liste.projet_bac_a_sable("bac-koprogo").expect("projet"),
-        Duree::secondes(3_600).expect("ttl"),
-        PlafondDepense::new(20.0).expect("plafond"),
-        4.0,
+        DemandeBail {
+            projet: liste.projet_bac_a_sable("bac-koprogo").expect("projet"),
+            module: module_du_bail(),
+            ttl: Duree::secondes(3_600).expect("ttl"),
+            plafond: PlafondDepense::new(20.0).expect("plafond"),
+            estimation_depense: 4.0,
+        },
         Duree::secondes(21_600).expect("max"),
         MAINTENANT,
     )
@@ -77,7 +85,11 @@ struct ProvisionneurDouble {
 }
 
 impl Provisionneur for ProvisionneurDouble {
-    fn provisionner(&self, _bail: &BailBacASable) -> Result<CibleEphemere, AppError> {
+    fn provisionner(
+        &self,
+        _bail: &BailBacASable,
+        _sortie_adresse: &str,
+    ) -> Result<CibleEphemere, AppError> {
         self.journal.consigner("provisionner");
         if self.echoue {
             return Err(AppError::ServiceTiers {
@@ -144,6 +156,16 @@ impl MoteurCharge for MoteurDouble {
     }
 }
 
+/// Le plan que la déclaration de charge d'un dépôt fournirait.
+fn plan<'a>(escalier: &'a [ReglagePalier], secondes_avant_fermeture: i64) -> PlanCampagne<'a> {
+    PlanCampagne {
+        escalier,
+        sortie_adresse: "vps_ip",
+        chemin: "/api/sante",
+        secondes_avant_fermeture_fenetre: secondes_avant_fermeture,
+    }
+}
+
 fn escalier_court() -> Vec<ReglagePalier> {
     escalier_par_defaut().into_iter().take(2).collect()
 }
@@ -168,13 +190,13 @@ fn happy_une_campagne_provisionne_joue_puis_detruit() {
         echoue: false,
     };
 
+    let escalier = escalier_court();
     let resultat = campagne
         .conduire(
             &bail(),
             &provisionneur,
             &destructeur,
-            &escalier_court(),
-            100_000,
+            &plan(&escalier, 100_000),
         )
         .expect("campagne");
 
@@ -206,13 +228,13 @@ fn negative_un_moteur_absent_refuse_avant_de_provisionner_quoi_que_ce_soit() {
         echoue: false,
     };
 
+    let escalier = escalier_court();
     let erreur = campagne
         .conduire(
             &bail(),
             &provisionneur,
             &destructeur,
-            &escalier_court(),
-            100_000,
+            &plan(&escalier, 100_000),
         )
         .expect_err("doit être refusée");
 
@@ -239,8 +261,9 @@ fn negative_une_fenetre_trop_courte_refuse_avant_de_provisionner() {
         echoue: false,
     };
 
+    let escalier = escalier_court();
     let erreur = campagne
-        .conduire(&bail(), &provisionneur, &destructeur, &escalier_court(), 5)
+        .conduire(&bail(), &provisionneur, &destructeur, &plan(&escalier, 5))
         .expect_err("doit être refusée");
 
     assert!(erreur.to_string().contains("dérogation"));
@@ -267,13 +290,13 @@ fn edge_un_palier_en_echec_arrete_la_campagne_sans_empecher_la_destruction() {
         echoue: false,
     };
 
+    let escalier = escalier_court();
     let resultat = campagne
         .conduire(
             &bail(),
             &provisionneur,
             &destructeur,
-            &escalier_court(),
-            100_000,
+            &plan(&escalier, 100_000),
         )
         .expect("la campagne rend son résultat partiel");
 
@@ -299,13 +322,13 @@ fn edge_une_destruction_en_echec_ne_fait_pas_perdre_les_mesures() {
         echoue: true,
     };
 
+    let escalier = escalier_court();
     let resultat = campagne
         .conduire(
             &bail(),
             &provisionneur,
             &destructeur,
-            &escalier_court(),
-            100_000,
+            &plan(&escalier, 100_000),
         )
         .expect("les mesures survivent à l'échec de destruction");
 
@@ -341,13 +364,13 @@ fn security_un_provisionnement_en_echec_declenche_quand_meme_la_destruction() {
         echoue: false,
     };
 
+    let escalier = escalier_court();
     let erreur = campagne
         .conduire(
             &bail(),
             &provisionneur,
             &destructeur,
-            &escalier_court(),
-            100_000,
+            &plan(&escalier, 100_000),
         )
         .expect_err("le provisionnement échoue");
 
@@ -380,12 +403,12 @@ fn security_aucun_palier_n_est_joue_apres_la_destruction() {
         echoue: false,
     };
 
+    let escalier = escalier_court();
     let _ = campagne.conduire(
         &bail(),
         &provisionneur,
         &destructeur,
-        &escalier_court(),
-        100_000,
+        &plan(&escalier, 100_000),
     );
 
     let lignes = journal.lignes();

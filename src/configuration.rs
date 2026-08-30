@@ -76,18 +76,18 @@ pub struct SectionBacASable {
     #[serde(default = "fenetre_par_defaut")]
     pub fenetre_derogation_jours: i64,
 
-    /// Module Terraform jetable que loue une campagne.
+    /// Racines d'infrastructure que ce serveur a le droit de mesurer.
     ///
-    /// **Absent par défaut, et c'est ce qui fait la différence entre les deux
-    /// déploiements** : sans lui, `sluis_campagne` n'est pas enregistré, donc
-    /// le service n'expose que de la lecture. Le Sluis public n'a pas à le
-    /// renseigner ; le Sluis exécutant, sur le réseau interne, l'a.
+    /// **Vide par défaut, et c'est ce qui fait la différence entre les deux
+    /// déploiements** : sans dépôt autorisé, `sluis_campagne` n'est pas
+    /// enregistré, donc le service n'expose que de la lecture. Le Sluis public
+    /// n'en déclare aucun ; le Sluis exécutant, sur le réseau interne, en
+    /// déclare.
+    ///
+    /// Le module Terraform, lui, ne se configure pas : il vient de la
+    /// déclaration de charge du dépôt mesuré, `_shared/charge.yaml`.
     #[serde(default)]
-    pub module_terraform: Option<String>,
-
-    /// Nom de la sortie du module qui porte l'adresse à charger.
-    #[serde(default = "sortie_adresse_par_defaut")]
-    pub sortie_adresse: String,
+    pub depots_autorises: Vec<String>,
 
     /// Fichier où la fenêtre de dérogation est conservée, scellée.
     #[serde(default = "depot_derogation_par_defaut")]
@@ -103,9 +103,6 @@ fn plafond_par_defaut() -> f64 {
 fn fenetre_par_defaut() -> i64 {
     90
 }
-fn sortie_adresse_par_defaut() -> String {
-    "vps_ip".to_string()
-}
 fn depot_derogation_par_defaut() -> String {
     "sluis-derogation.json".to_string()
 }
@@ -116,8 +113,7 @@ impl Default for SectionBacASable {
             ttl_maximal_secondes: ttl_max_par_defaut(),
             plafond_depense: plafond_par_defaut(),
             fenetre_derogation_jours: fenetre_par_defaut(),
-            module_terraform: None,
-            sortie_adresse: sortie_adresse_par_defaut(),
+            depots_autorises: Vec::new(),
             depot_derogation: depot_derogation_par_defaut(),
         }
     }

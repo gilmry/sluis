@@ -2,6 +2,7 @@
 
 mod audit_log;
 mod charge;
+mod charge_declaree;
 mod derogation;
 mod diagnostic;
 mod gates;
@@ -15,6 +16,7 @@ mod provisionnement;
 
 pub use audit_log::AuditLog;
 pub use charge::{MoteurCharge, ReglagePalier};
+pub use charge_declaree::DepotCharge;
 pub use derogation::DepotDerogation;
 pub use diagnostic::Diagnostic;
 pub use gates::{EtatGate, GatePlancher, VerificateurGates};

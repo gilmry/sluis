@@ -37,7 +37,7 @@ fn happy_une_configuration_complete_expose_la_campagne() {
 projets_bac_a_sable = ["bac-koprogo"]
 
 [bac_a_sable]
-module_terraform = "infra/bac-a-sable"
+depots_autorises = ["/depots/koprogo/infrastructure"]
 "#,
         "complete",
     );
@@ -73,18 +73,17 @@ projets_production = ["prj-prod"]
 }
 
 #[test]
-fn security_un_module_declare_sans_projet_de_bac_a_sable_n_expose_rien() {
+fn security_un_depot_autorise_sans_projet_de_bac_a_sable_n_expose_rien() {
     let configuration = configuration(
         r#"
 [bac_a_sable]
-module_terraform = "infra/bac-a-sable"
+depots_autorises = ["/depots/koprogo/infrastructure"]
 "#,
         "sans-projet",
     );
 
-    // Sans projet déclaré, la campagne n'aurait aucune liste d'autorisation à
-    // opposer à sa cible : mieux vaut ne rien exposer que d'exposer un outil
-    // qui muterait n'importe où.
+    // Sans projet déclaré, la campagne n'aurait aucun projet OVH où louer :
+    // mieux vaut ne rien exposer que d'exposer un outil qui muterait ailleurs.
     assert!(
         outil_campagne_si_configure(&configuration, SECRET, horloge())
             .expect("composition")
@@ -100,7 +99,7 @@ fn security_sans_secret_de_signature_la_campagne_n_est_pas_exposee() {
 projets_bac_a_sable = ["bac-koprogo"]
 
 [bac_a_sable]
-module_terraform = "infra/bac-a-sable"
+depots_autorises = ["/depots/koprogo/infrastructure"]
 "#,
         "sans-secret",
     );

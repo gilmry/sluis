@@ -13,11 +13,16 @@ use std::sync::Mutex;
 use sluis::application::ports::MoteurTerraform;
 use sluis::application::ports::Provisionneur;
 use sluis::domain::{
-    Action, AppError, BailBacASable, Duree, Environnement, FenetreDerogation, Horodatage,
-    JetonChangement, JetonConsomme, ListeAutorisation, MutationTerraform, PlafondDepense,
-    PlanChangement, PlanTerraform, Tier, ValeurSure,
+    Action, AppError, BailBacASable, DemandeBail, Duree, Environnement, FenetreDerogation,
+    Horodatage, JetonChangement, JetonConsomme, ListeAutorisation, MutationTerraform,
+    PlafondDepense, PlanChangement, PlanTerraform, Tier, ValeurSure,
 };
 use sluis::infrastructure::bac_a_sable::{BacASableTerraform, DestructeurBail};
+
+/// Le module que porte un bail de test.
+fn module_du_bail() -> sluis::domain::ValeurSure {
+    sluis::domain::ValeurSure::new("depots/projet/infra/bac-a-sable").expect("module")
+}
 
 const MAINTENANT: Horodatage = Horodatage::new(1_000_000);
 
@@ -50,10 +55,13 @@ fn bail() -> BailBacASable {
     let liste = ListeAutorisation::new(Vec::new(), vec!["bac-koprogo".to_string()]).expect("liste");
     BailBacASable::louer(
         &derogation,
-        liste.projet_bac_a_sable("bac-koprogo").expect("projet"),
-        Duree::secondes(3_600).expect("ttl"),
-        PlafondDepense::new(20.0).expect("plafond"),
-        4.0,
+        DemandeBail {
+            projet: liste.projet_bac_a_sable("bac-koprogo").expect("projet"),
+            module: module_du_bail(),
+            ttl: Duree::secondes(3_600).expect("ttl"),
+            plafond: PlafondDepense::new(20.0).expect("plafond"),
+            estimation_depense: 4.0,
+        },
         Duree::secondes(21_600).expect("max"),
         MAINTENANT,
     )
@@ -175,18 +183,16 @@ impl MoteurTerraform for &MoteurDouble {
     }
 }
 
-fn module() -> ValeurSure {
-    ValeurSure::new("infra/bac-a-sable").expect("module")
-}
-
 // ── @happy ───────────────────────────────────────────────────
 
 #[test]
 fn happy_le_provisionnement_initialise_applique_puis_lit_les_sorties() {
     let moteur = MoteurDouble::nouveau();
-    let bac = BacASableTerraform::new(&moteur, module(), "vps_ip");
+    let bac = BacASableTerraform::new(&moteur);
 
-    let cible = bac.provisionner(&bail()).expect("provisionnement");
+    let cible = bac
+        .provisionner(&bail(), "vps_ip")
+        .expect("provisionnement");
 
     assert_eq!(cible.adresse(), "57.128.0.1");
     // L'ordre n'est pas cosmétique : un apply sans init échoue sur un module
@@ -198,9 +204,11 @@ fn happy_le_provisionnement_initialise_applique_puis_lit_les_sorties() {
 #[test]
 fn happy_les_sorties_du_module_sont_conservees_avec_la_cible() {
     let moteur = MoteurDouble::nouveau();
-    let bac = BacASableTerraform::new(&moteur, module(), "vps_ip");
+    let bac = BacASableTerraform::new(&moteur);
 
-    let cible = bac.provisionner(&bail()).expect("provisionnement");
+    let cible = bac
+        .provisionner(&bail(), "vps_ip")
+        .expect("provisionnement");
 
     assert!(cible.sorties().iter().any(|(nom, _)| nom == "ssh_command"));
 }
@@ -208,7 +216,7 @@ fn happy_les_sorties_du_module_sont_conservees_avec_la_cible() {
 #[test]
 fn happy_la_destruction_appelle_terraform_destroy() {
     let moteur = MoteurDouble::nouveau();
-    let bac = BacASableTerraform::new(&moteur, module(), "vps_ip");
+    let bac = BacASableTerraform::new(&moteur);
 
     bac.detruire(&bail()).expect("destruction");
 
@@ -221,9 +229,11 @@ fn happy_la_destruction_appelle_terraform_destroy() {
 fn negative_un_apply_en_echec_ne_rend_aucune_cible() {
     let mut moteur = MoteurDouble::nouveau();
     moteur.echec_apply = true;
-    let bac = BacASableTerraform::new(&moteur, module(), "vps_ip");
+    let bac = BacASableTerraform::new(&moteur);
 
-    let erreur = bac.provisionner(&bail()).expect_err("doit échouer");
+    let erreur = bac
+        .provisionner(&bail(), "vps_ip")
+        .expect_err("doit échouer");
 
     assert!(erreur.to_string().contains("quota"));
     // Les sorties ne sont pas lues : elles décriraient un état partiel, et une
@@ -235,9 +245,11 @@ fn negative_un_apply_en_echec_ne_rend_aucune_cible() {
 fn negative_une_sortie_d_adresse_absente_est_une_erreur_nommee() {
     let mut moteur = MoteurDouble::nouveau();
     moteur.sorties = vec![("autre_chose".to_string(), "x".to_string())];
-    let bac = BacASableTerraform::new(&moteur, module(), "vps_ip");
+    let bac = BacASableTerraform::new(&moteur);
 
-    let erreur = bac.provisionner(&bail()).expect_err("doit échouer");
+    let erreur = bac
+        .provisionner(&bail(), "vps_ip")
+        .expect_err("doit échouer");
 
     assert!(
         erreur.to_string().contains("vps_ip"),
@@ -249,7 +261,7 @@ fn negative_une_sortie_d_adresse_absente_est_une_erreur_nommee() {
 fn negative_une_destruction_en_echec_remonte_l_erreur() {
     let mut moteur = MoteurDouble::nouveau();
     moteur.echec_destroy = true;
-    let bac = BacASableTerraform::new(&moteur, module(), "vps_ip");
+    let bac = BacASableTerraform::new(&moteur);
 
     let erreur = bac.detruire(&bail()).expect_err("doit échouer");
 
@@ -262,11 +274,11 @@ fn negative_une_destruction_en_echec_remonte_l_erreur() {
 fn edge_une_adresse_vide_est_refusee_plutot_que_transmise() {
     let mut moteur = MoteurDouble::nouveau();
     moteur.sorties = vec![("vps_ip".to_string(), String::new())];
-    let bac = BacASableTerraform::new(&moteur, module(), "vps_ip");
+    let bac = BacASableTerraform::new(&moteur);
 
     // Une campagne lancée contre une adresse vide mesurerait le vide et
     // rendrait des chiffres qu'on croirait valides.
-    assert!(bac.provisionner(&bail()).is_err());
+    assert!(bac.provisionner(&bail(), "vps_ip").is_err());
 }
 
 // ── @security ────────────────────────────────────────────────
@@ -274,7 +286,7 @@ fn edge_une_adresse_vide_est_refusee_plutot_que_transmise() {
 #[test]
 fn security_une_destruction_est_idempotente() {
     let moteur = MoteurDouble::nouveau();
-    let bac = BacASableTerraform::new(&moteur, module(), "vps_ip");
+    let bac = BacASableTerraform::new(&moteur);
 
     bac.detruire(&bail()).expect("première destruction");
     bac.detruire(&bail()).expect("seconde destruction");

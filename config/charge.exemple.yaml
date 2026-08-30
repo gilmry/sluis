@@ -1,0 +1,34 @@
+# Déclaration de charge d'un projet Foyer.
+#
+# À déposer dans le dépôt mesuré, sous `infrastructure/_shared/charge.yaml`,
+# là où vivent déjà les profils de cluster et les modules Terraform. Sluis la
+# découvre sans aucune saisie, comme il découvre la matrice d'inventaire.
+#
+# Ce fichier DEMANDE, il n'accorde pas. Quiconque écrit dans le dépôt mesuré
+# l'écrit : si ses bornes pouvaient relever celles du serveur, ADR-007 se
+# contournerait par une pull request. Sluis retient toujours le minimum des
+# deux.
+
+# Topologie à louer. Doit exister dans la matrice du dépôt.
+topologie: vps
+
+# Module Terraform jetable, relatif à la racine d'infrastructure.
+module: monosite/vps/bac-a-sable/terraform
+
+# Sortie du module qui porte l'adresse à charger.
+sortie_adresse: vps_ip
+
+# Chemin HTTP que l'escalier de charge frappe.
+chemin: /api/sante
+
+# La cible vient du brief. Elle sert de verdict, pas de décor : la campagne
+# dit si le projet la tient, et remplace les priors [caler] de l'abaque par du
+# mesuré. Une cible à zéro serait toujours atteinte, elle est donc refusée.
+cible:
+  requetes_par_seconde: 200
+  p99_millisecondes: 300
+
+# Ce que le projet demande. Le serveur borne.
+bornes:
+  ttl_secondes: 3600
+  plafond_depense: 20

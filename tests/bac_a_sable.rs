@@ -9,11 +9,16 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use sluis::domain::{
-    Action, AppError, BailBacASable, Duree, Empreinte, Environnement, FenetreDerogation,
-    Horodatage, JetonChangement, JetonConsomme, ListeAutorisation, PlafondDepense, PlanChangement,
-    Tier,
+    Action, AppError, BailBacASable, DemandeBail, Duree, Empreinte, Environnement,
+    FenetreDerogation, Horodatage, JetonChangement, JetonConsomme, ListeAutorisation,
+    PlafondDepense, PlanChangement, Tier,
 };
 use sluis::infrastructure::bac_a_sable::{ChienDeGarde, DestructeurBail, GardeBail, RegistreBaux};
+
+/// Le module que porte un bail de test.
+fn module_du_bail() -> sluis::domain::ValeurSure {
+    sluis::domain::ValeurSure::new("depots/projet/infra/bac-a-sable").expect("module")
+}
 
 const MAINTENANT: Horodatage = Horodatage::new(1_000_000);
 
@@ -94,10 +99,13 @@ fn louer(fenetre: &FenetreDerogation, ttl_secondes: i64) -> Result<BailBacASable
     let derogation = fenetre.valider(MAINTENANT)?;
     BailBacASable::louer(
         &derogation,
-        liste().projet_bac_a_sable("prj-bac")?,
-        Duree::secondes(ttl_secondes)?,
-        PlafondDepense::new(20.0)?,
-        5.0,
+        DemandeBail {
+            projet: liste().projet_bac_a_sable("prj-bac")?,
+            module: module_du_bail(),
+            ttl: Duree::secondes(ttl_secondes)?,
+            plafond: PlafondDepense::new(20.0)?,
+            estimation_depense: 5.0,
+        },
         Duree::secondes(21_600)?,
         MAINTENANT,
     )
@@ -134,10 +142,13 @@ fn negative_une_estimation_au_dessus_du_plafond_est_refusee_a_l_admission() {
     let derogation = fenetre.valider(MAINTENANT).expect("valide");
     let erreur = BailBacASable::louer(
         &derogation,
-        liste().projet_bac_a_sable("prj-bac").expect("projet"),
-        Duree::secondes(3_600).expect("ttl"),
-        PlafondDepense::new(20.0).expect("plafond"),
-        35.0,
+        DemandeBail {
+            projet: liste().projet_bac_a_sable("prj-bac").expect("projet"),
+            module: module_du_bail(),
+            ttl: Duree::secondes(3_600).expect("ttl"),
+            plafond: PlafondDepense::new(20.0).expect("plafond"),
+            estimation_depense: 35.0,
+        },
         Duree::secondes(21_600).expect("max"),
         MAINTENANT,
     )
@@ -181,10 +192,13 @@ fn edge_une_campagne_qui_survivrait_a_la_fenetre_est_refusee_a_l_admission() {
     let derogation = fenetre.valider(MAINTENANT).expect("valide");
     let erreur = BailBacASable::louer(
         &derogation,
-        liste().projet_bac_a_sable("prj-bac").expect("projet"),
-        Duree::secondes(21_600).expect("ttl"),
-        PlafondDepense::new(20.0).expect("plafond"),
-        1.0,
+        DemandeBail {
+            projet: liste().projet_bac_a_sable("prj-bac").expect("projet"),
+            module: module_du_bail(),
+            ttl: Duree::secondes(21_600).expect("ttl"),
+            plafond: PlafondDepense::new(20.0).expect("plafond"),
+            estimation_depense: 1.0,
+        },
         Duree::secondes(21_600).expect("max"),
         MAINTENANT,
     )

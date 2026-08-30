@@ -22,7 +22,7 @@ use crate::application::ports::{MoteurTerraform, Provisionneur};
 // garde RAII et le chien de garde, qui sont des mécanismes d'infrastructure,
 // s'en servent, et parce que les appelants le nomment depuis ce module.
 pub use crate::application::ports::DestructeurBail;
-use crate::domain::{AppError, BailBacASable, CibleEphemere, Horodatage, ValeurSure};
+use crate::domain::{AppError, BailBacASable, CibleEphemere, Horodatage};
 
 /// Garde RAII : détruit le bail à la sortie de portée, panique comprise.
 pub struct GardeBail {
@@ -189,42 +189,41 @@ impl ChienDeGarde {
 /// vocation à décrire des topologies, il en loue une, la charge et l'efface.
 pub struct BacASableTerraform<M: MoteurTerraform> {
     moteur: M,
-    module: ValeurSure,
-    sortie_adresse: String,
 }
 
 impl<M: MoteurTerraform> BacASableTerraform<M> {
     /// Construit l'adaptateur.
     ///
-    /// `sortie_adresse` nomme la sortie du module qui porte l'adresse à
-    /// charger, par exemple `vps_ip`.
-    pub fn new(moteur: M, module: ValeurSure, sortie_adresse: impl Into<String>) -> Self {
-        Self {
-            moteur,
-            module,
-            sortie_adresse: sortie_adresse.into(),
-        }
+    /// Ni module ni sortie ici : ils viennent du projet mesuré, par son bail
+    /// et sa déclaration de charge. Un adaptateur qui les figerait ne pourrait
+    /// servir qu'un seul dépôt.
+    pub fn new(moteur: M) -> Self {
+        Self { moteur }
     }
 }
 
 impl<M: MoteurTerraform> Provisionneur for BacASableTerraform<M> {
-    fn provisionner(&self, bail: &BailBacASable) -> Result<CibleEphemere, AppError> {
+    fn provisionner(
+        &self,
+        bail: &BailBacASable,
+        sortie_adresse: &str,
+    ) -> Result<CibleEphemere, AppError> {
+        let module = bail.module();
         // L'ordre n'est pas cosmétique : un apply sans init échoue sur un
         // module dont les fournisseurs ne sont pas téléchargés, et lire les
         // sorties avant l'apply rendrait celles du tour précédent.
-        self.moteur.initialiser(&self.module)?;
-        self.moteur.appliquer(&self.module, bail)?;
-        let sorties = self.moteur.sorties(&self.module)?;
+        self.moteur.initialiser(module)?;
+        self.moteur.appliquer(module, bail)?;
+        let sorties = self.moteur.sorties(module)?;
 
         let adresse = sorties
             .iter()
-            .find(|(nom, _)| nom == &self.sortie_adresse)
+            .find(|(nom, _)| nom == sortie_adresse)
             .map(|(_, valeur)| valeur.clone())
             .ok_or_else(|| AppError::Configuration {
                 detail: format!(
-                    "le module ne déclare aucune sortie « {} » : sans adresse, \
-                     la campagne n'a pas de cible",
-                    self.sortie_adresse
+                    "le module ne déclare aucune sortie « {sortie_adresse} » : sans adresse, \
+                     la campagne n'a pas de cible"
                 ),
             })?;
 
@@ -233,11 +232,11 @@ impl<M: MoteurTerraform> Provisionneur for BacASableTerraform<M> {
 }
 
 impl<M: MoteurTerraform> DestructeurBail for BacASableTerraform<M> {
-    fn detruire(&self, _bail: &BailBacASable) -> Result<(), AppError> {
+    fn detruire(&self, bail: &BailBacASable) -> Result<(), AppError> {
         // Idempotent par construction : `terraform destroy` sur un état déjà
         // vide rend « 0 destroyed » et réussit. La garde RAII et le chien de
         // garde peuvent donc réclamer la même destruction sans qu'un nettoyage
         // réussi se lise comme une panne.
-        self.moteur.detruire(&self.module).map(|_| ())
+        self.moteur.detruire(bail.module()).map(|_| ())
     }
 }

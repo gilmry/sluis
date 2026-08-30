@@ -8,6 +8,7 @@ pub mod audit;
 pub mod autorisation;
 pub mod bac_a_sable;
 pub mod capacite;
+pub mod charge_declaree;
 pub mod convergence;
 pub mod diagnostic;
 pub mod error;
@@ -22,13 +23,14 @@ pub mod valeur_sure;
 pub use audit::{AuditEntry, Tier};
 pub use autorisation::{Action, Empreinte, JetonChangement, JetonConsomme, PlanChangement};
 pub use bac_a_sable::{
-    BailBacASable, CibleEphemere, DerogationValide, FenetreDerogation, FenetreScellee,
+    BailBacASable, CibleEphemere, DemandeBail, DerogationValide, FenetreDerogation, FenetreScellee,
     PlafondDepense,
 };
 pub use capacite::{
     verifier_coherence_latences, MesureCapacite, Palier, Prior, Provenance, RapportRecalage,
     Recalage,
 };
+pub use charge_declaree::{CibleCapacite, DeclarationCharge, Verdict};
 pub use convergence::{etablir as etablir_convergence, PreuveConvergence};
 pub use diagnostic::{EtatBinaire, Identifiant, Moteur, RapportDiagnostic};
 pub use error::AppError;

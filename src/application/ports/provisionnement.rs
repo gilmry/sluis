@@ -12,7 +12,11 @@ pub trait Provisionneur: Send + Sync {
     ///
     /// Doit être sûr à rejouer : un appel qui suit un échec partiel converge
     /// vers le même état plutôt que d'empiler des ressources.
-    fn provisionner(&self, bail: &BailBacASable) -> Result<CibleEphemere, AppError>;
+    fn provisionner(
+        &self,
+        bail: &BailBacASable,
+        sortie_adresse: &str,
+    ) -> Result<CibleEphemere, AppError>;
 }
 
 /// Détruit une infrastructure éphémère.

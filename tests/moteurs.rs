@@ -14,6 +14,11 @@ use sluis::infrastructure::process::{
     analyser_resume_plan, masquer_secrets, Argocd, ExecuteurSysteme, Helm, Kustomize, Terraform,
 };
 
+/// Le module que porte un bail de test.
+fn module_du_bail() -> sluis::domain::ValeurSure {
+    sluis::domain::ValeurSure::new("depots/projet/infra/bac-a-sable").expect("module")
+}
+
 /// Exécuteur doublé : consigne les appels, rend une sortie décidée d'avance.
 struct ExecuteurDouble {
     reponse: Result<SortieProcessus, AppError>,
@@ -306,8 +311,8 @@ impl Executeur for &ExecuteurDouble {
 // de garde doit pouvoir nettoyer un bail déjà échu.
 
 use sluis::domain::{
-    Action, BailBacASable, Duree, Environnement, FenetreDerogation, Horodatage, JetonChangement,
-    JetonConsomme, ListeAutorisation, PlafondDepense, PlanChangement, Tier,
+    Action, BailBacASable, DemandeBail, Duree, Environnement, FenetreDerogation, Horodatage,
+    JetonChangement, JetonConsomme, ListeAutorisation, PlafondDepense, PlanChangement, Tier,
 };
 use sluis::infrastructure::process::analyser_resume_mutation;
 
@@ -344,10 +349,13 @@ fn bail_de_test() -> BailBacASable {
     let liste = ListeAutorisation::new(Vec::new(), vec!["bac-koprogo".to_string()]).expect("liste");
     BailBacASable::louer(
         &derogation,
-        liste.projet_bac_a_sable("bac-koprogo").expect("projet"),
-        Duree::secondes(3_600).expect("ttl"),
-        PlafondDepense::new(20.0).expect("plafond"),
-        4.0,
+        DemandeBail {
+            projet: liste.projet_bac_a_sable("bac-koprogo").expect("projet"),
+            module: module_du_bail(),
+            ttl: Duree::secondes(3_600).expect("ttl"),
+            plafond: PlafondDepense::new(20.0).expect("plafond"),
+            estimation_depense: 4.0,
+        },
         Duree::secondes(21_600).expect("ttl max"),
         MAINTENANT,
     )

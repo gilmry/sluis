@@ -14,7 +14,7 @@
 
 use serde::Serialize;
 
-use crate::domain::{AppError, Duree, Horodatage, JetonConsomme, ProjetBacASable};
+use crate::domain::{AppError, Duree, Horodatage, JetonConsomme, ProjetBacASable, ValeurSure};
 
 /// Plafond de dépense d'une campagne.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize)]
@@ -178,6 +178,26 @@ impl FenetreDerogation {
     }
 }
 
+/// Ce qu'un appelant demande, avant que le domaine ne le borne.
+///
+/// Regroupé plutôt qu'égrené : ces cinq valeurs viennent toutes du projet
+/// mesuré et de sa déclaration, quand les deux suivantes de `louer` viennent
+/// du serveur. La frontière entre ce qui est demandé et ce qui est autorisé
+/// se lit alors dans la signature.
+#[derive(Debug, Clone)]
+pub struct DemandeBail {
+    /// Projet OVH où louer.
+    pub projet: ProjetBacASable,
+    /// Module Terraform à appliquer.
+    pub module: ValeurSure,
+    /// Durée de vie demandée.
+    pub ttl: Duree,
+    /// Plafond de dépense retenu.
+    pub plafond: PlafondDepense,
+    /// Dépense projetée pour la campagne.
+    pub estimation_depense: f64,
+}
+
 /// Un bail d'infrastructure éphémère.
 ///
 /// Toujours borné : un TTL et un plafond, tous deux non optionnels. Il n'existe
@@ -185,6 +205,7 @@ impl FenetreDerogation {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BailBacASable {
     projet: ProjetBacASable,
+    module: ValeurSure,
     ttl: Duree,
     plafond: PlafondDepense,
     ouvert_le: Horodatage,
@@ -205,13 +226,17 @@ impl BailBacASable {
     /// mesures inexploitables.
     pub fn louer(
         derogation: &DerogationValide<'_>,
-        projet: ProjetBacASable,
-        ttl: Duree,
-        plafond: PlafondDepense,
-        estimation_depense: f64,
+        demande: DemandeBail,
         ttl_maximal: Duree,
         maintenant: Horodatage,
     ) -> Result<Self, AppError> {
+        let DemandeBail {
+            projet,
+            module,
+            ttl,
+            plafond,
+            estimation_depense,
+        } = demande;
         if ttl > ttl_maximal {
             return Err(AppError::Configuration {
                 detail: format!("TTL demandé {ttl} au-delà du maximum configuré {ttl_maximal}"),
@@ -239,6 +264,7 @@ impl BailBacASable {
         }
         Ok(Self {
             projet,
+            module,
             ttl,
             plafond,
             ouvert_le: maintenant,
@@ -254,6 +280,14 @@ impl BailBacASable {
     /// Projet loué.
     pub fn projet(&self) -> &ProjetBacASable {
         &self.projet
+    }
+    /// Module Terraform que porte ce bail.
+    ///
+    /// Le bail est auto-porteur à dessein : le chien de garde détruit des baux
+    /// dont il n'a pas suivi la location, et il ne peut pas aller demander à
+    /// qui que ce soit quel module correspond à quel bail.
+    pub fn module(&self) -> &ValeurSure {
+        &self.module
     }
     /// Échéance.
     pub fn expire_le(&self) -> Horodatage {
