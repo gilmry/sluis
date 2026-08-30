@@ -17,6 +17,7 @@ use sluis::application::ports::Horloge;
 use sluis::configuration::Configuration;
 use sluis::domain::{Duree, Horodatage, Redacted};
 use sluis::infrastructure::audit::JsonlAuditLog;
+use sluis::infrastructure::composition::outil_campagne_si_configure;
 use sluis::infrastructure::diagnostic::DiagnosticSysteme;
 use sluis::infrastructure::fs_inventaire::FsInventaire;
 use sluis::infrastructure::mcp::outils_lecture::{OutilDoctor, OutilInventaire, OutilProfils};
@@ -110,10 +111,24 @@ fn executer() -> Result<(), sluis::domain::AppError> {
     let depot_inventaire = Arc::new(FsInventaire::new());
     let diagnostic = Arc::new(DiagnosticSysteme::depuis_environnement());
 
+    let horloge: Arc<dyn Horloge> = Arc::new(HorlogeSysteme);
+
     let mut registre = RegistreOutils::new();
     registre.enregistrer(Box::new(OutilDoctor::new(diagnostic)))?;
     registre.enregistrer(Box::new(OutilInventaire::new(depot_inventaire.clone())))?;
     registre.enregistrer(Box::new(OutilProfils::new(depot_inventaire)))?;
+
+    // N'apparaît que si la configuration déclare un module de bac à sable et
+    // un projet dédié. Un déploiement de lecture n'expose donc rien qui mute,
+    // même s'il porte par ailleurs des identifiants OVH.
+    if let Some(campagne) = outil_campagne_si_configure(
+        &configuration,
+        secret_signature.exposer().as_bytes(),
+        horloge.clone(),
+    )? {
+        eprintln!("sluis-server : bac à sable configuré, « sluis_campagne » exposé");
+        registre.enregistrer(campagne)?;
+    }
 
     let mcp = Arc::new(ServeurMcp::new(
         registre,

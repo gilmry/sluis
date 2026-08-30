@@ -75,6 +75,23 @@ pub struct SectionBacASable {
     /// fenêtre absente vaut fenêtre fermée.
     #[serde(default = "fenetre_par_defaut")]
     pub fenetre_derogation_jours: i64,
+
+    /// Module Terraform jetable que loue une campagne.
+    ///
+    /// **Absent par défaut, et c'est ce qui fait la différence entre les deux
+    /// déploiements** : sans lui, `sluis_campagne` n'est pas enregistré, donc
+    /// le service n'expose que de la lecture. Le Sluis public n'a pas à le
+    /// renseigner ; le Sluis exécutant, sur le réseau interne, l'a.
+    #[serde(default)]
+    pub module_terraform: Option<String>,
+
+    /// Nom de la sortie du module qui porte l'adresse à charger.
+    #[serde(default = "sortie_adresse_par_defaut")]
+    pub sortie_adresse: String,
+
+    /// Fichier où la fenêtre de dérogation est conservée, scellée.
+    #[serde(default = "depot_derogation_par_defaut")]
+    pub depot_derogation: String,
 }
 
 fn ttl_max_par_defaut() -> i64 {
@@ -86,6 +103,12 @@ fn plafond_par_defaut() -> f64 {
 fn fenetre_par_defaut() -> i64 {
     90
 }
+fn sortie_adresse_par_defaut() -> String {
+    "vps_ip".to_string()
+}
+fn depot_derogation_par_defaut() -> String {
+    "sluis-derogation.json".to_string()
+}
 
 impl Default for SectionBacASable {
     fn default() -> Self {
@@ -93,6 +116,9 @@ impl Default for SectionBacASable {
             ttl_maximal_secondes: ttl_max_par_defaut(),
             plafond_depense: plafond_par_defaut(),
             fenetre_derogation_jours: fenetre_par_defaut(),
+            module_terraform: None,
+            sortie_adresse: sortie_adresse_par_defaut(),
+            depot_derogation: depot_derogation_par_defaut(),
         }
     }
 }

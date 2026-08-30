@@ -17,6 +17,7 @@ use sluis::application::ports::Horloge;
 use sluis::configuration::Configuration;
 use sluis::domain::Horodatage;
 use sluis::infrastructure::audit::JsonlAuditLog;
+use sluis::infrastructure::composition::outil_campagne_si_configure;
 use sluis::infrastructure::diagnostic::DiagnosticSysteme;
 use sluis::infrastructure::fs_inventaire::FsInventaire;
 use sluis::infrastructure::mcp::outils_lecture::{OutilDoctor, OutilInventaire, OutilProfils};
@@ -62,6 +63,18 @@ fn executer() -> Result<(), sluis::domain::AppError> {
     registre.enregistrer(Box::new(OutilDoctor::new(diagnostic)))?;
     registre.enregistrer(Box::new(OutilInventaire::new(depot.clone())))?;
     registre.enregistrer(Box::new(OutilProfils::new(depot)))?;
+
+    // En stdio comme en HTTP, la campagne n'apparaît que si le bac à sable est
+    // configuré et si un secret de signature existe pour sceller la fenêtre de
+    // dérogation. Son absence n'est pas une panne.
+    let secret_signature = std::env::var("SLUIS_SECRET_SIGNATURE").unwrap_or_default();
+    if let Some(campagne) = outil_campagne_si_configure(
+        &configuration,
+        secret_signature.as_bytes(),
+        Arc::new(HorlogeSysteme),
+    )? {
+        registre.enregistrer(campagne)?;
+    }
 
     eprintln!(
         "sluis-mcp {} — {} outil(s), journal « {} »",

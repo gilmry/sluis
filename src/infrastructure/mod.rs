@@ -6,6 +6,7 @@
 pub mod audit;
 pub mod bac_a_sable;
 pub mod charge;
+pub mod composition;
 pub mod derogation_depot;
 pub mod diagnostic;
 pub mod fs_inventaire;
