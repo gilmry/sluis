@@ -5,8 +5,9 @@ use std::path::{Path, PathBuf};
 
 use sluis::application::ports::{DepotInventaire, Diagnostic};
 use sluis::domain::{Environnement, Topologie};
-use sluis::infrastructure::diagnostic::DiagnosticSysteme;
+use sluis::infrastructure::diagnostic::{DiagnosticSysteme, MOTEURS_ATTENDUS};
 use sluis::infrastructure::fs_inventaire::FsInventaire;
+use sluis::infrastructure::process::EXECUTABLES_AUTORISES;
 
 /// Reconstruit une arborescence semblable à celle de KoproGo.
 fn depot_de_reference(nom: &str) -> PathBuf {
@@ -121,12 +122,26 @@ fn happy_un_profil_rend_son_contrat_day1_day2() {
 }
 
 #[test]
-fn happy_le_diagnostic_liste_les_six_moteurs() {
+fn happy_le_diagnostic_liste_les_sept_moteurs() {
     let rapport = DiagnosticSysteme::avec("", Vec::new())
         .etablir()
         .expect("diagnostic");
-    assert_eq!(rapport.moteurs.len(), 6);
+    assert_eq!(rapport.moteurs.len(), 7);
     assert_eq!(rapport.identifiants.len(), 4);
+}
+
+#[test]
+fn happy_le_diagnostic_couvre_exactement_l_allowlist() {
+    // Les deux listes disent la même chose sous deux angles : ce que Sluis a le
+    // droit de lancer, et ce dont il rend l'état. Les laisser diverger produit
+    // le pire des cas, un moteur lançable dont aucun diagnostic ne parle, donc
+    // invisible jusqu'à son premier échec. C'est exactement ce qui est arrivé à
+    // `wrk`, qui portait tout l'escalier de charge sans figurer au rapport.
+    let mut diagnostiques: Vec<&str> = MOTEURS_ATTENDUS.iter().map(|(nom, _)| *nom).collect();
+    let mut lancables: Vec<&str> = EXECUTABLES_AUTORISES.to_vec();
+    diagnostiques.sort_unstable();
+    lancables.sort_unstable();
+    assert_eq!(diagnostiques, lancables);
 }
 
 // ── @negative ────────────────────────────────────────────────
@@ -170,27 +185,24 @@ fn negative_un_binaire_non_executable_n_est_pas_rapporte_disponible() {
     let base = std::env::temp_dir().join(format!("sluis-bin-{}", std::process::id()));
     let _ = fs::remove_dir_all(&base);
     fs::create_dir_all(&base).expect("création");
-    let faux = base.join("terraform");
+    let faux = base.join("tofu");
     fs::write(&faux, "#!/bin/sh\n").expect("écriture");
     // Volontairement sans bit d'exécution.
 
     let rapport = DiagnosticSysteme::avec(base.to_str().unwrap(), Vec::new())
         .etablir()
         .expect("diagnostic");
-    let terraform = rapport
+    let tofu = rapport
         .moteurs
         .iter()
-        .find(|m| m.nom == "terraform")
-        .expect("terraform");
+        .find(|m| m.nom == "tofu")
+        .expect("tofu");
     assert!(
-        !terraform.etat.utilisable(),
+        !tofu.etat.utilisable(),
         "un binaire sans bit d'exécution ne doit pas être dit disponible"
     );
     assert!(
-        matches!(
-            terraform.etat,
-            sluis::domain::EtatBinaire::NonExecutable { .. }
-        ),
+        matches!(tofu.etat, sluis::domain::EtatBinaire::NonExecutable { .. }),
         "il doit être distingué de l'absence, pour ne pas masquer une erreur \
          de configuration derrière un diagnostic de machine nue"
     );
@@ -236,11 +248,11 @@ fn edge_un_depot_sans_profils_rend_une_liste_vide_pas_une_erreur() {
 }
 
 #[test]
-fn edge_un_path_vide_rend_les_six_moteurs_absents_sans_paniquer() {
+fn edge_un_path_vide_rend_les_sept_moteurs_absents_sans_paniquer() {
     let rapport = DiagnosticSysteme::avec("", Vec::new())
         .etablir()
         .expect("diagnostic");
-    assert_eq!(rapport.moteurs_indisponibles().len(), 6);
+    assert_eq!(rapport.moteurs_indisponibles().len(), 7);
     assert!(rapport.moteurs_utilisables().is_empty());
 }
 

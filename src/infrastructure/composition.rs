@@ -11,13 +11,13 @@ use crate::application::campagne::Campagne;
 use crate::application::ports::Horloge;
 use crate::configuration::Configuration;
 use crate::domain::{AppError, Duree, PlafondDepense};
-use crate::infrastructure::bac_a_sable::BacASableTerraform;
+use crate::infrastructure::bac_a_sable::BacASableIac;
 use crate::infrastructure::charge::Wrk;
 use crate::infrastructure::derogation_depot::DepotDerogationFichier;
 use crate::infrastructure::fs_charge::FsCharge;
 use crate::infrastructure::mcp::outil_campagne::{OutilCampagne, ReglagesCampagne};
 use crate::infrastructure::mcp::Outil;
-use crate::infrastructure::process::{ExecuteurSysteme, Terraform};
+use crate::infrastructure::process::{ExecuteurSysteme, Tofu};
 
 /// Construit `sluis_campagne`, **si et seulement si** la configuration le
 /// prévoit.
@@ -53,7 +53,7 @@ pub fn outil_campagne_si_configure(
     }
 
     let projet = configuration.autorisation.projet_bac_a_sable(&nom_projet)?;
-    let bac = Arc::new(BacASableTerraform::new(Terraform::new(ExecuteurSysteme)));
+    let bac = Arc::new(BacASableIac::new(Tofu::new(ExecuteurSysteme)));
 
     Ok(Some(Box::new(OutilCampagne::new(
         Arc::new(Campagne::new(Arc::new(Wrk::new(ExecuteurSysteme)))),

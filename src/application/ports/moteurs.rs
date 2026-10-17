@@ -40,8 +40,13 @@ pub trait Executeur: Send + Sync {
     ) -> Result<SortieProcessus, AppError>;
 }
 
-/// Pilote Terraform.
-pub trait MoteurTerraform: Send + Sync {
+/// Pilote le moteur d'infrastructure as code.
+///
+/// Le port ne nomme pas de produit, et c'est délibéré : il décrit le cycle
+/// plan / init / apply / destroy / output, que plusieurs moteurs savent tenir.
+/// L'adaptateur en service est [`Tofu`](crate::infrastructure::process::Tofu),
+/// OpenTofu.
+pub trait MoteurIac: Send + Sync {
     /// Produit un plan, **sans rien appliquer**.
     fn plan(&self, module: &ValeurSure) -> Result<PlanTerraform, AppError>;
 

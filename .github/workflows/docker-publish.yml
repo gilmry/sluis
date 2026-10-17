@@ -12,6 +12,33 @@ permissions:
 jobs:
   publier:
     runs-on: ubuntu-latest
+    strategy:
+      # `fail-fast: false` : si l'exécutant échoue au scan, on veut quand même
+      # savoir où en est le public, et inversement. Un seul verdict pour deux
+      # images cacherait laquelle est en cause.
+      fail-fast: false
+      matrix:
+        include:
+          # Le Sluis exposé à Internet. Aucun moteur : il ne peut pas muter.
+          # Gate plein : tout ce que porte cette image est de notre fait.
+          - cible: public
+            paquet: server
+            ignorer_binaires: ""
+          # Le Sluis du réseau interne. Porte tofu et wrk.
+          #
+          # Le binaire `tofu` est écarté du gate BLOQUANT, et de lui seul.
+          # Raison, mesurée le 2026-09-02 : ses 12 CVE CRITICAL/HIGH vivent
+          # dans le go.mod d'OpenTofu (x/crypto, x/net, grpc, oras), que nous
+          # ne pouvons pas corriger. Terraform ne ferait pas mieux, 9 CVE dans
+          # les mêmes conditions : le problème est d'embarquer un binaire Go
+          # tiers, pas le choix du moteur. Voir ADR-011.
+          #
+          # Ce qui reste bloquant sur cette image : les paquets système et wrk,
+          # qui sont, eux, de notre ressort. Les CVE de tofu sont rapportées à
+          # part, sans bloquer, pour rester visibles.
+          - cible: executant
+            paquet: executant
+            ignorer_binaires: "usr/local/bin/tofu"
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -25,18 +52,32 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          target: ${{ matrix.cible }}
           load: true
-          tags: ghcr.io/${{ github.repository }}/server:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.paquet }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.cible }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.cible }}
 
       # Gate du plancher : l'image est scannée AVANT d'être poussée. Une image
       # vulnérable poussée sur un registre est tirable par n'importe qui.
       - name: Scanner avant push
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ github.repository }}/server:${{ github.sha }}
+          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.paquet }}:${{ github.sha }}
           exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          skip-files: ${{ matrix.ignorer_binaires }}
+
+      # Ce que le gate ci-dessus a écarté est rapporté ici, sans bloquer. Une
+      # exception muette redevient un angle mort à la première montée de
+      # version : celle-ci reste lisible dans le journal de chaque build.
+      - name: Rapporter les CVE du moteur tiers (sans bloquer)
+        if: matrix.ignorer_binaires != ''
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.paquet }}:${{ github.sha }}
+          exit-code: "0"
           severity: CRITICAL,HIGH
           ignore-unfixed: true
 
@@ -44,8 +85,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          target: ${{ matrix.cible }}
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/server:${{ github.sha }}
-            ghcr.io/${{ github.repository }}/server:latest
-          cache-from: type=gha
+            ghcr.io/${{ github.repository }}/${{ matrix.paquet }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/${{ matrix.paquet }}:latest
+          cache-from: type=gha,scope=${{ matrix.cible }}

@@ -10,5 +10,11 @@ kubeconfig
 /.deploy.lock
 /.deployed_rev
 /sluis.toml
+# Configuration du Sluis exécutant, déposée à la main sur le serveur. Elle
+# nomme le projet OVH du bac à sable et les dépôts mesurables : rien de secret,
+# mais rien de générique non plus, et c'est le fichier dont l'existence décide
+# du déploiement. Le gabarit versionné est config/sluis.executant.toml.
+/sluis.executant.toml
 /sluis-audit.jsonl
 /sluis-oauth.json
+/sluis-derogation.json

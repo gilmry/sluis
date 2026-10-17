@@ -15,15 +15,17 @@ Un serveur MCP distant qui expose **trois outils, tous en lecture** :
 
 | Outil | Ce qu'il fait |
 |---|---|
-| `sluis_doctor` | état des six moteurs d'infrastructure et présence des identifiants OVH, jamais leur valeur |
+| `sluis_doctor` | état des sept moteurs d'infrastructure et présence des identifiants OVH, jamais leur valeur |
 | `sluis_inventory` | matrice topologies x environnements d'un dépôt, découverte sans saisie |
 | `sluis_cluster_profiles` | profils de cluster déclarés dans le dépôt |
 
-Le bac à sable, la campagne de charge et la passerelle Tier 1 sont écrits et
-testés dans le domaine, mais **ne sont câblés à aucun registre MCP**. Un agent
-connecté à ce déploiement ne peut donc rien muter. C'est l'état voulu tant que
-les hypothèses H1 et H2 ne sont pas levées, et c'est ce qui rend ce
-déploiement sans risque pour l'infrastructure existante.
+La campagne de charge et la passerelle Tier 1 sont écrites et testées, mais
+**ce déploiement-ci ne les expose pas**. Un agent connecté à `sluis.ecosolva.org`
+ne peut donc rien muter, et c'est une propriété de l'image autant que de la
+configuration : l'image `server` ne contient ni `tofu` ni `wrk`, elle ne
+pourrait pas provisionner même si on lui donnait des clés OVH.
+
+C'est le second déploiement, décrit plus bas, qui porte les moteurs.
 
 ---
 
@@ -32,7 +34,7 @@ déploiement sans risque pour l'infrastructure existante.
 - Docker avec le plugin `compose`
 - le réseau Traefik partagé : `docker network create ecosolva-web` s'il n'existe pas
 - un enregistrement DNS pointant vers le serveur, par défaut `sluis.ecosolva.org`
-- rien d'autre. Pas de base de données, pas de terraform, pas de kubectl
+- rien d'autre. Pas de base de données, pas de tofu, pas de kubectl
 
 ---
 
@@ -139,6 +141,15 @@ docker compose --profile prod ps                # état
 tail -f deploy.log                              # boucle GitOps
 ```
 
+Pour l'exécutant, il faut ajouter sa surcouche à chaque commande, sans quoi
+Compose ne connaît pas le service :
+
+```sh
+alias dcx='docker compose -f docker-compose.yml -f docker-compose.executant.yml'
+dcx logs -f sluis-executant
+dcx run --rm --entrypoint /usr/local/bin/sluis sluis-executant doctor
+```
+
 Le **journal d'audit** est une ligne de JSON par appel d'outil, dans le volume :
 
 ```sh
@@ -171,12 +182,69 @@ valides jusqu'à leur expiration, une heure pour un jeton d'accès.
 | `exec /usr/local/bin/sluis-server: operation not permitted` | `no-new-privileges` sur un Docker installé par snap | ne pas le remettre dans le compose, AppArmor refuse la transition de profil |
 | déploiement figé, `échec du fast-forward` dans `deploy.log` | historique réécrit sur `origin/main` | intervention humaine, jamais un `--force` automatique |
 
+## Le second déploiement : le Sluis exécutant
+
+Le Sluis public ne détient rien, et c'est pour cela qu'il peut être exposé.
+Celui qui détient les clés n'est joignable de nulle part : pas de label
+Traefik, pas de port publié, pas de place sur `ecosolva-web`. Les deux font
+tourner le **même commit du même binaire**, épinglé sur le même tag ; ce qui
+les distingue est l'image (`server` contre `executant`) et la configuration.
+
+Fusionner les deux rendrait à un service public le pouvoir de muter. C'est le
+choix d'architecture du Sprint 5, et il ne se négocie pas.
+
+**Il ne se déploie que si `sluis.executant.toml` existe à la racine.** C'est
+le seul interrupteur, et il est à la main : tant que H1 n'est pas levée, il
+n'y a ni projet OVH de bac à sable, ni dépôt à mesurer.
+
+```sh
+# 1. Le projet OVH dédié aux bacs à sable (H1), et lui seul, dans le fichier
+cp config/sluis.executant.toml sluis.executant.toml
+$EDITOR sluis.executant.toml     # y mettre l'identifiant réel du projet
+
+# 2. Les identifiants OVH restreints à ce projet, et une signature à part
+$EDITOR .env                     # SLUIS_SECRET_SIGNATURE_EXECUTANT, OVH_BAC_A_SABLE_*
+
+# 3. Les dépôts à mesurer, montés en lecture-écriture sous /depots
+mkdir -p /home/ubuntu/depots
+git clone git@github.com:gilmry/koprogo.git /home/ubuntu/depots/koprogo
+
+# 4. Le déploiement les prend tous les deux, sans autre commande
+sudo ./deploy.sh
+sudo ./deploy.sh --run
+```
+
+`deploy.sh` refuse de continuer si le fichier porte encore l'identifiant de
+projet du gabarit : un `sluis_campagne` armé contre un projet qui n'existe pas
+serait pire qu'un outil absent.
+
+Vérification, qui ne passe pas par HTTP puisque rien n'est publié :
+
+```sh
+./tools/fumee.sh --executant
+```
+
+```
+Fumée sur le Sluis exécutant
+  ✓ tofu présent
+  ✓ wrk présent
+  ✓ identifiants OVH présents
+Fumée verte : les moteurs et les identifiants sont là.
+```
+
+**Le moteur d'infrastructure est OpenTofu**, pas Terraform. Terraform est sous
+BSL 1.1 depuis la 1.6 ; ce dépôt est MIT et publie une image publique sur GHCR,
+où redistribuer du BSL serait contradictoire. OpenTofu (MPL-2.0) lit les mêmes
+fichiers `.tf` et rend les mêmes résumés. Le binaire s'appelle `tofu`, et c'est
+sous ce nom que l'allowlist et `sluis_doctor` le connaissent.
+
 ## Ce que ce déploiement ne fait pas encore
 
-- **Pas de rollback automatique.** L'architecture le prévoit, `deploy.sh` ne
-  l'implémente pas. Si `tools/fumee.sh` est rouge après une mise à jour, c'est
-  à vous de revenir à l'image précédente
-- **Pas de mutation, d'aucune sorte.** Ni bac à sable, ni Tier 1. Le jeton
-  `SLUIS_GITHUB_TOKEN` du `.env` n'est lu par aucun outil
+- **Pas de mutation de production, d'aucune sorte.** Le Tier 1 reste derrière
+  la passerelle d'ADR-008, et le jeton `SLUIS_GITHUB_TOKEN` du `.env` n'est lu
+  par aucun outil tant que H2 n'est pas levée
+- **Aucun projet ne déclare encore sa charge.** L'exécutant sait mesurer, mais
+  `infrastructure/_shared/charge.yaml` n'existe dans aucun dépôt : voir
+  `config/charge.exemple.yaml` pour ce qu'un projet doit déposer
 - **Un seul utilisateur.** Sluis sert un superviseur, il n'a pas de table
   d'utilisateurs et n'en aura pas tant qu'il en sert un

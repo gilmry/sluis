@@ -2,7 +2,7 @@
 //!
 //! **Le refus a lieu à l'admission, pas par échappement.** C'est une décision,
 //! pas une commodité : échapper suppose de connaître le langage de destination,
-//! or Sluis passe ses arguments à six moteurs différents dont il ne maîtrise
+//! or Sluis passe ses arguments à sept moteurs différents dont il ne maîtrise
 //! aucun analyseur. Refuser une valeur douteuse est vérifiable ; l'échapper
 //! correctement pour six cibles ne l'est pas.
 //!
@@ -50,7 +50,7 @@ impl ValeurSure {
                 detail: format!(
                     "argument refusé : le caractère « {} » n'est pas admis. \
                      Sluis refuse à l'admission plutôt que d'échapper, car l'échappement \
-                     supposerait de connaître l'analyseur de chacun des six moteurs",
+                     supposerait de connaître l'analyseur de chacun des sept moteurs",
                     interdit.escape_default()
                 ),
             });

@@ -16,7 +16,7 @@
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use crate::application::ports::{MoteurTerraform, Provisionneur};
+use crate::application::ports::{MoteurIac, Provisionneur};
 
 // Le port vit dans `application::ports` ; il reste visible ici parce que la
 // garde RAII et le chien de garde, qui sont des mécanismes d'infrastructure,
@@ -187,11 +187,11 @@ impl ChienDeGarde {
 ///
 /// Un seul module jetable, donné à la construction : le bac à sable n'a pas
 /// vocation à décrire des topologies, il en loue une, la charge et l'efface.
-pub struct BacASableTerraform<M: MoteurTerraform> {
+pub struct BacASableIac<M: MoteurIac> {
     moteur: M,
 }
 
-impl<M: MoteurTerraform> BacASableTerraform<M> {
+impl<M: MoteurIac> BacASableIac<M> {
     /// Construit l'adaptateur.
     ///
     /// Ni module ni sortie ici : ils viennent du projet mesuré, par son bail
@@ -202,7 +202,7 @@ impl<M: MoteurTerraform> BacASableTerraform<M> {
     }
 }
 
-impl<M: MoteurTerraform> Provisionneur for BacASableTerraform<M> {
+impl<M: MoteurIac> Provisionneur for BacASableIac<M> {
     fn provisionner(
         &self,
         bail: &BailBacASable,
@@ -231,7 +231,7 @@ impl<M: MoteurTerraform> Provisionneur for BacASableTerraform<M> {
     }
 }
 
-impl<M: MoteurTerraform> DestructeurBail for BacASableTerraform<M> {
+impl<M: MoteurIac> DestructeurBail for BacASableIac<M> {
     fn detruire(&self, bail: &BailBacASable) -> Result<(), AppError> {
         // Idempotent par construction : `terraform destroy` sur un état déjà
         // vide rend « 0 destroyed » et réussit. La garde RAII et le chien de

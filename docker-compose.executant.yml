@@ -1,0 +1,79 @@
+# Le Sluis EXÉCUTANT — surcouche, jamais seule.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.executant.yml ...
+#
+# **Pourquoi un fichier séparé et non un profil.** Docker Compose interpole les
+# variables de TOUS les services avant de filtrer par profil : un
+# `${VAR:?}` sur un service hors profil fait quand même échouer la commande.
+# Décrire l'exécutant dans le fichier principal cassait donc le déploiement du
+# Sluis public dès que le `.env` n'avait pas les variables de l'exécutant, ce
+# qui est précisément l'état d'un serveur qui n'en veut pas. Un fichier qu'on
+# n'ajoute pas est un fichier qui n'interpole rien.
+#
+# Même binaire que le Sluis public, même commit, même tag. Ce qui diffère :
+# l'image (elle porte tofu et wrk), la configuration, et le réseau. C'est lui
+# qui détient les clés OVH, et c'est pour cela qu'il n'est joignable de nulle
+# part : pas de label Traefik, pas de port publié, pas de place sur
+# `ecosolva-web`. Ce qui est exposé ne détient rien, ce qui détient n'est pas
+# exposé. Voir ADR-010.
+
+services:
+  sluis-executant:
+    image: ${SLUIS_IMAGE_EXECUTANT:-ghcr.io/gilmry/sluis/executant:latest}
+    container_name: sluis-executant
+    restart: unless-stopped
+    environment:
+      SLUIS_CONFIG: /app/sluis.toml
+      # N'écoute que sur le réseau interne du projet. Aucune section `ports` :
+      # rien de cette écoute ne remonte jusqu'à l'hôte.
+      SLUIS_ECOUTE: 0.0.0.0:8080
+      # L'issuer doit désigner l'adresse par laquelle on atteint réellement ce
+      # service, celle du réseau interne. Réutiliser le domaine public serait
+      # pire qu'inexact : deux émetteurs sous une même identité sont
+      # indistinguables pour un client.
+      SLUIS_BASE_URL: http://sluis-executant:8080
+      SLUIS_DEPOT_OAUTH: /app/donnees/sluis-oauth.json
+      SLUIS_SECRET_SIGNATURE: ${SLUIS_SECRET_SIGNATURE_EXECUTANT:?absent du .env — openssl rand -base64 32, DIFFÉRENT de celui du Sluis public}
+      SLUIS_IDENTIFIANT: ${SLUIS_IDENTIFIANT:?absent du .env — identifiant du superviseur}
+      SLUIS_EMPREINTE_MOT_DE_PASSE: ${SLUIS_EMPREINTE_MOT_DE_PASSE:?absent du .env — sha256 du mot de passe, pas le mot de passe}
+      # Les identifiants OVH ne vivent QUE sur ce service, et ce sont ceux du
+      # projet bac à sable (H1), restreints à lui. Le Sluis public n'en reçoit
+      # pas : c'est ce qui rend sa compromission sans effet sur l'infrastructure.
+      OVH_APPLICATION_KEY: ${OVH_BAC_A_SABLE_APPLICATION_KEY:-}
+      OVH_APPLICATION_SECRET: ${OVH_BAC_A_SABLE_APPLICATION_SECRET:-}
+      OVH_CONSUMER_KEY: ${OVH_BAC_A_SABLE_CONSUMER_KEY:-}
+      OVH_ENDPOINT: ${OVH_ENDPOINT:-https://eu.api.ovh.com/1.0}
+      # OpenTofu écrit dans le HOME du processus. Le seul chemin inscriptible
+      # est le volume ; sans cette ligne, `tofu init` échoue sur un HOME absent
+      # et le message ne désigne pas la cause.
+      HOME: /app/donnees
+    volumes:
+      - ./sluis.executant.toml:/app/sluis.toml:ro
+      - sluis_executant_donnees:/app/donnees
+      # Les dépôts mesurés. En écriture, parce que `tofu init` dépose les
+      # fournisseurs dans le `.terraform/` du module et que l'état vit à côté.
+      # C'est le seul endroit où ce conteneur écrit hors de son volume, et la
+      # liste blanche `depots_autorises` borne ce qu'il a le droit d'y toucher.
+      - ${SLUIS_DEPOTS:-/home/ubuntu/depots}:/depots
+    read_only: true
+    # tofu et wrk écrivent des fichiers de travail dans /tmp. Un tmpfs le leur
+    # donne sans rendre l'image inscriptible, et le vide à chaque redémarrage,
+    # ce qu'un plan mérite.
+    tmpfs:
+      - /tmp:size=256m
+    networks:
+      - sluis-interne
+
+volumes:
+  # Volume distinct : les deux Sluis ne partagent ni journal d'audit, ni dépôt
+  # OAuth, ni fenêtre de dérogation. Un journal commun rendrait indiscernables
+  # les actes du service exposé et ceux du service armé.
+  sluis_executant_donnees:
+
+networks:
+  # Réseau propre à l'exécutant. **Volontairement pas `internal: true`** : il
+  # lui faut la sortie vers l'API OVH, vers le registre des fournisseurs
+  # OpenTofu, et vers la machine louée qu'il va charger. Ce qu'on lui retire,
+  # c'est l'ENTRÉE : aucun port publié, aucune place sur le réseau que Traefik
+  # dessert.
+  sluis-interne:

@@ -31,7 +31,7 @@ impl ContratOutil for OutilDoctor {
         "sluis_doctor"
     }
     fn description(&self) -> &'static str {
-        "Rend l'état des six moteurs d'infrastructure et la présence des \
+        "Rend l'état des sept moteurs d'infrastructure et la présence des \
          identifiants OVH. Ne révèle jamais la valeur d'un identifiant. \
          Une absence est un état normal, pas une panne."
     }

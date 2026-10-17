@@ -1,6 +1,6 @@
 //! Diagnostic de l'environnement d'exécution.
 //!
-//! Cherche les six moteurs dans le `PATH` et signale la présence des
+//! Cherche les sept moteurs dans le `PATH` et signale la présence des
 //! identifiants, sans jamais en révéler la valeur.
 //!
 //! Le `PATH` et les variables sont **injectés** plutôt que lus depuis le
@@ -14,13 +14,20 @@ use crate::application::ports::Diagnostic;
 use crate::domain::{AppError, EtatBinaire, Identifiant, Moteur, RapportDiagnostic};
 
 /// Les moteurs que Sluis pilote, et ce à quoi ils servent.
+///
+/// La liste est **exactement** celle de
+/// [`EXECUTABLES_AUTORISES`](crate::infrastructure::process::EXECUTABLES_AUTORISES),
+/// et un test le vérifie. Un moteur lançable qu'aucun diagnostic ne mentionne
+/// serait invisible jusqu'à son premier échec ; c'est ce qui est arrivé à
+/// `wrk`, absent d'ici alors qu'il portait tout l'escalier de charge.
 pub const MOTEURS_ATTENDUS: &[(&str, &str)] = &[
-    ("terraform", "provisionnement d'infrastructure"),
+    ("tofu", "provisionnement d'infrastructure (OpenTofu)"),
     ("ansible-playbook", "configuration et durcissement"),
     ("helm", "déploiement applicatif Kubernetes"),
     ("kubectl", "interrogation d'un cluster"),
     ("kustomize", "rendu des surcouches d'environnement"),
     ("argocd", "état de la réconciliation GitOps"),
+    ("wrk", "escalier de charge des campagnes de capacité"),
 ];
 
 /// Les identifiants attendus pour parler à OVH.

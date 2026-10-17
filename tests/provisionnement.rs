@@ -10,14 +10,14 @@
 
 use std::sync::Mutex;
 
-use sluis::application::ports::MoteurTerraform;
+use sluis::application::ports::MoteurIac;
 use sluis::application::ports::Provisionneur;
 use sluis::domain::{
     Action, AppError, BailBacASable, DemandeBail, Duree, Environnement, FenetreDerogation,
     Horodatage, JetonChangement, JetonConsomme, ListeAutorisation, MutationTerraform,
     PlafondDepense, PlanChangement, PlanTerraform, Tier, ValeurSure,
 };
-use sluis::infrastructure::bac_a_sable::{BacASableTerraform, DestructeurBail};
+use sluis::infrastructure::bac_a_sable::{BacASableIac, DestructeurBail};
 
 /// Le module que porte un bail de test.
 fn module_du_bail() -> sluis::domain::ValeurSure {
@@ -101,7 +101,7 @@ impl MoteurDouble {
     }
 }
 
-impl MoteurTerraform for MoteurDouble {
+impl MoteurIac for MoteurDouble {
     fn plan(&self, _module: &ValeurSure) -> Result<PlanTerraform, AppError> {
         self.consigner("plan");
         Ok(PlanTerraform {
@@ -161,7 +161,7 @@ impl MoteurTerraform for MoteurDouble {
 
 /// Le pilote prend son moteur par valeur ; les tests veulent garder le double
 /// observable après coup, d'où cette délégation, calquée sur `tests/moteurs.rs`.
-impl MoteurTerraform for &MoteurDouble {
+impl MoteurIac for &MoteurDouble {
     fn plan(&self, module: &ValeurSure) -> Result<PlanTerraform, AppError> {
         (*self).plan(module)
     }
@@ -188,7 +188,7 @@ impl MoteurTerraform for &MoteurDouble {
 #[test]
 fn happy_le_provisionnement_initialise_applique_puis_lit_les_sorties() {
     let moteur = MoteurDouble::nouveau();
-    let bac = BacASableTerraform::new(&moteur);
+    let bac = BacASableIac::new(&moteur);
 
     let cible = bac
         .provisionner(&bail(), "vps_ip")
@@ -204,7 +204,7 @@ fn happy_le_provisionnement_initialise_applique_puis_lit_les_sorties() {
 #[test]
 fn happy_les_sorties_du_module_sont_conservees_avec_la_cible() {
     let moteur = MoteurDouble::nouveau();
-    let bac = BacASableTerraform::new(&moteur);
+    let bac = BacASableIac::new(&moteur);
 
     let cible = bac
         .provisionner(&bail(), "vps_ip")
@@ -216,7 +216,7 @@ fn happy_les_sorties_du_module_sont_conservees_avec_la_cible() {
 #[test]
 fn happy_la_destruction_appelle_terraform_destroy() {
     let moteur = MoteurDouble::nouveau();
-    let bac = BacASableTerraform::new(&moteur);
+    let bac = BacASableIac::new(&moteur);
 
     bac.detruire(&bail()).expect("destruction");
 
@@ -229,7 +229,7 @@ fn happy_la_destruction_appelle_terraform_destroy() {
 fn negative_un_apply_en_echec_ne_rend_aucune_cible() {
     let mut moteur = MoteurDouble::nouveau();
     moteur.echec_apply = true;
-    let bac = BacASableTerraform::new(&moteur);
+    let bac = BacASableIac::new(&moteur);
 
     let erreur = bac
         .provisionner(&bail(), "vps_ip")
@@ -245,7 +245,7 @@ fn negative_un_apply_en_echec_ne_rend_aucune_cible() {
 fn negative_une_sortie_d_adresse_absente_est_une_erreur_nommee() {
     let mut moteur = MoteurDouble::nouveau();
     moteur.sorties = vec![("autre_chose".to_string(), "x".to_string())];
-    let bac = BacASableTerraform::new(&moteur);
+    let bac = BacASableIac::new(&moteur);
 
     let erreur = bac
         .provisionner(&bail(), "vps_ip")
@@ -261,7 +261,7 @@ fn negative_une_sortie_d_adresse_absente_est_une_erreur_nommee() {
 fn negative_une_destruction_en_echec_remonte_l_erreur() {
     let mut moteur = MoteurDouble::nouveau();
     moteur.echec_destroy = true;
-    let bac = BacASableTerraform::new(&moteur);
+    let bac = BacASableIac::new(&moteur);
 
     let erreur = bac.detruire(&bail()).expect_err("doit échouer");
 
@@ -274,7 +274,7 @@ fn negative_une_destruction_en_echec_remonte_l_erreur() {
 fn edge_une_adresse_vide_est_refusee_plutot_que_transmise() {
     let mut moteur = MoteurDouble::nouveau();
     moteur.sorties = vec![("vps_ip".to_string(), String::new())];
-    let bac = BacASableTerraform::new(&moteur);
+    let bac = BacASableIac::new(&moteur);
 
     // Une campagne lancée contre une adresse vide mesurerait le vide et
     // rendrait des chiffres qu'on croirait valides.
@@ -286,7 +286,7 @@ fn edge_une_adresse_vide_est_refusee_plutot_que_transmise() {
 #[test]
 fn security_une_destruction_est_idempotente() {
     let moteur = MoteurDouble::nouveau();
-    let bac = BacASableTerraform::new(&moteur);
+    let bac = BacASableIac::new(&moteur);
 
     bac.detruire(&bail()).expect("première destruction");
     bac.detruire(&bail()).expect("seconde destruction");
