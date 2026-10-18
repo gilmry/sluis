@@ -61,7 +61,7 @@ jobs:
       # Gate du plancher : l'image est scannée AVANT d'être poussée. Une image
       # vulnérable poussée sur un registre est tirable par n'importe qui.
       - name: Scanner avant push
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository }}/${{ matrix.paquet }}:${{ github.sha }}
           exit-code: "1"
@@ -74,7 +74,7 @@ jobs:
       # version : celle-ci reste lisible dans le journal de chaque build.
       - name: Rapporter les CVE du moteur tiers (sans bloquer)
         if: matrix.ignorer_binaires != ''
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository }}/${{ matrix.paquet }}:${{ github.sha }}
           exit-code: "0"

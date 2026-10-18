@@ -12,12 +12,12 @@ finit par diverger.
 | ADR-003 | DDD ubiquitous language → mapping code | non | acceptée |
 | ADR-004 | Rust plutôt que le défaut BMAD Python + FastAPI | non | acceptée, écart méthodologique assumé |
 | ADR-005 | Le contrat MCP est matérialisé, pas décrit | **oui** | acceptée |
-| ADR-006 | Persistance CQRS SQL pur, pas d'ORM | **oui** | contresignée le 2026-08-29 · **amendée à la fabrication** : dépôt fichier, voir ci-dessous |
+| ADR-006 | Persistance CQRS SQL pur, pas d'ORM | **oui** | contresignée le 2026-08-29 · **amendée à la fabrication** : dépôt fichier, amendement contresigné le 2026-10-18 |
 | ADR-007 | Dérogation Tier 2 bornée **et à durée limitée** pour les bacs à sable | **oui** | **contresignée le 2026-08-29** · fenêtre ouverte jusqu'au **2026-11-27** |
 | ADR-008 | Passerelle d'approbation = environnement GitHub protégé | **oui** | acceptée |
 | ADR-009 | Mapping branche → environnement | **oui** | acceptée |
-| ADR-010 | Deux déploiements, et OpenTofu comme moteur | **oui** | **à contresigner**, voir ci-dessous |
-| ADR-011 | Gate de scan différencié par image | non | **à contresigner**, voir ci-dessous |
+| ADR-010 | Deux déploiements, et OpenTofu comme moteur | **oui** | **contresignée le 2026-10-18** |
+| ADR-011 | Gate de scan différencié par image | non | **contresignée le 2026-10-18** |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
@@ -46,7 +46,7 @@ dans PostgreSQL. Deux raisons :
 Ce que l'amendement **ne relâche pas** : la révocation reste durable, écrite
 avant tout retour, et la consommation d'un code reste atomique. Le port
 `DepotOAuth` rend la bascule vers PostgreSQL sans effet sur le reste du code, le
-jour où le volume l'exigera. Cet amendement est à contresigner.
+jour où le volume l'exigera. Amendement contresigné le 2026-10-18.
 
 
 ## ADR-010 — Deux déploiements, et OpenTofu comme moteur
@@ -95,7 +95,8 @@ indiscernables. Et un moteur dont la compatibilité avec Terraform doit être
 vérifiée sur les modules réels, ce que la première campagne dira.
 
 **Irréversible ?** Oui pour la seconde partie : les modules mesurés porteront des
-états écrits par OpenTofu. Cet ADR est à contresigner.
+états écrits par OpenTofu. Contresigné le 2026-10-18. Le moteur de charge
+`wrk` sera remplacé par k6 (#8), ce qui amendera cet ADR et ADR-011.
 
 
 ## ADR-011 — Gate de scan différencié par image
@@ -142,5 +143,5 @@ signale pas. Elles viennent de la même Debian 12 que la base et se remettent à
 jour à chaque reconstruction, ce qui limite la portée du trou sans l'annuler.
 
 Cet ADR n'est pas irréversible : rétablir le gate plein est une ligne de
-configuration. Il est à contresigner, parce qu'il relâche un garde-fou du
+configuration. Il a été contresigné le 2026-10-18, parce qu'il relâche un garde-fou du
 plancher.
