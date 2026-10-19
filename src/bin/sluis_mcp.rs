@@ -79,12 +79,14 @@ fn executer() -> Result<(), sluis::domain::AppError> {
         registre.enregistrer(campagne)?;
     }
 
-    // La passerelle n'est exposée, par deux outils de Tier 2, que si le
-    // plancher peut aussi être vérifié (ADR-012). Son état est dit au
-    // démarrage, qu'elle soit composée ou non.
+    // La passerelle s'expose par des outils de Tier 2 qui ne font que
+    // demander ; la mise en ligne exige en plus que le plancher soit
+    // vérifiable (ADR-012). Son état est dit au démarrage.
     let passerelle = passerelle_github_si_configuree(&configuration);
     eprintln!("sluis-mcp : {}", passerelle.diagnostic());
-    for outil in outils_mise_en_ligne_si_configures(&configuration, passerelle) {
+    for outil in
+        outils_mise_en_ligne_si_configures(&configuration, passerelle, Arc::new(HorlogeSysteme))
+    {
         eprintln!("sluis-mcp : « {} » exposé", outil.nom());
         registre.enregistrer(outil)?;
     }

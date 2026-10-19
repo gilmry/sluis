@@ -19,8 +19,8 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::application::mise_en_ligne::{IssueMiseEnLigne, MiseEnLigne};
-use crate::application::ports::{EtatApprobation, PasserelleApprobation};
-use crate::domain::{AppError, Empreinte, Environnement, Tier};
+use crate::application::ports::{EtatApprobation, Horloge, PasserelleApprobation};
+use crate::domain::{plan_renouvellement, AppError, Empreinte, Environnement, Tier};
 use crate::infrastructure::gates_github::verifier_reference;
 use crate::infrastructure::mcp::contrat::Contrat;
 use crate::infrastructure::mcp::{ContratOutil, Outil};
@@ -50,6 +50,22 @@ const CONTRAT_MISE_EN_LIGNE: Contrat<ArgumentsMiseEnLigne> = Contrat::new(
      gates du plancher puis soumet un plan de Tier 1 à approbation humaine dans \
      un environnement GitHub protégé. Ne met rien en ligne par lui-même : rend \
      l'empreinte du plan, à suivre avec sluis_etat_approbation.",
+);
+
+/// `sluis_renouvellement_derogation` — aucun argument.
+///
+/// Rien n'est laissé à l'appelant : le plan est entièrement écrit par Sluis,
+/// daté par son horloge.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ArgumentsRenouvellement {}
+
+const CONTRAT_RENOUVELLEMENT: Contrat<ArgumentsRenouvellement> = Contrat::new(
+    "sluis_renouvellement_derogation",
+    "Demande le renouvellement de la fenêtre de dérogation d'ADR-007 : soumet un \
+     plan de Tier 1 daté à approbation humaine dans l'environnement production. \
+     N'ouvre rien : l'exécutant ouvre la fenêtre, sur preuve lue chez GitHub, avec \
+     l'instant de demande rendu ici.",
 );
 
 const CONTRAT_ETAT: Contrat<ArgumentsEtatApprobation> = Contrat::new(
@@ -185,5 +201,54 @@ impl Outil for OutilEtatApprobation {
         let empreinte = Empreinte::depuis_hexadecimal(&arguments.empreinte)?;
         let etat = self.passerelle.interroger(&empreinte)?;
         Ok(etat_en_json(&etat))
+    }
+}
+
+/// Demande le renouvellement de la fenêtre d'ADR-007 (ADR-012, partie 3).
+pub struct OutilRenouvellementDerogation {
+    passerelle: Arc<dyn PasserelleApprobation>,
+    horloge: Arc<dyn Horloge>,
+}
+
+impl OutilRenouvellementDerogation {
+    /// Construit l'outil.
+    pub fn new(passerelle: Arc<dyn PasserelleApprobation>, horloge: Arc<dyn Horloge>) -> Self {
+        Self {
+            passerelle,
+            horloge,
+        }
+    }
+}
+
+impl ContratOutil for OutilRenouvellementDerogation {
+    fn nom(&self) -> &'static str {
+        CONTRAT_RENOUVELLEMENT.nom()
+    }
+    fn description(&self) -> &'static str {
+        CONTRAT_RENOUVELLEMENT.description()
+    }
+    fn schema(&self) -> serde_json::Value {
+        CONTRAT_RENOUVELLEMENT.schema()
+    }
+    fn desérialiser(&self, arguments: &serde_json::Value) -> Result<(), String> {
+        CONTRAT_RENOUVELLEMENT.desérialiser(arguments)
+    }
+}
+
+impl Outil for OutilRenouvellementDerogation {
+    fn tier(&self) -> Tier {
+        Tier::Two
+    }
+
+    fn appeler(&self, arguments: &serde_json::Value) -> Result<serde_json::Value, AppError> {
+        let _: ArgumentsRenouvellement = analyser(self.nom(), arguments)?;
+        let demande_le = self.horloge.maintenant();
+        let plan = plan_renouvellement(demande_le)?;
+        let etat = self.passerelle.soumettre(&plan)?;
+        Ok(json!({
+            "empreinte": plan.empreinte().hexadecimal(),
+            "demande_le": demande_le.secondes(),
+            "approbation": etat_en_json(&etat),
+        }))
     }
 }

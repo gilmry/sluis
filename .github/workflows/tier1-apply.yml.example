@@ -22,7 +22,7 @@ on:
         description: "Empreinte du plan de changement (liée à l'approbation)"
         required: true
       action:
-        description: "terraform_apply, helm_upgrade, mise_en_ligne…"
+        description: "terraform_apply, helm_upgrade, mise_en_ligne, renouvellement_derogation…"
         required: true
       environnement:
         description: "dev, integration, staging, production"
@@ -46,23 +46,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Les entrées passent par l'environnement, jamais interpolées dans le
+      # script : une entrée interpolée par `${{ }}` devient du shell, et le
+      # premier caractère spécial d'une cible exécuterait ce qui suit.
       - name: Tracer la demande
+        env:
+          EMPREINTE: ${{ inputs.empreinte }}
+          ACTION: ${{ inputs.action }}
+          ENVIRONNEMENT: ${{ inputs.environnement }}
+          CIBLE: ${{ inputs.cible }}
         run: |
-          echo "Empreinte    : ${{ inputs.empreinte }}"
-          echo "Action       : ${{ inputs.action }}"
-          echo "Environnement: ${{ inputs.environnement }}"
-          echo "Cible        : ${{ inputs.cible }}"
+          echo "Empreinte    : $EMPREINTE"
+          echo "Action       : $ACTION"
+          echo "Environnement: $ENVIRONNEMENT"
+          echo "Cible        : $CIBLE"
           # Pas d'« approuvé par » ici : `github.actor` désigne celui qui a
           # déclenché ou relancé le run, pas le relecteur. Sluis lit le
           # relecteur réel dans /actions/runs/{id}/approvals.
 
+      # Le renouvellement d'ADR-007 ne mute rien : l'approbation EST l'acte.
+      # Le Sluis exécutant la lit chez GitHub et ouvre la fenêtre lui-même.
+      - name: Renouvellement de la dérogation
+        if: inputs.action == 'renouvellement_derogation'
+        run: echo "Approbation consignée. Aucune mutation, l'exécutant ouvre la fenêtre."
+
       - name: Appliquer
+        if: inputs.action != 'renouvellement_derogation'
         env:
           # Ces secrets vivent dans GitHub Actions. Sluis ne les voit jamais.
           OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
           KUBECONFIG_CONTENU: ${{ secrets.KUBECONFIG }}
+          EMPREINTE: ${{ inputs.empreinte }}
+          CIBLE: ${{ inputs.cible }}
         run: |
           echo "Remplacer par la commande réelle, par exemple :"
-          echo "  terraform -chdir=${{ inputs.cible }} apply -auto-approve"
-          echo "L'empreinte ${{ inputs.empreinte }} doit être vérifiée ici contre"
+          echo "  tofu -chdir=\"$CIBLE\" apply -auto-approve"
+          echo "L'empreinte $EMPREINTE doit être vérifiée ici contre"
           echo "le plan, pour qu'une approbation ne vaille que pour ce plan."
