@@ -179,8 +179,13 @@ impl PlanChangement {
                 detail: "plan sans cible".to_string(),
             });
         }
-        let empreinte = Empreinte::calculer(&format!(
-            "{action}|{environnement}|{tier:?}|{cible}|{description}|{diff}"
+        let empreinte = Empreinte::calculer(&forme_canonique(
+            &action,
+            environnement,
+            tier,
+            &cible,
+            &description,
+            &diff,
         ));
         Ok(Self {
             action,
@@ -196,6 +201,23 @@ impl PlanChangement {
     /// Empreinte du plan.
     pub fn empreinte(&self) -> &Empreinte {
         &self.empreinte
+    }
+
+    /// La chaîne dont l'empreinte est le SHA-256.
+    ///
+    /// Le job de Tier 1 la recompose à partir de ses entrées et en recalcule
+    /// l'empreinte avant toute mutation : c'est ce qui lie l'approbation
+    /// humaine au plan exécuté, et non à un plan de mêmes entrées (faille S2).
+    /// Changer cette forme casse le gabarit du workflow ; un test les confronte.
+    pub fn forme_canonique(&self) -> String {
+        forme_canonique(
+            &self.action,
+            self.environnement,
+            self.tier,
+            &self.cible,
+            &self.description,
+            &self.diff,
+        )
     }
     /// Action visée.
     pub fn action(&self) -> &Action {
@@ -328,4 +350,17 @@ impl JetonChangement {
     pub fn expire_le(&self) -> Horodatage {
         self.expire_le
     }
+}
+
+/// Forme canonique d'un plan : les six champs, séparés par `|`, le tier sous
+/// sa forme `Debug` (`One`, `Two`).
+fn forme_canonique(
+    action: &Action,
+    environnement: Environnement,
+    tier: Tier,
+    cible: &str,
+    description: &str,
+    diff: &str,
+) -> String {
+    format!("{action}|{environnement}|{tier:?}|{cible}|{description}|{diff}")
 }
