@@ -18,8 +18,8 @@ use sluis::configuration::Configuration;
 use sluis::domain::{Duree, Horodatage, Redacted};
 use sluis::infrastructure::audit::JsonlAuditLog;
 use sluis::infrastructure::composition::{
-    outil_campagne_si_configure, outils_mise_en_ligne_si_configures,
-    passerelle_github_si_configuree,
+    outil_campagne_si_configure, outil_ouverture_derogation_si_configure,
+    outils_mise_en_ligne_si_configures, passerelle_github_si_configuree,
 };
 use sluis::infrastructure::diagnostic::DiagnosticSysteme;
 use sluis::infrastructure::fs_inventaire::FsInventaire;
@@ -143,6 +143,15 @@ fn executer() -> Result<(), sluis::domain::AppError> {
     {
         eprintln!("sluis-server : « {} » exposé", outil.nom());
         registre.enregistrer(outil)?;
+    }
+    if let Some(ouverture) = outil_ouverture_derogation_si_configure(
+        &configuration,
+        secret_signature.exposer().as_bytes(),
+        passerelle_github_si_configuree(&configuration),
+        Arc::new(HorlogeSysteme),
+    )? {
+        eprintln!("sluis-server : « {} » exposé", ouverture.nom());
+        registre.enregistrer(ouverture)?;
     }
 
     let mcp = Arc::new(ServeurMcp::new(

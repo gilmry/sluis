@@ -387,3 +387,61 @@ mod mise_en_ligne {
         }
     }
 }
+
+// ── Story 4.4b (#4) — l'outil d'ouverture passe le harnais ───
+
+mod ouverture {
+    use std::sync::Arc;
+
+    use sluis::application::ouverture_derogation::OuvertureDerogation;
+    use sluis::application::ports::{
+        DepotDerogation, EtatApprobation, HorlogeFigee, PasserelleApprobation,
+        RegistreRenouvellements,
+    };
+    use sluis::domain::{
+        AppError, Duree, Empreinte, FenetreDerogation, Horodatage, PlanChangement,
+    };
+    use sluis::infrastructure::mcp::outil_ouverture_derogation::OutilOuvertureDerogation;
+
+    struct Inerte;
+
+    impl PasserelleApprobation for Inerte {
+        fn soumettre(&self, _plan: &PlanChangement) -> Result<EtatApprobation, AppError> {
+            unreachable!("le harnais ne teste que le contrat")
+        }
+        fn interroger(&self, _empreinte: &Empreinte) -> Result<EtatApprobation, AppError> {
+            unreachable!("le harnais ne teste que le contrat")
+        }
+    }
+    impl RegistreRenouvellements for Inerte {
+        fn deja_consommee(&self, _empreinte: &Empreinte) -> Result<bool, AppError> {
+            unreachable!("le harnais ne teste que le contrat")
+        }
+        fn consigner(&self, _empreinte: &Empreinte) -> Result<(), AppError> {
+            unreachable!("le harnais ne teste que le contrat")
+        }
+    }
+    impl DepotDerogation for Inerte {
+        fn courante(&self) -> Result<Option<FenetreDerogation>, AppError> {
+            unreachable!("le harnais ne teste que le contrat")
+        }
+        fn enregistrer(&self, _fenetre: &FenetreDerogation) -> Result<(), AppError> {
+            unreachable!("le harnais ne teste que le contrat")
+        }
+    }
+
+    #[test]
+    fn happy_l_outil_d_ouverture_respecte_son_contrat() {
+        let inerte = Arc::new(Inerte);
+        let outil = OutilOuvertureDerogation::new(Arc::new(OuvertureDerogation::new(
+            inerte.clone(),
+            inerte.clone(),
+            inerte,
+            Arc::new(HorlogeFigee::a(Horodatage::new(0))),
+            Duree::jours(90).expect("durée"),
+        )));
+        if let Err(faute) = super::verifier_contrat(&outil) {
+            panic!("{faute}");
+        }
+    }
+}

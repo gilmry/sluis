@@ -17,7 +17,7 @@ mod provisionnement;
 pub use audit_log::AuditLog;
 pub use charge::{MoteurCharge, ReglagePalier};
 pub use charge_declaree::DepotCharge;
-pub use derogation::DepotDerogation;
+pub use derogation::{DepotDerogation, RegistreRenouvellements};
 pub use diagnostic::Diagnostic;
 pub use gates::{EtatGate, GatePlancher, VerificateurGates};
 pub use horloge::{Horloge, HorlogeFigee};

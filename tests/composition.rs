@@ -352,3 +352,91 @@ scan_conteneur = "Scan image"
         );
     }
 }
+
+// ── Story 4.4b (#4) — l'exécutant ouvre, le public demande ───
+
+mod ouverture {
+    use sluis::configuration::Configuration;
+    use sluis::infrastructure::composition::{
+        outil_ouverture_derogation_si_configure, outils_mise_en_ligne_si_configures,
+        passerelle_github_si_configuree,
+    };
+
+    const EXECUTANT: &str = r#"
+[ovh]
+projets_bac_a_sable = ["bac-koprogo"]
+
+[bac_a_sable]
+depots_autorises = ["/depots/koprogo/infrastructure"]
+
+[github]
+proprietaire = "gilmry"
+depot = "koprogo"
+workflow = "tier1-apply.yml"
+"#;
+
+    const PUBLIC: &str = r#"
+[github]
+proprietaire = "gilmry"
+depot = "koprogo"
+workflow = "tier1-apply.yml"
+"#;
+
+    fn charger(contenu: &str, nom: &str) -> Configuration {
+        let chemin = std::env::temp_dir().join(format!("sluis-ouverture-{nom}.toml"));
+        std::fs::write(&chemin, contenu).expect("écriture");
+        let configuration = Configuration::charger_avec(Some(&chemin), |variable| {
+            (variable == "SLUIS_GITHUB_TOKEN").then(|| "jeton".to_string())
+        })
+        .expect("chargement");
+        let _ = std::fs::remove_file(&chemin);
+        configuration
+    }
+
+    fn ouverture(configuration: &Configuration, secret: &[u8]) -> Option<&'static str> {
+        outil_ouverture_derogation_si_configure(
+            configuration,
+            secret,
+            passerelle_github_si_configuree(configuration),
+            super::horloge(),
+        )
+        .expect("composition")
+        .map(|o| o.nom())
+    }
+
+    #[test]
+    fn happy_l_executant_expose_l_ouverture() {
+        let configuration = charger(EXECUTANT, "executant");
+        assert_eq!(
+            ouverture(&configuration, super::SECRET),
+            Some("sluis_ouvrir_derogation")
+        );
+    }
+
+    #[test]
+    fn negative_le_public_n_expose_pas_l_ouverture() {
+        let configuration = charger(PUBLIC, "public");
+        assert_eq!(ouverture(&configuration, super::SECRET), None);
+    }
+
+    #[test]
+    fn edge_sans_secret_de_signature_l_executant_n_expose_pas_l_ouverture() {
+        let configuration = charger(EXECUTANT, "sans-secret");
+        assert_eq!(ouverture(&configuration, b""), None);
+    }
+
+    #[test]
+    fn security_l_executant_n_expose_aucun_outil_de_soumission() {
+        let configuration = charger(EXECUTANT, "sans-soumission");
+        let outils = outils_mise_en_ligne_si_configures(
+            &configuration,
+            passerelle_github_si_configuree(&configuration),
+            super::horloge(),
+        );
+        assert!(
+            outils.is_empty(),
+            "l'exécutant ouvre, il ne demande pas : {:?}",
+            outils.iter().map(|o| o.nom()).collect::<Vec<_>>()
+        );
+    }
+}

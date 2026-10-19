@@ -7,4 +7,5 @@
 
 pub mod campagne;
 pub mod mise_en_ligne;
+pub mod ouverture_derogation;
 pub mod ports;

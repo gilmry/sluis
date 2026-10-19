@@ -150,6 +150,11 @@ pub struct SectionBacASable {
     /// Fichier où la fenêtre de dérogation est conservée, scellée.
     #[serde(default = "depot_derogation_par_defaut")]
     pub depot_derogation: String,
+
+    /// Fichier des empreintes de renouvellement déjà consommées : une
+    /// approbation ne rouvre la fenêtre qu'une fois.
+    #[serde(default = "registre_renouvellements_par_defaut")]
+    pub registre_renouvellements: String,
 }
 
 fn ttl_max_par_defaut() -> i64 {
@@ -164,6 +169,9 @@ fn fenetre_par_defaut() -> i64 {
 fn depot_derogation_par_defaut() -> String {
     "sluis-derogation.json".to_string()
 }
+fn registre_renouvellements_par_defaut() -> String {
+    "sluis-renouvellements.json".to_string()
+}
 
 impl Default for SectionBacASable {
     fn default() -> Self {
@@ -173,6 +181,7 @@ impl Default for SectionBacASable {
             fenetre_derogation_jours: fenetre_par_defaut(),
             depots_autorises: Vec::new(),
             depot_derogation: depot_derogation_par_defaut(),
+            registre_renouvellements: registre_renouvellements_par_defaut(),
         }
     }
 }
