@@ -177,15 +177,20 @@ impl PasserelleApprobation for PasserelleGithub {
     fn soumettre(&self, plan: &PlanChangement) -> Result<EtatApprobation, AppError> {
         self.verifier_environnement(plan.environnement().nom())?;
 
-        // L'empreinte voyage en entrée du workflow : c'est elle qui lie
-        // l'approbation humaine à un plan précis, et pas à un autre.
+        // L'empreinte voyage en entrée du workflow avec **tout ce qui la
+        // compose** : le job la recalcule avant toute mutation et s'arrête si
+        // elle ne correspond pas. Sans cela, une approbation donnée pour une
+        // empreinte vaudrait pour n'importe quelles entrées (faille S2).
         let corps = serde_json::json!({
             "ref": self.reference,
             "inputs": {
                 "empreinte": plan.empreinte().hexadecimal(),
                 "action": plan.action().nom(),
                 "environnement": plan.environnement().nom(),
+                "tier": format!("{:?}", plan.tier()),
                 "cible": plan.cible(),
+                "description": plan.description(),
+                "diff": plan.diff(),
             }
         });
 

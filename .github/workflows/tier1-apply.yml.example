@@ -12,8 +12,9 @@ name: Tier 1 — mutation approuvée
 
 # Sluis retrouve le run par l'empreinte : elle DOIT figurer dans le titre du
 # run. Sans `run-name`, le titre vaut le nom du workflow et Sluis ne retrouve
-# jamais le run qu'il a déclenché.
-run-name: "Tier 1 · ${{ inputs.empreinte }}"
+# jamais le run qu'il a déclenché. L'action, la cible et l'environnement y
+# figurent aussi : c'est ce que le relecteur voit au moment d'approuver.
+run-name: "Tier 1 · ${{ inputs.action }} · ${{ inputs.cible }} · ${{ inputs.environnement }} · ${{ inputs.empreinte }}"
 
 on:
   workflow_dispatch:
@@ -27,9 +28,19 @@ on:
       environnement:
         description: "dev, integration, staging, production"
         required: true
+      tier:
+        description: "Tier du plan (One)"
+        required: true
       cible:
         description: "Cible du plan"
         required: true
+      description:
+        description: "Description du plan, écrite par Sluis"
+        required: true
+      diff:
+        description: "Diff du plan, écrit par Sluis (peut être vide)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -44,6 +55,33 @@ jobs:
     environment: ${{ inputs.environnement }}
     # ─────────────────────────────────────────────────────────
     steps:
+      # ─────────────────────────────────────────────────────────
+      # LE LIEN ENTRE L'APPROBATION ET LE PLAN (faille S2). Premier pas, avant
+      # tout le reste : l'empreinte est recalculée à partir des entrées, et le
+      # job s'arrête si elle ne correspond pas. Sans ce pas, une approbation
+      # donnée pour une empreinte vaudrait pour n'importe quelles entrées.
+      # Le script entre les marqueurs est exécuté tel quel par les tests de
+      # Sluis : ne pas le modifier ici sans modifier `forme_canonique`.
+      # ─────────────────────────────────────────────────────────
+      - name: Vérifier l'empreinte
+        env:
+          EMPREINTE: ${{ inputs.empreinte }}
+          ACTION: ${{ inputs.action }}
+          ENVIRONNEMENT: ${{ inputs.environnement }}
+          TIER: ${{ inputs.tier }}
+          CIBLE: ${{ inputs.cible }}
+          DESCRIPTION: ${{ inputs.description }}
+          DIFF: ${{ inputs.diff }}
+        run: |
+          # >>> verification-empreinte
+          calculee=$(printf '%s|%s|%s|%s|%s|%s' "$ACTION" "$ENVIRONNEMENT" "$TIER" "$CIBLE" "$DESCRIPTION" "$DIFF" | sha256sum | cut -d' ' -f1)
+          if [ "$calculee" != "$EMPREINTE" ]; then
+            echo "::error::empreinte incohérente : les entrées ne sont pas celles du plan approuvé"
+            exit 1
+          fi
+          echo "Empreinte vérifiée : $EMPREINTE"
+          # <<< verification-empreinte
+
       - uses: actions/checkout@v4
 
       # Les entrées passent par l'environnement, jamais interpolées dans le
@@ -81,5 +119,4 @@ jobs:
         run: |
           echo "Remplacer par la commande réelle, par exemple :"
           echo "  tofu -chdir=\"$CIBLE\" apply -auto-approve"
-          echo "L'empreinte $EMPREINTE doit être vérifiée ici contre"
-          echo "le plan, pour qu'une approbation ne vaille que pour ce plan."
+          echo "L'empreinte $EMPREINTE a été vérifiée au premier pas du job."
