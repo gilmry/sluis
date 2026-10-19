@@ -1,17 +1,17 @@
 //! Stories 3.4 et 3.5 — runners sans shell, plans et statuts.
 //!
-//! Aucun test ne lance de binaire réel : les six moteurs sont absents de la
+//! Aucun test ne lance de binaire réel : les sept moteurs sont absents de la
 //! machine de développement, et NFR-06 impose que la suite n'en dépende pas.
 //! L'exécuteur est doublé, ce qui rend aussi les cas d'échec reproductibles.
 
 use std::sync::Mutex;
 
 use sluis::application::ports::{
-    Executeur, MoteurArgocd, MoteurHelm, MoteurKustomize, MoteurTerraform, SortieProcessus,
+    Executeur, MoteurArgocd, MoteurHelm, MoteurIac, MoteurKustomize, SortieProcessus,
 };
 use sluis::domain::{AppError, ValeurSure};
 use sluis::infrastructure::process::{
-    analyser_resume_plan, masquer_secrets, Argocd, ExecuteurSysteme, Helm, Kustomize, Terraform,
+    analyser_resume_plan, masquer_secrets, Argocd, ExecuteurSysteme, Helm, Kustomize, Tofu,
 };
 
 /// Le module que porte un bail de test.
@@ -86,9 +86,7 @@ fn happy_un_plan_terraform_est_resume_correctement() {
         "Terraform will perform the following actions:\n\n\
          Plan: 3 to add, 1 to change, 2 to destroy.\n",
     );
-    let plan = Terraform::new(double)
-        .plan(&sure("infra/prod"))
-        .expect("plan");
+    let plan = Tofu::new(double).plan(&sure("infra/prod")).expect("plan");
     assert_eq!(plan.creations, 3);
     assert_eq!(plan.modifications, 1);
     assert_eq!(plan.destructions, 2);
@@ -122,13 +120,10 @@ fn happy_un_statut_argocd_est_lu() {
 
 #[test]
 fn negative_un_binaire_absent_nomme_le_binaire() {
-    let erreur = Terraform::new(ExecuteurDouble::absent("terraform"))
+    let erreur = Tofu::new(ExecuteurDouble::absent("tofu"))
         .plan(&sure("infra"))
         .unwrap_err();
-    assert!(
-        erreur.to_string().contains("terraform"),
-        "obtenu : {erreur}"
-    );
+    assert!(erreur.to_string().contains("tofu"), "obtenu : {erreur}");
     assert!(
         !erreur.to_string().contains("panic"),
         "l'absence est un état normal, pas une panne"
@@ -137,10 +132,10 @@ fn negative_un_binaire_absent_nomme_le_binaire() {
 
 #[test]
 fn negative_un_code_de_retour_non_nul_produit_une_erreur() {
-    let erreur = Terraform::new(ExecuteurDouble::rendant(1, ""))
+    let erreur = Tofu::new(ExecuteurDouble::rendant(1, ""))
         .plan(&sure("infra"))
         .unwrap_err();
-    assert!(erreur.to_string().contains("terraform"));
+    assert!(erreur.to_string().contains("tofu"));
 }
 
 #[test]
@@ -200,7 +195,7 @@ fn edge_un_historique_vide_rend_une_liste_vide() {
 fn security_une_valeur_contenant_un_point_virgule_est_refusee_a_l_admission() {
     // Le test emblématique de la story : le refus a lieu à l'admission, et
     // aucun processus n'est lancé. Un échappement, lui, supposerait de connaître
-    // l'analyseur des six moteurs.
+    // l'analyseur des sept moteurs.
     let erreur = ValeurSure::new("module; rm -rf /").unwrap_err();
     assert!(erreur.to_string().contains("caractère"));
 }
@@ -228,8 +223,8 @@ fn security_une_remontee_de_chemin_est_refusee() {
 #[test]
 fn security_aucun_argument_n_est_interpole_les_arguments_partent_en_tableau() {
     let double = ExecuteurDouble::rendant(0, "Plan: 0 to add, 0 to change, 0 to destroy.");
-    let terraform = Terraform::new(double);
-    let _ = terraform.plan(&sure("infra/prod"));
+    let tofu = Tofu::new(double);
+    let _ = tofu.plan(&sure("infra/prod"));
     // Impossible d'observer le double après l'avoir déplacé ; on vérifie plutôt
     // que la construction d'arguments ne concatène jamais, via un second double.
     let observable = ExecuteurDouble::rendant(0, r#"{"info":{"status":"deployed"},"version":1}"#);
@@ -380,7 +375,7 @@ fn happy_un_apply_terraform_est_resume_correctement() {
         "openstack_compute_instance_v2.koprogo_vps: Creation complete\n\n\
          Apply complete! Resources: 3 added, 1 changed, 0 destroyed.\n",
     );
-    let mutation = Terraform::new(&double)
+    let mutation = Tofu::new(&double)
         .appliquer(&sure("infra/bac-a-sable"), &bail_de_test())
         .expect("apply");
 
@@ -392,7 +387,7 @@ fn happy_un_apply_terraform_est_resume_correctement() {
 #[test]
 fn happy_un_destroy_terraform_est_resume_correctement() {
     let double = ExecuteurDouble::rendant(0, "Destroy complete! Resources: 3 destroyed.\n");
-    let mutation = Terraform::new(&double)
+    let mutation = Tofu::new(&double)
         .detruire(&sure("infra/bac-a-sable"))
         .expect("destroy");
 
@@ -407,7 +402,7 @@ fn happy_les_sorties_terraform_sont_lues_en_json() {
         r#"{"vps_ip":{"sensitive":false,"type":"string","value":"57.128.0.1"},
             "ssh_command":{"sensitive":false,"type":"string","value":"ssh ubuntu@57.128.0.1"}}"#,
     );
-    let sorties = Terraform::new(&double)
+    let sorties = Tofu::new(&double)
         .sorties(&sure("infra/bac-a-sable"))
         .expect("sorties");
 
@@ -423,11 +418,11 @@ fn happy_les_sorties_terraform_sont_lues_en_json() {
 #[test]
 fn negative_un_apply_en_echec_nomme_le_moteur_et_son_erreur() {
     let double = double_en_echec("Error: quota exceeded for instances");
-    let erreur = Terraform::new(&double)
+    let erreur = Tofu::new(&double)
         .appliquer(&sure("infra/bac-a-sable"), &bail_de_test())
         .expect_err("l'apply doit échouer");
 
-    assert!(erreur.to_string().contains("terraform"));
+    assert!(erreur.to_string().contains("tofu"));
     assert!(erreur.to_string().contains("quota exceeded"));
 }
 
@@ -436,7 +431,7 @@ fn negative_une_destruction_en_echec_ne_se_tait_pas() {
     // Le seul échec du lot qui coûte de l'argent tant qu'il n'est pas vu : une
     // destruction ratée laisse une infrastructure qui facture.
     let double = double_en_echec("Error: instance still locked");
-    let erreur = Terraform::new(&double)
+    let erreur = Tofu::new(&double)
         .detruire(&sure("infra/bac-a-sable"))
         .expect_err("la destruction doit échouer bruyamment");
 
@@ -446,7 +441,7 @@ fn negative_une_destruction_en_echec_ne_se_tait_pas() {
 #[test]
 fn edge_un_apply_sans_ligne_de_resume_rend_zero_plutot_que_de_deviner() {
     let double = ExecuteurDouble::rendant(0, "Apply complete!\n");
-    let mutation = Terraform::new(&double)
+    let mutation = Tofu::new(&double)
         .appliquer(&sure("infra/bac-a-sable"), &bail_de_test())
         .expect("apply");
 
@@ -457,7 +452,7 @@ fn edge_un_apply_sans_ligne_de_resume_rend_zero_plutot_que_de_deviner() {
 #[test]
 fn edge_des_sorties_terraform_vides_ne_sont_pas_une_erreur() {
     let double = ExecuteurDouble::rendant(0, "{}");
-    let sorties = Terraform::new(&double)
+    let sorties = Tofu::new(&double)
         .sorties(&sure("infra/bac-a-sable"))
         .expect("sorties");
 
@@ -470,11 +465,11 @@ fn security_un_apply_ne_demande_jamais_de_confirmation_interactive() {
         0,
         "Apply complete! Resources: 1 added, 0 changed, 0 destroyed.",
     );
-    let _ = Terraform::new(&double).appliquer(&sure("infra/bac-a-sable"), &bail_de_test());
+    let _ = Tofu::new(&double).appliquer(&sure("infra/bac-a-sable"), &bail_de_test());
     let (programme, arguments) = double.dernier_appel().expect("un appel");
 
-    assert_eq!(programme, "terraform");
-    // Sans `-input=false`, terraform attend une réponse sur une entrée standard
+    assert_eq!(programme, "tofu");
+    // Sans `-input=false`, tofu attend une réponse sur une entrée standard
     // qui n'existe pas dans un service : le processus se bloque au lieu
     // d'échouer, et rien dans les journaux ne le dit.
     assert!(arguments.contains(&"-input=false".to_string()));
@@ -487,7 +482,7 @@ fn security_une_mutation_ne_desactive_jamais_le_verrou_d_etat() {
         0,
         "Apply complete! Resources: 1 added, 0 changed, 0 destroyed.",
     );
-    let _ = Terraform::new(&double).appliquer(&sure("infra/bac-a-sable"), &bail_de_test());
+    let _ = Tofu::new(&double).appliquer(&sure("infra/bac-a-sable"), &bail_de_test());
     let (_, arguments) = double.dernier_appel().expect("un appel");
 
     // `plan` passe `-lock=false` parce qu'il ne fait que lire. Une mutation qui

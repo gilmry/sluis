@@ -24,7 +24,7 @@ signature_humaine:
 
 ---
 
-## Avancement au 2026-08-29
+## Avancement au 2026-09-02
 
 | Sprint | Stories | État |
 |---|---|---|
@@ -34,7 +34,7 @@ signature_humaine:
 | Sprint 3 — Bac à sable, Capacité | 7/7 | **livré** |
 | Sprint 4 — Tier 1, Accès distant | 5/5 | **livré** |
 
-**Les 31 stories sont livrées.** 187 tests, `make ci` vert, clippy en `-D warnings`.
+**Les 31 stories sont livrées.** 274 tests, `make ci` vert, clippy en `-D warnings`.
 
 Le critère d'acceptation du PRD §13.1 est atteint : `sluis_inventory` ressort
 3 topologies, 4 environnements, 3 profils et 4 modules d'une arborescence de
@@ -60,14 +60,34 @@ référence, sans aucune saisie.
 - Le jeton d'accès est un **jeton signé HMAC-SHA256 maison** plutôt qu'un JWT :
   le format complet de JWT apporterait des algorithmes inutilisés et une
   négociation dont on ne veut pas. Il n'est, comme un JWT, jamais persisté.
+- Le moteur d'infrastructure est **OpenTofu et non Terraform**, décidé le
+  2026-09-02 et tracé en ADR-010. Le format lu est le même ; ce qui change est
+  la licence du binaire redistribué, BSL 1.1 pour Terraform depuis la 1.6, ce
+  qu'une image publique d'un dépôt MIT ne peut pas porter. L'exécutable est
+  nommé `tofu` partout où Sluis le lance ; les types qui décrivent le format
+  gardent le nom Terraform, qui est bien le leur.
 
-**Ce qui reste hors de portée d'un test automatique**, et attend H1 et H2 :
+**Livré après la clôture des cinq sprints, le 2026-09-02 :** les **deux
+déploiements** prévus par le choix d'architecture du Sprint 5 existent enfin.
+Jusque-là seul le Sluis public était construit, et la campagne du Sprint 5
+n'avait aucun serveur capable de l'exécuter. L'image `executant` porte `tofu`
+et `wrk` ; la séparation est doublement portée, par la configuration
+(`depots_autorises` vide ⇒ pas d'outil de campagne enregistré) et par l'image
+(aucun moteur ⇒ rien à lancer). Le diagnostic gagne `wrk`, qui portait tout
+l'escalier de charge sans figurer au rapport, et un test verrouille désormais
+l'égalité entre la liste des lançables et celle des diagnostiqués.
+
+**Ce qui reste hors de portée d'un test automatique**, et attend H1, H2 et un
+projet mesuré :
 
 - une campagne de charge contre une infrastructure OVH réellement provisionnée
   (H1 : projet OVH dédié aux bacs à sable) ;
 - un cycle d'approbation Tier 1 de bout en bout contre un environnement GitHub
   réellement protégé (H2). La passerelle est écrite et testée par doublure, mais
-  le blocage effectif du travail par GitHub ne se prouve que sur un vrai dépôt.
+  le blocage effectif du travail par GitHub ne se prouve que sur un vrai dépôt ;
+- **la compatibilité d'OpenTofu avec les modules réellement mesurés.** Elle est
+  attendue, elle n'est pas prouvée : aucun dépôt ne déclare encore son
+  `infrastructure/_shared/charge.yaml`, donc aucun module n'a été appliqué.
 
 ---
 

@@ -6,9 +6,17 @@
 //! d'arguments à `std::process::Command`. Il n'existe aucun point où une chaîne
 //! serait interprétée, donc aucune surface d'injection par métacaractère.
 //!
-//! **Allowlist d'exécutables.** Seuls les six moteurs attendus peuvent être
+//! **Allowlist d'exécutables.** Seuls les sept moteurs attendus peuvent être
 //! lancés. Un appelant qui demanderait `sh` ou `curl` est refusé, même si son
 //! argument est par ailleurs valide.
+//!
+//! **Le moteur d'infrastructure est OpenTofu, et il est nommé `tofu`.** Le
+//! format lu reste celui de Terraform — des fichiers `.tf`, un résumé
+//! `Plan: N to add` — et les types qui le décrivent gardent donc ce nom, parce
+//! que c'est ce qu'ils décrivent. Mais le binaire lancé, lui, est OpenTofu
+//! (MPL-2.0) : Terraform est sous BSL depuis la 1.6, et une image publique
+//! d'un dépôt MIT ne peut pas le redistribuer. L'appeler `terraform` par
+//! commodité aurait masqué ce choix au lieu de le porter.
 //!
 //! **L'absence n'est pas une panne.** Un binaire manquant produit
 //! `AppError::EngineMissing` nommant le binaire, ce qui est l'état normal d'une
@@ -17,7 +25,7 @@
 use std::process::Command;
 
 use crate::application::ports::{
-    Executeur, MoteurArgocd, MoteurHelm, MoteurKustomize, MoteurTerraform, SortieProcessus,
+    Executeur, MoteurArgocd, MoteurHelm, MoteurIac, MoteurKustomize, SortieProcessus,
 };
 use crate::domain::{
     AppError, BailBacASable, MutationTerraform, PlanTerraform, StatutArgocd, StatutHelm, ValeurSure,
@@ -25,7 +33,7 @@ use crate::domain::{
 
 /// Les seuls exécutables que Sluis a le droit de lancer.
 pub const EXECUTABLES_AUTORISES: &[&str] = &[
-    "terraform",
+    "tofu",
     "ansible-playbook",
     "helm",
     "kubectl",
@@ -75,32 +83,28 @@ impl Executeur for ExecuteurSysteme {
     }
 }
 
-/// Pilote Terraform.
-pub struct Terraform<E: Executeur> {
+/// Pilote OpenTofu.
+pub struct Tofu<E: Executeur> {
     executeur: E,
 }
 
-impl<E: Executeur> Terraform<E> {
+impl<E: Executeur> Tofu<E> {
     /// Construit le pilote.
     pub fn new(executeur: E) -> Self {
         Self { executeur }
     }
 
-    /// Lance terraform dans le module et traduit un code non nul en erreur.
+    /// Lance tofu dans le module et traduit un code non nul en erreur.
     ///
     /// Un seul endroit fait cette traduction : disséminée, elle finirait par
     /// diverger, et une commande finirait par avaler son propre échec.
-    fn executer_terraform(
-        &self,
-        module: &ValeurSure,
-        arguments: &[String],
-    ) -> Result<String, AppError> {
+    fn executer_tofu(&self, module: &ValeurSure, arguments: &[String]) -> Result<String, AppError> {
         let sortie = self
             .executeur
-            .executer("terraform", arguments, Some(module.valeur()))?;
+            .executer("tofu", arguments, Some(module.valeur()))?;
         if !sortie.reussi() {
             return Err(AppError::ServiceTiers {
-                service: "terraform".to_string(),
+                service: "tofu".to_string(),
                 detail: format!("code {} : {}", sortie.code, sortie.erreur.trim()),
             });
         }
@@ -184,13 +188,13 @@ pub fn analyser_resume_mutation(sortie: &str) -> MutationTerraform {
     }
 }
 
-impl<E: Executeur> MoteurTerraform for Terraform<E> {
+impl<E: Executeur> MoteurIac for Tofu<E> {
     fn plan(&self, module: &ValeurSure) -> Result<PlanTerraform, AppError> {
         // `-detailed-exitcode` est délibérément absent : il rend 2 quand des
         // changements existent, ce qui se lirait comme un échec alors que c'est
         // le résultat normal d'un plan.
         let sortie = self.executeur.executer(
-            "terraform",
+            "tofu",
             &[
                 "plan".to_string(),
                 "-no-color".to_string(),
@@ -201,7 +205,7 @@ impl<E: Executeur> MoteurTerraform for Terraform<E> {
         )?;
         if !sortie.reussi() {
             return Err(AppError::ServiceTiers {
-                service: "terraform".to_string(),
+                service: "tofu".to_string(),
                 detail: format!("code {} : {}", sortie.code, sortie.erreur.trim()),
             });
         }
@@ -209,7 +213,7 @@ impl<E: Executeur> MoteurTerraform for Terraform<E> {
     }
 
     fn initialiser(&self, module: &ValeurSure) -> Result<(), AppError> {
-        self.executer_terraform(
+        self.executer_tofu(
             module,
             &[
                 "init".to_string(),
@@ -227,7 +231,7 @@ impl<E: Executeur> MoteurTerraform for Terraform<E> {
     ) -> Result<MutationTerraform, AppError> {
         // Aucun `-lock=false` : deux apply concurrents sur le même état
         // produiraient une infrastructure que plus aucun état ne décrit.
-        let sortie = self.executer_terraform(
+        let sortie = self.executer_tofu(
             module,
             &[
                 "apply".to_string(),
@@ -240,7 +244,7 @@ impl<E: Executeur> MoteurTerraform for Terraform<E> {
     }
 
     fn detruire(&self, module: &ValeurSure) -> Result<MutationTerraform, AppError> {
-        let sortie = self.executer_terraform(
+        let sortie = self.executer_tofu(
             module,
             &[
                 "destroy".to_string(),
@@ -253,7 +257,7 @@ impl<E: Executeur> MoteurTerraform for Terraform<E> {
     }
 
     fn sorties(&self, module: &ValeurSure) -> Result<Vec<(String, String)>, AppError> {
-        let sortie = self.executer_terraform(
+        let sortie = self.executer_tofu(
             module,
             &[
                 "output".to_string(),

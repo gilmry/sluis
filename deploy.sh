@@ -9,6 +9,11 @@
 # Repris de derniere-chance : le serveur ne construit rien, les images sont
 # produites en CI et poussées sur GHCR. Idempotent dans les deux modes : une
 # seconde exécution sans nouveau commit n'a aucun effet, ce qu'un test vérifie.
+#
+# Deux déploiements possibles, du même commit et donc du même binaire : le
+# Sluis public, toujours, et le Sluis exécutant si `sluis.executant.toml`
+# existe à la racine. Les deux sont épinglés sur le MÊME tag, et le
+# déploiement attend que les deux images soient publiées avant de bouger.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,7 +26,25 @@ DEPLOYED_REV_FILE="$REPO_DIR/.deployed_rev"
 # Image GHCR à épingler. La CI la publie sous le SHA complet du commit en plus
 # de `latest` (voir .github/workflows/docker-publish.yml).
 IMAGE_REPO="${IMAGE_REPO:-ghcr.io/gilmry/sluis}"
-IMAGE_SERVICES="server"
+
+# Le Sluis exécutant ne se déploie QUE si sa configuration existe. C'est le
+# seul interrupteur, et il est délibérément à la main : tant que H1 n'est pas
+# levée, il n'y a ni projet OVH de bac à sable ni dépôt à mesurer, et déployer
+# un second Sluis en lecture ne servirait à rien. Voir config/sluis.executant.toml.
+#
+# Le choix passe par un FICHIER et non par un profil : Compose interpole les
+# variables de tous les services avant de filtrer par profil, si bien qu'un
+# `${VAR:?}` sur un service hors profil ferait quand même échouer la commande.
+# Un serveur qui ne veut pas de l'exécutant n'a pas ses variables, et le
+# déploiement du Sluis public en serait bloqué.
+CONFIG_EXECUTANT="$REPO_DIR/sluis.executant.toml"
+COMPOSE=(docker compose -f docker-compose.yml)
+IMAGE_SERVICES=(server)
+if [ -f "$CONFIG_EXECUTANT" ]; then
+  COMPOSE+=(-f docker-compose.executant.yml)
+  IMAGE_SERVICES+=(executant)
+fi
+COMPOSE+=(--profile prod)
 
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" >> "$LOG_FILE"; }
 
@@ -30,10 +53,23 @@ image_published() {
   docker manifest inspect "$1" >/dev/null 2>&1
 }
 
-# Épingle SLUIS_IMAGE sur un tag précis, pour que `docker compose` résolve une
-# image déterminée et non un `latest` mouvant.
+# Vraie seulement si TOUTES les images du déploiement portent ce tag.
+#
+# Une seule des deux publiée ne suffit pas : déployer le Sluis public d'un
+# commit et l'exécutant du précédent, c'est faire tourner deux versions du même
+# binaire en se croyant sur une seule.
+images_publiees() {
+  local tag="$1" service
+  for service in "${IMAGE_SERVICES[@]}"; do
+    image_published "$IMAGE_REPO/$service:$tag" || return 1
+  done
+}
+
+# Épingle les images sur un tag précis, pour que `docker compose` résolve des
+# images déterminées et non un `latest` mouvant.
 pin_images() {
   export SLUIS_IMAGE="$IMAGE_REPO/server:$1"
+  export SLUIS_IMAGE_EXECUTANT="$IMAGE_REPO/executant:$1"
 }
 
 run_deploy() {
@@ -47,7 +83,7 @@ run_deploy() {
 
   local_rev="$(git rev-parse main)"
   remote_rev="$(git rev-parse origin/main)"
-  running="$(docker compose --profile prod ps --status running -q 2>/dev/null || true)"
+  running="$("${COMPOSE[@]}" ps --status running -q 2>/dev/null || true)"
   deployed_rev="$(cat "$DEPLOYED_REV_FILE" 2>/dev/null || true)"
 
   if [ "$deployed_rev" = "$remote_rev" ] && [ -n "$running" ]; then
@@ -65,7 +101,7 @@ run_deploy() {
   #
   # On sort en 0 : la CI n'a pas fini, ce n'est pas une panne.
   local target_tag="$remote_rev"
-  if ! image_published "$IMAGE_REPO/server:$target_tag"; then
+  if ! images_publiees "$target_tag"; then
     if [ "$deployed_rev" != "$remote_rev" ]; then
       log "image $target_tag pas encore publiée, attente du prochain tic"
     fi
@@ -81,12 +117,12 @@ run_deploy() {
 
   pin_images "$target_tag"
 
-  if ! docker compose --profile prod pull >> "$LOG_FILE" 2>&1; then
+  if ! "${COMPOSE[@]}" pull >> "$LOG_FILE" 2>&1; then
     log "échec du pull de $target_tag, nouvelle tentative au prochain tic"
     exit 1
   fi
 
-  if docker compose --profile prod up -d --remove-orphans >> "$LOG_FILE" 2>&1; then
+  if "${COMPOSE[@]}" up -d --remove-orphans >> "$LOG_FILE" 2>&1; then
     log "déploiement réussi ($remote_rev, image épinglée)"
     echo "$remote_rev" > "$DEPLOYED_REV_FILE"
     docker image prune -f >> "$LOG_FILE" 2>&1
@@ -109,7 +145,7 @@ rollback() {
     return
   fi
 
-  if ! image_published "$IMAGE_REPO/server:$previous_rev"; then
+  if ! images_publiees "$previous_rev"; then
     log "ROLLBACK impossible : image $previous_rev absente du registre, intervention manuelle requise"
     return
   fi
@@ -119,7 +155,7 @@ rollback() {
 
   # `.deployed_rev` est remis à la version réellement en service pour que le
   # prochain tic retente le déploiement au lieu de croire le travail fait.
-  if docker compose --profile prod up -d --remove-orphans >> "$LOG_FILE" 2>&1; then
+  if "${COMPOSE[@]}" up -d --remove-orphans >> "$LOG_FILE" 2>&1; then
     echo "$previous_rev" > "$DEPLOYED_REV_FILE"
     log "ROLLBACK réussi, la prod tourne sur $previous_rev"
   else
@@ -138,10 +174,20 @@ install_cron() {
     || cp "$REPO_DIR/config/sluis.prod.toml" "$REPO_DIR/sluis.toml"
   [ -f "$REPO_DIR/.env" ] \
     || { echo ".env absent : cp .env.example .env, puis le remplir" >&2; exit 1; }
+  # Le fichier de l'exécutant n'est JAMAIS copié automatiquement : le gabarit
+  # porte un identifiant de projet OVH à remplacer, et un Sluis qui démarrerait
+  # dessus armerait `sluis_campagne` contre un projet qui n'existe pas. Un outil
+  # qui a l'air armé et ne l'est pas est pire qu'un outil absent.
+  if [ -f "$CONFIG_EXECUTANT" ] \
+     && grep -q "a-remplacer-par-l-identifiant-du-projet-ovh" "$CONFIG_EXECUTANT"; then
+    echo "sluis.executant.toml porte encore l'identifiant de projet du gabarit :" >&2
+    echo "y mettre le projet OVH réel du bac à sable (H1), ou supprimer le fichier" >&2
+    exit 1
+  fi
   # Vérifie ici, une fois, ce que le cron ne pourrait que constater toutes les
   # cinq minutes : une variable requise absente fait échouer cette commande
   # avec le nom de la variable manquante.
-  docker compose --profile prod config -q \
+  "${COMPOSE[@]}" config -q \
     || { echo "configuration incomplète : voir le message ci-dessus" >&2; exit 1; }
   ( crontab -l 2>/dev/null | grep -v "$CRON_MARKER" || true
     echo "$CRON_SCHEDULE cd $REPO_DIR && ./deploy.sh --run # $CRON_MARKER"

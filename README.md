@@ -12,9 +12,17 @@ Sprint 3  Bac à sable · Capacité        ██████████  7/7
 Sprint 4  Tier 1 · Accès distant        ██████████  5/5
 ```
 
-**31 stories livrées, 187 tests verts.** Restent deux hypothèses à lever avant
-de pouvoir prouver le dispositif contre du réel : un projet OVH dédié aux bacs
-à sable (H1), et un environnement GitHub protégé sur les dépôts cibles (H2).
+**31 stories livrées, 274 tests verts.** Les deux déploiements prévus par
+l'architecture existent : un Sluis **public** en lecture, exposé et qui ne
+détient rien, et un Sluis **exécutant** sur le réseau interne, qui porte
+OpenTofu, wrk et les clés OVH sans être joignable de nulle part.
+
+Restent deux hypothèses à lever avant de pouvoir prouver le dispositif contre
+du réel : un projet OVH dédié aux bacs à sable (H1), sans lequel l'exécutant
+n'a rien à louer, et un environnement GitHub protégé sur les dépôts cibles
+(H2), sans lequel la passerelle Tier 1 n'est prouvée que par doublure. Et
+aucun projet ne déclare encore son `infrastructure/_shared/charge.yaml` : la
+capacité de mesurer n'a pas encore de sujet.
 
 ---
 
@@ -56,7 +64,7 @@ Conséquence : même compromis, Sluis ne peut pas muter la production. Il ne peu
 
 La dérogation du niveau intermédiaire est encadrée par **sept conditions cumulatives**, codées comme invariants de domaine et non comme vérifications de surface.
 
-La septième mérite d'être lue à part : **la dérogation elle-même expire.** Elle est accordée pour une fenêtre limitée, elle est réputée expirée par défaut, et son renouvellement est un acte de Tier 1 qui emprunte la même passerelle qu'un `terraform apply` de production. Autrement dit, l'autorité de déléguer n'est jamais elle-même déléguée, et une dérogation ne peut pas devenir permanente par simple inertie. Voir ADR-007.
+La septième mérite d'être lue à part : **la dérogation elle-même expire.** Elle est accordée pour une fenêtre limitée, elle est réputée expirée par défaut, et son renouvellement est un acte de Tier 1 qui emprunte la même passerelle qu'un `tofu apply` de production. Autrement dit, l'autorité de déléguer n'est jamais elle-même déléguée, et une dérogation ne peut pas devenir permanente par simple inertie. Voir ADR-007.
 
 ## Les deux scénarios cibles
 
@@ -116,6 +124,15 @@ La pureté du domaine n'est pas une convention mais un job de CI qui échoue.
 ## Déploiement
 
 Deux modes. En local, un binaire en transport stdio déclaré dans un `.mcp.json`. Sur serveur, un service en transport Streamable HTTP derrière Traefik, avec OAuth 2.1 + PKCE, image construite en CI et tirée depuis GHCR, déploiement GitOps idempotent.
+
+Sur serveur, **deux déploiements du même commit**, et la séparation est la garantie :
+
+| | image | exposé | détient | peut muter |
+|---|---|---|---|---|
+| Sluis public | `server` | oui, derrière Traefik | rien | non, l'image n'a aucun moteur |
+| Sluis exécutant | `executant` | non, réseau interne | les clés du projet bac à sable | oui, dans les bornes d'ADR-007 |
+
+Ce qui est exposé ne détient rien ; ce qui détient n'est pas exposé. Le Sluis public ne pourrait pas provisionner même si on lui donnait des clés, faute d'embarquer `tofu` : c'est une propriété de l'image, pas une règle contournable.
 
 Le mode serveur est décrit pas à pas dans [docs/DEMARRAGE.md](docs/DEMARRAGE.md), vérification et dépannage compris.
 

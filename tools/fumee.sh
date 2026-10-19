@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # Test de fumée d'un Sluis déployé.
 #
-#   ./tools/fumee.sh https://sluis.ecosolva.org
+#   ./tools/fumee.sh https://sluis.ecosolva.org   le Sluis public
+#   ./tools/fumee.sh --executant                  le Sluis exécutant
 #
-# Trois vérifications, dans cet ordre : le service répond, il s'annonce sous
-# la bonne identité, et il refuse un appel non authentifié. La troisième est
-# la seule qui compte vraiment : un /mcp ouvert est une porte ouverte.
+# Sur le public : quatre vérifications, dont la seule qui compte vraiment, que
+# `/mcp` refuse un appel sans jeton. Un /mcp ouvert est une porte ouverte.
+#
+# Sur l'exécutant : on ne peut pas l'interroger en HTTP, il n'est publié nulle
+# part, et c'est voulu. On le fait donc parler par sa CLI, qui rend le même
+# diagnostic que `sluis_doctor`. C'est aussi le seul contrôle qui prouve ce
+# pour quoi cette image existe : que tofu et wrk sont présents.
 set -euo pipefail
 
-BASE="${1:-https://sluis.ecosolva.org}"
-BASE="${BASE%/}"
 echec=0
 
 verifier() {
@@ -20,6 +23,59 @@ verifier() {
     echec=1
   fi
 }
+
+# ── Sluis exécutant ────────────────────────────────────────────────────────
+#
+# `docker compose run --rm` plutôt qu'un `exec` dans le conteneur en service :
+# l'image est distroless, elle n'a pas de shell, et `exec` n'aurait rien à
+# lancer. Le `run` remplace l'entrypoint par la CLI, dans le même environnement
+# et avec la même configuration, ce qui est exactement ce qu'on veut vérifier.
+if [ "${1:-}" = "--executant" ]; then
+  printf 'Fumée sur le Sluis exécutant\n'
+
+  # Sans cette garde, `docker compose` CRÉERAIT un répertoire du nom du fichier
+  # de configuration manquant, parce que c'est ce qu'il fait d'une source de
+  # montage absente. Le déploiement s'en trouverait dans un état que ni
+  # `[ -f ]` ni l'œil ne lisent correctement.
+  if [ ! -f sluis.executant.toml ]; then
+    printf '  ✗ sluis.executant.toml absent : aucun exécutant déployé ici\n'
+    printf 'Voir docs/DEMARRAGE.md, section « Le second déploiement ».\n'
+    exit 1
+  fi
+
+  rapport="$(docker compose -f docker-compose.yml -f docker-compose.executant.yml \
+               run --rm --no-deps \
+               --entrypoint /usr/local/bin/sluis sluis-executant doctor 2>&1 || true)"
+
+  # Le diagnostic marque chaque moteur présent ou absent. Sur cette image, un
+  # moteur absent n'est pas l'état normal d'une machine nue : c'est un défaut
+  # de build, puisque l'image existe précisément pour les porter.
+  for moteur in tofu wrk; do
+    verifier "$moteur présent" \
+      "$(printf '%s' "$rapport" | grep -ci "$moteur.*absent" || true)" \
+      "0"
+  done
+
+  # Sans identifiants, rien de ce qui touche OVH ne répond, et la campagne ne
+  # peut rien louer. C'est l'état tant que H1 n'est pas levée : le contrôle le
+  # dit, il ne le masque pas. Le diagnostic préfixe d'un ✗ chaque variable
+  # absente ; on compte les ✗, pas les lignes.
+  verifier "identifiants OVH présents" \
+    "$(printf '%s' "$rapport" | grep -c '✗ OVH_' || true)" \
+    "0"
+
+  if [ "$echec" -eq 0 ]; then
+    printf 'Fumée verte : les moteurs et les identifiants sont là.\n'
+  else
+    printf 'Fumée rouge. Rapport complet :\n%s\n' "$rapport"
+    exit 1
+  fi
+  exit 0
+fi
+
+# ── Sluis public ───────────────────────────────────────────────────────────
+BASE="${1:-https://sluis.ecosolva.org}"
+BASE="${BASE%/}"
 
 printf 'Fumée sur %s\n' "$BASE"
 

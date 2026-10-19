@@ -1,0 +1,53 @@
+# Configuration du Sluis **exécutant**, copiée en `sluis.executant.toml` à la
+# racine par deploy.sh, puis montée en `/app/sluis.toml` dans son conteneur.
+#
+# C'est le seul des deux déploiements qui porte les moteurs et les clés OVH.
+# Il n'est pas exposé sur Internet : aucun label Traefik, aucun port publié.
+#
+# Ce fichier ne porte JAMAIS de secret, ici comme pour le Sluis public. Les
+# identifiants viennent exclusivement de l'environnement, via le .env.
+#
+# **Tant que H1 n'est pas levée, ce fichier n'existe pas à la racine du dépôt
+# de déploiement, et `deploy.sh` ne déploie que le Sluis public.** Le créer
+# avec des listes vides ne servirait à rien : sans projet de bac à sable ni
+# dépôt autorisé, `sluis_campagne` ne s'enregistre pas, et l'exécutant serait
+# un second Sluis en lecture, coûteux et sans objet.
+
+[ovh]
+endpoint = "https://eu.api.ovh.com/1.0"
+
+# Projets portant de la production. **Reste vide sur l'exécutant** : ce Sluis
+# détient les clés, c'est donc celui à qui l'on doit le moins de droits sur du
+# réel. Ce qu'il ne connaît pas, il ne peut pas le muter.
+projets_production = []
+
+# Projet OVH dédié aux bacs à sable (H1). À remplacer par l'identifiant réel du
+# projet créé pour l'occasion, dont les identifiants API sont restreints à lui
+# seul. Première condition d'ADR-007 : cette liste doit être DISJOINTE de la
+# précédente, et Sluis refuse de démarrer sinon.
+projets_bac_a_sable = ["a-remplacer-par-l-identifiant-du-projet-ovh"]
+
+[bac_a_sable]
+ttl_maximal_secondes = 21600
+plafond_depense = 20.0
+
+# Fenêtre de dérogation, en jours. 90 par décision du superviseur du
+# 2026-08-29, ouverte jusqu'au 2026-11-27.
+fenetre_derogation_jours = 90
+
+# Racines d'infrastructure que ce serveur a le droit de mesurer.
+#
+# **C'est cette liste, et elle seule, qui arme `sluis_campagne`** : le Sluis
+# public la laisse vide et n'expose donc que de la lecture. Les chemins sont
+# ceux vus DEPUIS LE CONTENEUR, pas depuis l'hôte : le montage `/depots` de
+# docker-compose.yml fait la correspondance.
+#
+# Le module Terraform, lui, ne se configure pas ici : il vient de la
+# déclaration de charge du dépôt mesuré, `_shared/charge.yaml`.
+depots_autorises = ["/depots/koprogo/infrastructure"]
+
+# Fenêtre scellée : dans le volume, seul endroit inscriptible du conteneur.
+depot_derogation = "/app/donnees/sluis-derogation.json"
+
+[journal]
+chemin = "/app/donnees/sluis-audit.jsonl"
