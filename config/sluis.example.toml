@@ -32,3 +32,13 @@ fenetre_derogation_jours = 90
 # Journal d'audit append-only. Sluis refuse d'exécuter un outil s'il ne peut
 # pas écrire ici : un appel non traçable ne doit pas avoir lieu.
 chemin = "sluis-audit.jsonl"
+
+# Passerelle d'approbation GitHub (ADR-008, ADR-012). Absente par défaut : sans
+# elle, le serveur ne peut rien soumettre. Le jeton vient de SLUIS_GITHUB_TOKEN,
+# jamais de ce fichier, et son identité ne doit être celle d'aucun relecteur de
+# l'environnement protégé.
+# [github]
+# proprietaire = "gilmry"
+# depot = "koprogo"
+# workflow = "tier1-apply.yml"
+# branche = "main"

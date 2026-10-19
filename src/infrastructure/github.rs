@@ -13,8 +13,9 @@
 //! co-hébergement avec d'autres services. Si Sluis venait un jour à détenir ces
 //! clés, ADR-008 tomberait.
 //!
-//! Le jeton utilisé ici n'ouvre qu'un droit : déclencher un workflow. Il ne
-//! donne aucun accès à l'infrastructure.
+//! Le jeton utilisé ici déclenche un workflow et lit l'environnement, les runs
+//! et leurs approbations. Il ne donne aucun accès à l'infrastructure, et son
+//! identité ne doit être celle d'aucun relecteur (ADR-012).
 
 use std::time::Duration;
 

@@ -18,7 +18,7 @@ finit par diverger.
 | ADR-009 | Mapping branche → environnement | **oui** | acceptée |
 | ADR-010 | Deux déploiements, et OpenTofu comme moteur | **oui** | **contresignée le 2026-10-18** |
 | ADR-011 | Gate de scan différencié par image | non | **contresignée le 2026-10-18** |
-| ADR-012 | La mise en ligne se demande par un outil MCP du Sluis public · amende ADR-010 | **oui** | **proposée le 2026-10-19, à contresigner** |
+| ADR-012 | La mise en ligne se demande par un outil MCP du Sluis public · amende ADR-010 | **oui** | **contresignée le 2026-10-19** · relance d'un run approuvé à vérifier au premier essai (#4, 4.5) |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
@@ -214,5 +214,7 @@ d'ADR-008. Un outil de Tier 1 approuvé côté client MCP : écarté par ADR-008
 inopérant en exécution autonome.
 
 **Irréversible ?** Oui : le service exposé à Internet détient désormais un
-secret. **Proposée le 2026-10-19, à contresigner** avant toute mise en œuvre.
+secret. **Contresignée le 2026-10-19.** Le point sur la relance n'a pas pu être
+tranché par la documentation de GitHub : il devient un test explicite du premier
+essai bout en bout (#4, story 4.5), avant toute mise en ligne réelle.
 
