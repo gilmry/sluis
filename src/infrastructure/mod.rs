@@ -17,5 +17,6 @@ pub mod mcp;
 pub mod oauth_depot;
 pub mod ovh;
 pub mod process;
+pub mod renouvellements_depot;
 pub mod serveur_http;
 pub mod yaml_plat;

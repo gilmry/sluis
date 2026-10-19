@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use crate::application::campagne::Campagne;
 use crate::application::mise_en_ligne::MiseEnLigne;
+use crate::application::ouverture_derogation::OuvertureDerogation;
 use crate::application::ports::{GatePlancher, Horloge};
 use crate::configuration::Configuration;
 use crate::domain::{AppError, Duree, PlafondDepense};
@@ -19,11 +20,13 @@ use crate::infrastructure::fs_charge::FsCharge;
 use crate::infrastructure::gates_github::VerificateurGatesGithub;
 use crate::infrastructure::github::PasserelleGithub;
 use crate::infrastructure::mcp::outil_campagne::{OutilCampagne, ReglagesCampagne};
+use crate::infrastructure::mcp::outil_ouverture_derogation::OutilOuvertureDerogation;
 use crate::infrastructure::mcp::outils_mise_en_ligne::{
     OutilEtatApprobation, OutilMiseEnLigne, OutilRenouvellementDerogation,
 };
 use crate::infrastructure::mcp::Outil;
 use crate::infrastructure::process::{ExecuteurSysteme, Tofu};
+use crate::infrastructure::renouvellements_depot::RegistreRenouvellementsFichier;
 
 /// Construit `sluis_campagne`, **si et seulement si** la configuration le
 /// prévoit.
@@ -167,6 +170,16 @@ pub fn outils_mise_en_ligne_si_configures(
     passerelle: EtatPasserelle,
     horloge: Arc<dyn Horloge>,
 ) -> Vec<Box<dyn Outil>> {
+    // L'exécutant ne demande pas, il ouvre (ADR-012, partie 3) : un serveur
+    // qui arme un bac à sable n'expose aucun outil de soumission.
+    if !configuration
+        .fichier
+        .bac_a_sable
+        .depots_autorises
+        .is_empty()
+    {
+        return Vec::new();
+    }
     let EtatPasserelle::Composee(passerelle) = passerelle else {
         return Vec::new();
     };
@@ -188,4 +201,40 @@ pub fn outils_mise_en_ligne_si_configures(
         passerelle, horloge,
     )));
     outils
+}
+
+/// Construit `sluis_ouvrir_derogation` (ADR-012, partie 3), **si et seulement
+/// si** le serveur arme un bac à sable (dépôt autorisé, projet dédié, secret de
+/// signature) **et** dispose d'une passerelle pour lire l'approbation chez
+/// GitHub. C'est donc un outil de l'exécutant, jamais du Sluis public.
+pub fn outil_ouverture_derogation_si_configure(
+    configuration: &Configuration,
+    secret_signature: &[u8],
+    passerelle: EtatPasserelle,
+    horloge: Arc<dyn Horloge>,
+) -> Result<Option<Box<dyn Outil>>, AppError> {
+    let section = &configuration.fichier.bac_a_sable;
+    if section.depots_autorises.is_empty()
+        || configuration.fichier.ovh.projets_bac_a_sable.is_empty()
+        || secret_signature.is_empty()
+    {
+        return Ok(None);
+    }
+    let EtatPasserelle::Composee(passerelle) = passerelle else {
+        return Ok(None);
+    };
+
+    let cas = OuvertureDerogation::new(
+        Arc::new(passerelle),
+        Arc::new(RegistreRenouvellementsFichier::nouveau(
+            &section.registre_renouvellements,
+        )),
+        Arc::new(DepotDerogationFichier::nouveau(
+            &section.depot_derogation,
+            secret_signature,
+        )),
+        horloge,
+        configuration.fenetre_derogation()?,
+    );
+    Ok(Some(Box::new(OutilOuvertureDerogation::new(Arc::new(cas)))))
 }

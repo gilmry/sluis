@@ -1,6 +1,6 @@
 //! Port de persistance de la fenêtre de dérogation.
 
-use crate::domain::{AppError, FenetreDerogation};
+use crate::domain::{AppError, Empreinte, FenetreDerogation};
 
 /// Conserve la fenêtre de dérogation en vigueur.
 ///
@@ -13,4 +13,17 @@ pub trait DepotDerogation: Send + Sync {
 
     /// Enregistre une fenêtre nouvellement ouverte.
     fn enregistrer(&self, fenetre: &FenetreDerogation) -> Result<(), AppError>;
+}
+
+/// Retient les empreintes de renouvellement déjà consommées.
+///
+/// Une approbation ne rouvre la fenêtre **qu'une fois** : sans ce registre, la
+/// même demande approuvée, présentée deux fois, prolongerait la dérogation
+/// sans qu'aucun humain ait eu à la redécider.
+pub trait RegistreRenouvellements: Send + Sync {
+    /// Vrai si l'empreinte a déjà ouvert une fenêtre.
+    fn deja_consommee(&self, empreinte: &Empreinte) -> Result<bool, AppError>;
+
+    /// Consigne une empreinte, **avant** l'ouverture de la fenêtre.
+    fn consigner(&self, empreinte: &Empreinte) -> Result<(), AppError>;
 }
