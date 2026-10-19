@@ -50,6 +50,10 @@ fn negative_chaque_variante_porte_un_message_non_vide() {
         AppError::Configuration {
             detail: "TTL absent".to_string(),
         },
+        AppError::EnvironnementNonProtege {
+            environnement: "production".to_string(),
+            raison: "n'exige aucun relecteur".to_string(),
+        },
     ];
     for variante in variantes {
         let message = variante.to_string();
