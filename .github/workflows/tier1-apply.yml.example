@@ -10,6 +10,11 @@
 
 name: Tier 1 — mutation approuvée
 
+# Sluis retrouve le run par l'empreinte : elle DOIT figurer dans le titre du
+# run. Sans `run-name`, le titre vaut le nom du workflow et Sluis ne retrouve
+# jamais le run qu'il a déclenché.
+run-name: "Tier 1 · ${{ inputs.empreinte }}"
+
 on:
   workflow_dispatch:
     inputs:
@@ -47,7 +52,9 @@ jobs:
           echo "Action       : ${{ inputs.action }}"
           echo "Environnement: ${{ inputs.environnement }}"
           echo "Cible        : ${{ inputs.cible }}"
-          echo "Approuvé par : ${{ github.actor }}"
+          # Pas d'« approuvé par » ici : `github.actor` désigne celui qui a
+          # déclenché ou relancé le run, pas le relecteur. Sluis lit le
+          # relecteur réel dans /actions/runs/{id}/approvals.
 
       - name: Appliquer
         env:

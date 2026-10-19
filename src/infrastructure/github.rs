@@ -141,6 +141,29 @@ impl PasserelleGithub {
         Ok(())
     }
 
+    /// Lecture JSON authentifiée.
+    fn lire(&self, url: &str) -> Result<serde_json::Value, AppError> {
+        let mut reponse = self
+            .agent
+            .get(url)
+            .header("Authorization", &format!("Bearer {}", self.jeton.exposer()))
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .call()
+            .map_err(|e| match e {
+                ureq::Error::StatusCode(401) | ureq::Error::StatusCode(403) => {
+                    AppError::Authentification {
+                        secret: Redacted::new("jeton GitHub".to_string()),
+                    }
+                }
+                autre => self.erreur(autre.to_string()),
+            })?;
+        reponse
+            .body_mut()
+            .read_json()
+            .map_err(|e| self.erreur(e.to_string()))
+    }
+
     fn erreur(&self, detail: String) -> AppError {
         AppError::ServiceTiers {
             service: "GitHub".to_string(),
@@ -196,67 +219,84 @@ impl PasserelleApprobation for PasserelleGithub {
     }
 
     fn interroger(&self, empreinte: &Empreinte) -> Result<EtatApprobation, AppError> {
-        let mut reponse = self
-            .agent
-            .get(self.url("/actions/runs?event=workflow_dispatch&per_page=20"))
-            .header("Authorization", &format!("Bearer {}", self.jeton.exposer()))
-            .header("Accept", "application/vnd.github+json")
-            .call()
-            .map_err(|e| self.erreur(e.to_string()))?;
-
-        let corps: serde_json::Value = reponse
-            .body_mut()
-            .read_json()
-            .map_err(|e| self.erreur(e.to_string()))?;
+        let corps = self.lire(&self.url("/actions/runs?event=workflow_dispatch&per_page=20"))?;
 
         let runs = corps
             .get("workflow_runs")
             .and_then(|r| r.as_array())
             .ok_or_else(|| self.erreur("réponse sans workflow_runs".to_string()))?;
 
-        for run in runs {
-            let nom = run.get("name").and_then(|n| n.as_str()).unwrap_or_default();
-            let titre = run
-                .get("display_title")
-                .and_then(|n| n.as_str())
-                .unwrap_or_default();
-            if !nom.contains(empreinte.abregee()) && !titre.contains(empreinte.abregee()) {
-                continue;
-            }
-            let statut = run.get("status").and_then(|s| s.as_str()).unwrap_or("");
-            let conclusion = run.get("conclusion").and_then(|c| c.as_str()).unwrap_or("");
-            let identifiant = run
-                .get("id")
-                .map(|i| i.to_string())
-                .unwrap_or_else(|| empreinte.abregee().to_string());
+        // L'empreinte complète, pas l'abrégée : le titre du run la porte en
+        // entier (`run-name` du gabarit Tier 1), et un préfixe pourrait
+        // désigner le run d'un autre plan.
+        let Some(run) = runs.iter().find(|run| {
+            run.get("display_title")
+                .and_then(|t| t.as_str())
+                .is_some_and(|titre| titre.contains(empreinte.hexadecimal()))
+        }) else {
+            return Err(AppError::Introuvable {
+                quoi: format!("aucun run pour l'empreinte {}", empreinte.abregee()),
+            });
+        };
 
-            return Ok(match (statut, conclusion) {
-                ("completed", "success") => EtatApprobation::Approuvee {
-                    approbateur: run
-                        .pointer("/triggering_actor/login")
-                        .and_then(|a| a.as_str())
-                        .unwrap_or("inconnu")
-                        .to_string(),
-                    run: identifiant,
-                },
-                ("completed", "cancelled") => EtatApprobation::Refusee {
-                    motif: "approbation refusée ou exécution annulée".to_string(),
-                },
-                ("completed", autre) => EtatApprobation::Echouee {
-                    detail: format!("conclusion « {autre} »"),
-                },
-                _ => EtatApprobation::EnAttente {
-                    run: identifiant,
-                    url: run
-                        .get("html_url")
-                        .and_then(|u| u.as_str())
-                        .unwrap_or_default()
-                        .to_string(),
-                },
+        let statut = run.get("status").and_then(|s| s.as_str()).unwrap_or("");
+        let identifiant = run
+            .get("id")
+            .and_then(|i| i.as_u64())
+            .ok_or_else(|| self.erreur("run sans identifiant".to_string()))?;
+
+        if statut != "completed" {
+            return Ok(EtatApprobation::EnAttente {
+                run: identifiant.to_string(),
+                url: run
+                    .get("html_url")
+                    .and_then(|u| u.as_str())
+                    .unwrap_or_default()
+                    .to_string(),
             });
         }
-        Err(AppError::Introuvable {
-            quoi: format!("aucun run pour l'empreinte {}", empreinte.abregee()),
+
+        // Qui a approuvé se lit dans les approbations du run, jamais dans
+        // `triggering_actor` : celui-là a lancé ou relancé le run, il n'a pas
+        // forcément approuvé (failles H-b et S3).
+        let approbations =
+            self.lire(&self.url(&format!("/actions/runs/{identifiant}/approvals")))?;
+        let approbations = approbations.as_array().cloned().unwrap_or_default();
+        let par_etat = |etat: &str| {
+            approbations
+                .iter()
+                .filter(|a| a.get("state").and_then(|s| s.as_str()) == Some(etat))
+                .filter_map(|a| a.pointer("/user/login").and_then(|l| l.as_str()))
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        };
+
+        let rejets = par_etat("rejected");
+        if let Some(relecteur) = rejets.first() {
+            return Ok(EtatApprobation::Refusee {
+                motif: format!("approbation rejetée par {relecteur}"),
+            });
+        }
+
+        let conclusion = run.get("conclusion").and_then(|c| c.as_str()).unwrap_or("");
+        Ok(match (conclusion, par_etat("approved").last()) {
+            ("success", Some(approbateur)) => EtatApprobation::Approuvee {
+                approbateur: approbateur.clone(),
+                run: identifiant.to_string(),
+            },
+            // Exécuté sans approbation enregistrée : la garde n'a pas joué.
+            // Ce n'est jamais une approbation.
+            ("success", None) => EtatApprobation::Echouee {
+                detail: format!(
+                    "run {identifiant} exécuté sans aucune approbation humaine enregistrée"
+                ),
+            },
+            ("cancelled", _) => EtatApprobation::Refusee {
+                motif: "exécution annulée".to_string(),
+            },
+            (autre, _) => EtatApprobation::Echouee {
+                detail: format!("conclusion « {autre} »"),
+            },
         })
     }
 }
