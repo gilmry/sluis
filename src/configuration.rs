@@ -53,6 +53,31 @@ pub struct SectionGithub {
     /// Point d'entrée de l'API.
     #[serde(default = "api_github_par_defaut")]
     pub api: String,
+    /// Noms des check-runs qui portent les gates du plancher.
+    ///
+    /// Absent : aucun vérificateur n'est composé, donc aucune mise en ligne
+    /// ne peut être demandée.
+    #[serde(default)]
+    pub gates: Option<SectionGatesGithub>,
+}
+
+/// Correspondance entre les gates du plancher et les check-runs de la CI cible.
+///
+/// Les trois gates communes à tout archétype sont **requises** : une section
+/// qui en omettrait une ne se charge pas, plutôt que de laisser passer une
+/// mise en ligne sur un plancher incomplet.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SectionGatesGithub {
+    /// Check-run de la gate « secrets ».
+    pub secrets: String,
+    /// Check-run de la gate « sbom ».
+    pub sbom: String,
+    /// Check-run de la gate « scan-conteneur ».
+    pub scan_conteneur: String,
+    /// Check-run de la gate « retour-migration », archétype stateful seulement.
+    #[serde(default)]
+    pub retour_migration: Option<String>,
 }
 
 fn branche_par_defaut() -> String {
