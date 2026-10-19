@@ -18,7 +18,8 @@ use sluis::configuration::Configuration;
 use sluis::domain::Horodatage;
 use sluis::infrastructure::audit::JsonlAuditLog;
 use sluis::infrastructure::composition::{
-    outil_campagne_si_configure, passerelle_github_si_configuree,
+    outil_campagne_si_configure, outils_mise_en_ligne_si_configures,
+    passerelle_github_si_configuree,
 };
 use sluis::infrastructure::diagnostic::DiagnosticSysteme;
 use sluis::infrastructure::fs_inventaire::FsInventaire;
@@ -78,10 +79,15 @@ fn executer() -> Result<(), sluis::domain::AppError> {
         registre.enregistrer(campagne)?;
     }
 
-    // Composée dès le démarrage pour que son état soit dit, même avant que
-    // les outils qui la consomment n'existent (#4, story 4.3).
+    // La passerelle n'est exposée, par deux outils de Tier 2, que si le
+    // plancher peut aussi être vérifié (ADR-012). Son état est dit au
+    // démarrage, qu'elle soit composée ou non.
     let passerelle = passerelle_github_si_configuree(&configuration);
     eprintln!("sluis-mcp : {}", passerelle.diagnostic());
+    for outil in outils_mise_en_ligne_si_configures(&configuration, passerelle) {
+        eprintln!("sluis-mcp : « {} » exposé", outil.nom());
+        registre.enregistrer(outil)?;
+    }
 
     eprintln!(
         "sluis-mcp {} — {} outil(s), journal « {} »",

@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use crate::application::campagne::Campagne;
+use crate::application::mise_en_ligne::MiseEnLigne;
 use crate::application::ports::{GatePlancher, Horloge};
 use crate::configuration::Configuration;
 use crate::domain::{AppError, Duree, PlafondDepense};
@@ -18,6 +19,7 @@ use crate::infrastructure::fs_charge::FsCharge;
 use crate::infrastructure::gates_github::VerificateurGatesGithub;
 use crate::infrastructure::github::PasserelleGithub;
 use crate::infrastructure::mcp::outil_campagne::{OutilCampagne, ReglagesCampagne};
+use crate::infrastructure::mcp::outils_mise_en_ligne::{OutilEtatApprobation, OutilMiseEnLigne};
 use crate::infrastructure::mcp::Outil;
 use crate::infrastructure::process::{ExecuteurSysteme, Tofu};
 
@@ -149,4 +151,33 @@ pub fn verificateur_gates_si_configure(
         jeton,
         correspondance,
     ))
+}
+
+/// Construit `sluis_mise_en_ligne` et `sluis_etat_approbation` (ADR-012),
+/// **si et seulement si** la passerelle est composée **et** le vérificateur des
+/// gates aussi. L'un sans l'autre n'expose rien : une demande dont le plancher
+/// ne serait pas vérifié ne doit pas pouvoir être soumise.
+pub fn outils_mise_en_ligne_si_configures(
+    configuration: &Configuration,
+    passerelle: EtatPasserelle,
+) -> Vec<Box<dyn Outil>> {
+    let EtatPasserelle::Composee(passerelle) = passerelle else {
+        return Vec::new();
+    };
+    let Some(verificateur) = verificateur_gates_si_configure(configuration) else {
+        return Vec::new();
+    };
+    let Some(section) = configuration.fichier.github.as_ref() else {
+        return Vec::new();
+    };
+
+    let passerelle: Arc<dyn crate::application::ports::PasserelleApprobation> =
+        Arc::new(passerelle);
+    vec![
+        Box::new(OutilMiseEnLigne::new(
+            MiseEnLigne::new(Arc::new(verificateur), passerelle.clone()),
+            section.depot.clone(),
+        )),
+        Box::new(OutilEtatApprobation::new(passerelle)),
+    ]
 }

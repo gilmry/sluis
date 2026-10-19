@@ -331,3 +331,53 @@ fn security_tout_outil_enregistre_possede_un_schema_exploitable() {
         );
     }
 }
+
+// ── Story 4.3 (#4) — les outils réels de mise en ligne passent le harnais ──
+
+mod mise_en_ligne {
+    use std::sync::Arc;
+
+    use sluis::application::mise_en_ligne::MiseEnLigne;
+    use sluis::application::ports::{
+        EtatApprobation, EtatGate, PasserelleApprobation, VerificateurGates,
+    };
+    use sluis::domain::{AppError, Empreinte, PlanChangement};
+    use sluis::infrastructure::mcp::outils_mise_en_ligne::{
+        OutilEtatApprobation, OutilMiseEnLigne,
+    };
+    use sluis::infrastructure::mcp::ContratOutil;
+
+    struct Inerte;
+
+    impl PasserelleApprobation for Inerte {
+        fn soumettre(&self, _plan: &PlanChangement) -> Result<EtatApprobation, AppError> {
+            unreachable!("le harnais ne teste que le contrat")
+        }
+        fn interroger(&self, _empreinte: &Empreinte) -> Result<EtatApprobation, AppError> {
+            unreachable!("le harnais ne teste que le contrat")
+        }
+    }
+
+    impl VerificateurGates for Inerte {
+        fn etat_plancher(&self, _reference: &str) -> Result<Vec<EtatGate>, AppError> {
+            unreachable!("le harnais ne teste que le contrat")
+        }
+    }
+
+    #[test]
+    fn happy_les_outils_de_mise_en_ligne_respectent_leur_contrat() {
+        let inerte = Arc::new(Inerte);
+        let outils: Vec<Box<dyn ContratOutil>> = vec![
+            Box::new(OutilMiseEnLigne::new(
+                MiseEnLigne::new(inerte.clone(), inerte.clone()),
+                "koprogo".to_string(),
+            )),
+            Box::new(OutilEtatApprobation::new(inerte)),
+        ];
+        for outil in &outils {
+            if let Err(faute) = super::verifier_contrat(outil.as_ref()) {
+                panic!("{faute}");
+            }
+        }
+    }
+}

@@ -32,6 +32,27 @@ impl Empreinte {
         Self(format!("{:x}", hacheur.finalize()))
     }
 
+    /// Relit une empreinte transmise sous forme hexadécimale.
+    ///
+    /// Seule la forme exacte produite par [`Empreinte::calculer`] est
+    /// acceptée : 64 chiffres hexadécimaux en minuscules. Une empreinte qui
+    /// arrive de l'extérieur sert à retrouver un run, elle ne doit rien
+    /// pouvoir porter d'autre.
+    pub fn depuis_hexadecimal(texte: &str) -> Result<Self, AppError> {
+        let valide = texte.len() == 64
+            && texte
+                .chars()
+                .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
+        if valide {
+            Ok(Self(texte.to_string()))
+        } else {
+            Err(AppError::Analyse {
+                quoi: "empreinte".to_string(),
+                detail: "64 chiffres hexadécimaux en minuscules attendus".to_string(),
+            })
+        }
+    }
+
     /// Représentation hexadécimale.
     pub fn hexadecimal(&self) -> &str {
         &self.0
