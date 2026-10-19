@@ -433,6 +433,88 @@ Livre « la capacité de boucler ». Aucune story fonctionnelle ne démarre avan
 
 ---
 
+## Proposé le 2026-10-19 — Conformité dans les déploiements *(non signé)*
+
+> **Statut : proposition, hors du périmètre signé le 2026-08-29.** Cet epic
+> n'entre en sprint qu'après arbitrage à la gate review du jalon zéro. Ses
+> stories sont **réputées non prêtes** au sens de la convention de lecture :
+> chacune sera portée au gabarit complet (Gherkin, quatre classes de tests)
+> quand elle deviendra la prochaine étape, pas avant.
+
+**Décision d'origine (2026-10-19).** La Méthode Maury/Foyer vise le niveau
+**CyFun® 2025 Essential** pour tout SaaS, en partant des menaces qui pèsent sur
+des données de valeur. La conformité se répartit en trois couches :
+**plateforme** (Sluis), **application** (Foyer) et **organisation**. Cet epic
+porte la couche plateforme : un SaaS déployé par Sluis en hérite au lieu de la
+redémontrer.
+
+**Principe.** La conformité n'est pas un audit annuel, c'est **une gate de plus
+au déploiement**. Sluis vérifie déjà quatre gates avant toute mise en ligne
+(FR-024) et l'écart entre déclaré et réel (FR-004). On ajoute les contrôles de
+plateforme exigés par CyFun, et chaque déploiement laisse une **preuve** datée,
+puisque la maturité 3/5 (*Defined*) exige des preuves pour la plupart des
+activités.
+
+Les identifiants CyFun sont cités sans leur texte : les documents du CCB sont
+diffusés sous TLP:GREEN.
+
+### Epic 9 — Conformité de plateforme · Priorité **à arbitrer**
+
+| Story | Ce qu'elle apporte | CyFun 2025 visé | S'appuie sur | Taille · Tours |
+|---|---|---|---|---|
+| 9.1 — Profil de conformité déclaré par le dépôt | Le dépôt du SaaS déclare son niveau cible (Basic, Important, Essential) et ses écarts acceptés. Sluis le lit, il ne le décide pas, comme pour la charge (Sprint 5). | GV.RM, GV.PO-01 | BC1 Inventaire | S · 2 |
+| 9.2 — Gates de conformité avant mise en ligne | Mise en ligne refusée si une exigence de plateforme du niveau déclaré manque : sauvegarde hors hôte configurée, journaux expédiés hors hôte, MFA sur le compte OVH, pare-feu réseau actif. | PR.DS-11.1 ★, PR.PS-04.3, PR.AA-03.2 ★, PR.IR-01.1 ★ | FR-024 | L · 5 |
+| 9.3 — Preuve de conformité par déploiement | Chaque déploiement écrit dans le journal append-only la liste des contrôles vérifiés, avec leur identifiant CyFun et le commit. Export pour l'outil d'autoévaluation du CCB. | PR.PS-04.1 ★, RS.AN-06.1 | Story 0.5 | M · 3 |
+| 9.4 — Restauration éprouvée en bac à sable | La dernière sauvegarde est restaurée dans un bac à sable éphémère, son intégrité est vérifiée, puis le bac est détruit. La restauration est prouvée, pas supposée. | PR.DS-11.2, PR.DS-11.4, RC.RP-05.1 | Epic 5 | L · 5 |
+| 9.5 — Dérive de conformité | L'écart entre déclaré et réel s'étend aux contrôles : sauvegarde désactivée, rétention raccourcie, règle de pare-feu ouverte. Écart typé, jamais un vide trompeur. | PR.PS-01.1 ★, DE.CM-09.1 | FR-004 | M · 3 |
+| 9.6 — Séparation des environnements | Les profils de cluster imposent un environnement de test distinct de la production et un lien chiffré entre les composants critiques (pas de vRack sur VPS, voir les briques OVH). | PR.IR-01.2 ★, PR.IR-01.7, PR.PS-06.4 | FR-003, Terraform | M · 3 |
+| 9.7 — Coût des briques de conformité | Le coût courant distingue la part due à la conformité (stockage de sauvegarde, journaux, machine de test), pour confronter le coût de l'Essential au modèle. | — | FR-007 | S · 2 |
+
+**Estimation :** 7 stories, de l'ordre de **5,25 jours** et 23 tours (L ≈ 1 j, M ≈ 0,75 j, S ≈ 0,5 j, comme les epics 7 et 8), soit **≈ 1,75 jour de superviseur** au ratio 3.
+
+**Hors de cet epic, et à ne pas lui attribuer :**
+
+- **Couche application** (Foyer) : MFA des utilisateurs (PR.AA-01.4), identifiants uniques (PR.AA-02.2), développement sécurisé (PR.PS-06.3), vulnérabilités des dépendances (ID.RA-08.1 ★).
+- **Couche organisation** : politiques, plan de réponse aux incidents (RS.MA-01.1), gestion des fournisseurs (GV.SC), formation (PR.AT). Ce sont des documents, pas du code.
+- **Supervision** : elle a son propre dépôt privé. Sluis vérifie qu'elle est branchée (9.2), il ne la porte pas.
+
+**Questions ouvertes, à porter en RFC et pas à trancher dans le code :**
+
+1. Une gate de conformité rouge bloque-t-elle **toujours**, ou existe-t-il une dérogation datée, sur le modèle de la fenêtre de dérogation Tier 1 (Story 5.4) ?
+2. Quelles briques OVH portent chaque contrôle, et pour quel coût ? Premier chiffrage ci-dessous, à confirmer avant la story 9.2.
+
+### Briques OVHcloud et coût *(relevé du 2026-10-19, prix publics HT)*
+
+| Contrôle | Brique | Prix | Limite à connaître |
+|---|---|---|---|
+| Sauvegardes hors hôte, immuables (PR.DS-11.x) | Object Storage S3 Standard, **dans une autre région** que la prod, bucket en **Object Lock mode Compliance**, identifiants en écriture seule côté serveur | ~0,0071 €/Go/mois, trafic et requêtes gratuits | Object Lock ne s'active qu'à la création du bucket ; les versions conservées sont facturées |
+| Complément de sauvegarde | Sauvegarde automatique et snapshot du VPS | ~1 à 2,5 €/mois | **Même datacenter, 7 jours, pas d'immuabilité** : ne couvre pas PR.DS-11 seule |
+| Journaux hors hôte, alerte sur arrêt (PR.PS-04.3/.4) | Logs Data Platform : chaud 1 mois + archive froide 1 an ; alerte sur volume nul | 0,99 €/Gio/mois (1er Go offert), froid 0,10 €/Gio/mois | Formule exacte rétention/volume non publiée |
+| Variante économique des journaux | Object Storage avec Object Lock | ~0,0071 €/Go/mois | Ni recherche ni alerte : l'alerte d'arrêt doit venir de la supervision |
+| Séparation et segmentation (PR.IR-01.2/.7) | VPS distincts + Edge Network Firewall + pare-feu hôte + tunnel WireGuard | coût des VPS (VPS-1 à 4,49 €) | **vRack non disponible sur VPS** (réservé au Public Cloud) : la story 9.6 doit faire sans, ou passer en Public Cloud |
+| Clés et secrets (GV.PO-01.2, PR.DS-01/02) | KMS (OKMS), Secret Manager | 0,06 €/clé/mois, 0,03 €/secret/mois | Usage applicatif, pas de chiffrement disque VPS natif |
+| MFA et audit du compte (PR.AA-03.2, PR.AA-05.7) | IAM + 2FA, journaux du compte transférés vers LDP | gratuit (hors LDP) | Imposer la 2FA à tous les utilisateurs locaux : pas de moyen documenté trouvé |
+| Accès à privilèges tracés (PR.AA-05.9) | The Bastion (open source OVH) sur une machine distincte de la prod | ~4,49 €/mois | À maintenir soi-même |
+| Pare-feu réseau, DDoS (PR.IR-01.1) | Anti-DDoS + Edge Network Firewall | inclus | 20 règles par IP, IPv4 seulement |
+| Fournisseurs (GV.SC-05/07) | Certificats ISO 27001/27017/27018 (VPS, Object Storage et LDP dans le périmètre), SOC 2 sur demande | gratuit | Pas de SecNumCloud ni de HDS sur VPS |
+
+**Budget mensuel d'un petit SaaS** (50 Go de données, 200 Go de sauvegardes sur 30 jours, 5 Go de journaux par mois gardés un an, une prod et une machine de test/supervision, sans engagement) :
+
+- **Minimal, environ 17 €/mois** : VPS prod (8,49 €) + VPS de test (4,84 €) + sauvegardes S3 immuables (~1,40 €) + journaux dans S3 (~0,40 €) + KMS et secrets (~0,80 €).
+- **Recommandé, environ 27 €/mois** : idem, avec Logs Data Platform pour la recherche et l'alerte (~10 €) et la sauvegarde VPS Premium.
+- **Avec un bastion dédié, environ 32 €/mois.**
+
+**Ce qui ne vaut pas son prix à cette échelle :** PostgreSQL managé (54 €/mois en Essential, avec seulement 2 jours de rétention). Un `pg_dump` ou un archivage WAL vers le bucket immuable couvre mieux PR.DS-11 pour une fraction du coût.
+
+**Points non vérifiés, à confirmer avant de s'appuyer dessus :**
+- facturation de la sauvegarde VPS Standard (« incluse » selon la page commerciale, 0,35 à 0,50 € selon le catalogue) ;
+- absence de vRack sur VPS (aucun refus écrit explicite) ;
+- gratuité de l'Edge Network Firewall (déduite, pas écrite) ;
+- formule de facturation de LDP selon la rétention ;
+- possibilité d'imposer la MFA aux utilisateurs IAM.
+
+---
+
 ## Stories transverses
 
 - **Documentation Vivante** : les 5 flux critiques du PRD §9 en scénarios Gherkin, dont la découverte complète sans saisie et la dégradation propre sur machine nue. **Taille** : M · **Tours** : 3
