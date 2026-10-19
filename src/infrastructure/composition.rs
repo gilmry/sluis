@@ -8,13 +8,14 @@
 use std::sync::Arc;
 
 use crate::application::campagne::Campagne;
-use crate::application::ports::Horloge;
+use crate::application::ports::{GatePlancher, Horloge};
 use crate::configuration::Configuration;
 use crate::domain::{AppError, Duree, PlafondDepense};
 use crate::infrastructure::bac_a_sable::BacASableIac;
 use crate::infrastructure::charge::Wrk;
 use crate::infrastructure::derogation_depot::DepotDerogationFichier;
 use crate::infrastructure::fs_charge::FsCharge;
+use crate::infrastructure::gates_github::VerificateurGatesGithub;
 use crate::infrastructure::github::PasserelleGithub;
 use crate::infrastructure::mcp::outil_campagne::{OutilCampagne, ReglagesCampagne};
 use crate::infrastructure::mcp::Outil;
@@ -119,5 +120,33 @@ pub fn passerelle_github_si_configuree(configuration: &Configuration) -> EtatPas
         section.branche.clone(),
         jeton,
         section.api.clone(),
+    ))
+}
+
+/// Compose le vérificateur des gates du plancher sur les check-runs GitHub,
+/// **si et seulement si** la section `[github]`, sa sous-section `gates` et le
+/// jeton sont présents. Sinon, aucune mise en ligne ne peut être demandée.
+pub fn verificateur_gates_si_configure(
+    configuration: &Configuration,
+) -> Option<VerificateurGatesGithub> {
+    let section = configuration.fichier.github.as_ref()?;
+    let gates = section.gates.as_ref()?;
+    let jeton = configuration.jeton_github.clone()?;
+
+    let mut correspondance = vec![
+        (GatePlancher::Secrets, gates.secrets.clone()),
+        (GatePlancher::Sbom, gates.sbom.clone()),
+        (GatePlancher::ScanConteneur, gates.scan_conteneur.clone()),
+    ];
+    if let Some(nom) = &gates.retour_migration {
+        correspondance.push((GatePlancher::RetourMigration, nom.clone()));
+    }
+
+    Some(VerificateurGatesGithub::new(
+        section.proprietaire.clone(),
+        section.depot.clone(),
+        section.api.clone(),
+        jeton,
+        correspondance,
     ))
 }

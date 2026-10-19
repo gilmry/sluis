@@ -208,3 +208,71 @@ workflow = "tier1-apply.yml"
         );
     }
 }
+
+// ── Story 4.2 (#4) — vérificateur des gates composé par la configuration ──
+
+mod gates {
+    use sluis::configuration::Configuration;
+    use sluis::infrastructure::composition::verificateur_gates_si_configure;
+
+    fn charger(
+        contenu: &str,
+        nom: &str,
+        jeton: Option<&'static str>,
+    ) -> Result<Configuration, sluis::domain::AppError> {
+        let chemin = std::env::temp_dir().join(format!("sluis-gates-{nom}.toml"));
+        std::fs::write(&chemin, contenu).expect("écriture");
+        let resultat = Configuration::charger_avec(Some(&chemin), move |variable| {
+            (variable == "SLUIS_GITHUB_TOKEN")
+                .then_some(jeton)
+                .flatten()
+                .map(str::to_string)
+        });
+        let _ = std::fs::remove_file(&chemin);
+        resultat
+    }
+
+    const AVEC_GATES: &str = r#"
+[github]
+proprietaire = "gilmry"
+depot = "koprogo"
+workflow = "tier1-apply.yml"
+
+[github.gates]
+secrets = "Secrets"
+sbom = "SBOM"
+scan_conteneur = "Scan image"
+retour_migration = "Migrations"
+"#;
+
+    #[test]
+    fn happy_une_section_gates_et_un_jeton_composent_le_verificateur() {
+        let configuration = charger(AVEC_GATES, "complete", Some("jeton")).expect("chargement");
+        let verificateur = verificateur_gates_si_configure(&configuration).expect("composé");
+        let vue = format!("{verificateur:?}");
+        assert!(vue.contains("RetourMigration"), "{vue}");
+        assert!(!vue.contains("jeton\""), "{vue}");
+    }
+
+    #[test]
+    fn negative_sans_section_gates_aucun_verificateur() {
+        let sans = AVEC_GATES.split("[github.gates]").next().expect("préfixe");
+        let configuration = charger(sans, "sans-gates", Some("jeton")).expect("chargement");
+        assert!(verificateur_gates_si_configure(&configuration).is_none());
+    }
+
+    #[test]
+    fn edge_sans_jeton_aucun_verificateur() {
+        let configuration = charger(AVEC_GATES, "sans-jeton", None).expect("chargement");
+        assert!(verificateur_gates_si_configure(&configuration).is_none());
+    }
+
+    #[test]
+    fn security_une_gate_commune_omise_empeche_le_chargement() {
+        let incomplete = AVEC_GATES.replace("scan_conteneur = \"Scan image\"\n", "");
+        assert!(
+            charger(&incomplete, "incomplete", Some("jeton")).is_err(),
+            "un plancher sans scan de conteneur ne doit pas se charger"
+        );
+    }
+}
