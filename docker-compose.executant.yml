@@ -34,6 +34,9 @@ services:
       SLUIS_BASE_URL: http://sluis-executant:8080
       SLUIS_DEPOT_OAUTH: /app/donnees/sluis-oauth.json
       SLUIS_SECRET_SIGNATURE: ${SLUIS_SECRET_SIGNATURE_EXECUTANT:?absent du .env — openssl rand -base64 32, DIFFÉRENT de celui du Sluis public}
+      # Lecture seule : runs et approbations du dépôt cible, pour ouvrir la
+      # fenêtre d'ADR-007 sur preuve (ADR-012). Distinct du jeton public.
+      SLUIS_GITHUB_TOKEN: ${SLUIS_GITHUB_TOKEN_EXECUTANT:-}
       SLUIS_IDENTIFIANT: ${SLUIS_IDENTIFIANT:?absent du .env — identifiant du superviseur}
       SLUIS_EMPREINTE_MOT_DE_PASSE: ${SLUIS_EMPREINTE_MOT_DE_PASSE:?absent du .env — sha256 du mot de passe, pas le mot de passe}
       # Les identifiants OVH ne vivent QUE sur ce service, et ce sont ceux du
