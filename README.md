@@ -1,8 +1,8 @@
 # Sluis
 
-> L'écluse. Un orchestrateur d'infrastructure OVH exposé comme serveur MCP, qui laisse un agent IA mesurer, proposer et déployer sans jamais pouvoir nuire.
+> L'écluse. Un orchestrateur d'infrastructure OVH exposé comme serveur MCP, qui laisse un agent IA mesurer, proposer, et **demander** une mise en ligne qu'un humain approuve, sans jamais pouvoir nuire.
 
-**État : fabrication terminée.** Gate BMAD franchie le 2026-08-29, les cinq livrables sont signés. Sprints 0 à 2 livrés, Sprints 3 et 4 en cours.
+**État : fabriqué et testé en code, pas encore prouvé contre du réel.** Gate BMAD franchie le 2026-08-29, les cinq livrables sont signés, les cinq sprints planifiés sont livrés en code.
 
 ```
 Sprint 0  Fondations                    ██████████  5/5
@@ -12,17 +12,34 @@ Sprint 3  Bac à sable · Capacité        ██████████  7/7
 Sprint 4  Tier 1 · Accès distant        ██████████  5/5
 ```
 
-**31 stories livrées, 274 tests verts.** Les deux déploiements prévus par
-l'architecture existent : un Sluis **public** en lecture, exposé et qui ne
-détient rien, et un Sluis **exécutant** sur le réseau interne, qui porte
-OpenTofu, wrk et les clés OVH sans être joignable de nulle part.
+Livré depuis :
 
-Restent deux hypothèses à lever avant de pouvoir prouver le dispositif contre
-du réel : un projet OVH dédié aux bacs à sable (H1), sans lequel l'exécutant
-n'a rien à louer, et un environnement GitHub protégé sur les dépôts cibles
-(H2), sans lequel la passerelle Tier 1 n'est prouvée que par doublure. Et
-aucun projet ne déclare encore son `infrastructure/_shared/charge.yaml` : la
-capacité de mesurer n'a pas encore de sujet.
+- **2026-09-02** : la campagne de charge de bout en bout, et les deux
+  déploiements prévus par l'architecture, un Sluis **public** exposé qui ne
+  détient rien et un Sluis **exécutant** sur le réseau interne qui porte
+  OpenTofu, wrk et les clés OVH (ADR-010, ADR-011).
+- **2026-10-19** : la passerelle Tier 1 câblée dans les binaires (#4, ADR-012).
+  Outils `sluis_mise_en_ligne`, `sluis_etat_approbation` et
+  `sluis_renouvellement_derogation` sur le public, `sluis_ouvrir_derogation` sur
+  l'exécutant. Trois failles de la passerelle corrigées (#12, #13) et
+  l'empreinte du plan vérifiée par le job lui-même (#21).
+
+Les tests sont comptés par la CI à chaque push, pas recopiés ici.
+
+**Ce qui n'est pas encore prouvé, et pourquoi :**
+
+- **H1 non levée**, pas de projet OVH dédié aux bacs à sable : l'exécutant n'est
+  pas déployé, aucune campagne n'a tourné, et la compatibilité d'OpenTofu avec
+  les modules réellement mesurés reste attendue, pas établie.
+- **H2 non levée**, aucun environnement GitHub protégé sur un dépôt cible :
+  aucun cycle d'approbation Tier 1 n'a eu lieu de bout en bout. La passerelle
+  n'est prouvée que par doublure et contre un faux GitHub.
+- Aucun dépôt ne déclare encore son `infrastructure/_shared/charge.yaml` : la
+  capacité de mesurer n'a pas encore de sujet.
+- **Le retour arrière après une mise en ligne n'existe pas** (story 7.2
+  `@edge`, #5, prévu après le jalon zéro).
+- La fenêtre de dérogation d'ADR-007 expire le **2026-11-27**. La renouveler
+  exige H1 et H2.
 
 ---
 
@@ -60,7 +77,7 @@ Conséquence : même compromis, Sluis ne peut pas muter la production. Il ne peu
 |---|---|---|
 | Tier 2 lecture | inventaire, coûts, plans, statuts, diagnostics | aucune |
 | Tier 2 écriture bornée | infrastructure éphémère de test, à TTL et plafond | confirmation d'appel côté client MCP, **dans une fenêtre de dérogation ouverte** |
-| Tier 1 | toute mutation de production, mise en ligne | environnement GitHub protégé |
+| Tier 1 | toute mutation de production, mise en ligne, renouvellement de la dérogation | environnement GitHub protégé |
 
 La dérogation du niveau intermédiaire est encadrée par **sept conditions cumulatives**, codées comme invariants de domaine et non comme vérifications de surface.
 
@@ -70,7 +87,7 @@ La septième mérite d'être lue à part : **la dérogation elle-même expire.**
 
 **Campagnes de charge sur infrastructure éphémère.** Louer une infra jetable, prouver sa convergence, dérouler un escalier de charge, collecter des mesures, détruire inconditionnellement, puis produire un rapport qui remplace les constantes supposées du modèle de coût par du mesuré.
 
-**Mise en ligne.** Vérifier les gates du plancher, produire un plan, obtenir l'approbation humaine, déployer, et revenir en arrière si les tests post-déploiement échouent. La sortie n'est jamais un état non vérifié.
+**Mise en ligne.** Vérifier les gates du plancher, produire un plan, obtenir l'approbation humaine, déployer, et revenir en arrière si les tests post-déploiement échouent. La sortie n'est jamais un état non vérifié. *Le retour arrière n'est pas encore construit (#5).*
 
 ## Conception
 
@@ -78,15 +95,15 @@ Les livrables suivent la pipeline BMAD du framework Foyer. Chacun porte un front
 
 | # | Livrable | Persona | État |
 |---|---|---|---|
-| [01](docs/bmad/01-product-brief.md) | Product Brief | Analyste | à signer |
-| [02](docs/bmad/02-prd.md) | PRD | Product Manager | à signer |
-| [03](docs/bmad/03-architecture.md) | Architecture + ADR | Architecte | à signer |
-| [04](docs/bmad/04-epics-stories.md) | Epics & Stories | Scrum Master | à signer |
-| [05](docs/bmad/05-validation.md) | Validation | Validateur | **PASS**, 100/100 |
+| [01](docs/bmad/01-product-brief.md) | Product Brief | Analyste | signé le 2026-08-29 |
+| [02](docs/bmad/02-prd.md) | PRD | Product Manager | signé le 2026-08-29 |
+| [03](docs/bmad/03-architecture.md) | Architecture + ADR | Architecte | signé le 2026-08-29 |
+| [04](docs/bmad/04-epics-stories.md) | Epics & Stories | Scrum Master | signé le 2026-08-29 |
+| [05](docs/bmad/05-validation.md) | Validation | Validateur | **PASS**, 100/100, signé le 2026-08-29 |
 
-Les cinq sont **signés au 2026-08-29**, ADR-006 et ADR-007 contresignés.
+ADR-006 et ADR-007 sont contresignés depuis le 2026-08-29, ADR-010 à ADR-012 en octobre. Le registre et l'état de chaque ADR : [docs/adr/README.md](docs/adr/README.md).
 
-Le premier passage rendait CONCERNS à 88/100. Les trois incohérences sont closes : deux par rebouclage vers les personas concernés, une par décision du superviseur. Le second passage rend **PASS à 100/100**, avec deux réserves qui n'empêchent pas la sortie : une marge de 7 % sur la target de coût, et deux hypothèses à lever avant les Sprints 3 et 4.
+Le premier passage rendait CONCERNS à 88/100. Les trois incohérences sont closes : deux par rebouclage vers les personas concernés, une par décision du superviseur. Le second passage rend **PASS à 100/100**, avec deux réserves qui n'empêchent pas la sortie : une marge de 7 % sur la target de coût, et deux hypothèses à lever, H1 et H2, toujours ouvertes (voir l'état en tête).
 
 **Périmètre complet, pas de découpage MVP** (décision du superviseur, 2026-08-29) : les 25 exigences et les 11 capacités sont livrées. Les sprints ordonnent la fabrication, ils ne priorisent pas un abandon.
 
