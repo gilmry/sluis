@@ -276,3 +276,69 @@ retour_migration = "Migrations"
         );
     }
 }
+
+// ── Story 4.3 (#4) — les outils de mise en ligne n'existent qu'au complet ──
+
+mod outils {
+    use sluis::configuration::Configuration;
+    use sluis::infrastructure::composition::{
+        outils_mise_en_ligne_si_configures, passerelle_github_si_configuree,
+    };
+
+    const COMPLETE: &str = r#"
+[github]
+proprietaire = "gilmry"
+depot = "koprogo"
+workflow = "tier1-apply.yml"
+
+[github.gates]
+secrets = "Secrets"
+sbom = "SBOM"
+scan_conteneur = "Scan image"
+"#;
+
+    fn noms(contenu: &str, nom: &str, jeton: Option<&'static str>) -> Vec<&'static str> {
+        let chemin = std::env::temp_dir().join(format!("sluis-outils-{nom}.toml"));
+        std::fs::write(&chemin, contenu).expect("écriture");
+        let configuration = Configuration::charger_avec(Some(&chemin), move |variable| {
+            (variable == "SLUIS_GITHUB_TOKEN")
+                .then_some(jeton)
+                .flatten()
+                .map(str::to_string)
+        })
+        .expect("chargement");
+        let _ = std::fs::remove_file(&chemin);
+        let passerelle = passerelle_github_si_configuree(&configuration);
+        outils_mise_en_ligne_si_configures(&configuration, passerelle)
+            .iter()
+            .map(|o| o.nom())
+            .collect()
+    }
+
+    #[test]
+    fn happy_une_configuration_complete_expose_les_deux_outils() {
+        assert_eq!(
+            noms(COMPLETE, "complete", Some("jeton")),
+            vec!["sluis_mise_en_ligne", "sluis_etat_approbation"]
+        );
+    }
+
+    #[test]
+    fn negative_sans_section_github_rien_n_est_expose() {
+        assert!(noms("", "vide", Some("jeton")).is_empty());
+    }
+
+    #[test]
+    fn edge_sans_jeton_rien_n_est_expose() {
+        assert!(noms(COMPLETE, "sans-jeton", None).is_empty());
+    }
+
+    #[test]
+    fn security_une_passerelle_sans_gates_n_expose_rien() {
+        let sans_gates = COMPLETE.split("[github.gates]").next().expect("préfixe");
+        assert!(
+            noms(sans_gates, "sans-gates", Some("jeton")).is_empty(),
+            "une demande au plancher non vérifiable ne doit pas pouvoir être soumise"
+        );
+    }
+}

@@ -72,7 +72,7 @@ impl VerificateurGatesGithub {
 
 /// Une référence n'est acceptée que si elle ne peut rien faire d'autre que
 /// nommer un commit : elle finit dans un chemin d'URL.
-fn verifier_reference(reference: &str) -> Result<(), AppError> {
+pub fn verifier_reference(reference: &str) -> Result<(), AppError> {
     let valide = !reference.is_empty()
         && reference.len() <= LONGUEUR_MAX_REFERENCE
         && !reference.starts_with('.')
