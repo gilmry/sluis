@@ -73,6 +73,74 @@ impl PasserelleGithub {
         )
     }
 
+    /// Vérifie, avant tout dispatch, que l'environnement cible existe et qu'il
+    /// impose une approbation humaine que le titulaire du jeton ne peut pas
+    /// donner lui-même.
+    ///
+    /// Sans cette lecture, un environnement absent serait créé par GitHub
+    /// **sans protection** au premier run, et le job s'exécuterait sans que
+    /// personne l'approuve (faille S1).
+    fn verifier_environnement(&self, environnement: &str) -> Result<(), AppError> {
+        let refus = |raison: &str| AppError::EnvironnementNonProtege {
+            environnement: environnement.to_string(),
+            raison: raison.to_string(),
+        };
+
+        let reponse = self
+            .agent
+            .get(self.url(&format!("/environments/{environnement}")))
+            .header("Authorization", &format!("Bearer {}", self.jeton.exposer()))
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .call();
+
+        let corps: serde_json::Value = match reponse {
+            Ok(mut r) => r
+                .body_mut()
+                .read_json()
+                .map_err(|e| self.erreur(e.to_string()))?,
+            Err(ureq::Error::StatusCode(404)) => {
+                return Err(refus(
+                    "n'existe pas ; GitHub le créerait sans protection au premier run",
+                ))
+            }
+            Err(ureq::Error::StatusCode(401)) | Err(ureq::Error::StatusCode(403)) => {
+                return Err(AppError::Authentification {
+                    secret: Redacted::new("jeton GitHub".to_string()),
+                })
+            }
+            Err(e) => return Err(self.erreur(e.to_string())),
+        };
+
+        let relecteurs = corps
+            .get("protection_rules")
+            .and_then(|r| r.as_array())
+            .and_then(|regles| {
+                regles.iter().find(|regle| {
+                    regle.get("type").and_then(|t| t.as_str()) == Some("required_reviewers")
+                })
+            });
+
+        let Some(regle) = relecteurs else {
+            return Err(refus("n'exige aucun relecteur"));
+        };
+        let nombre = regle
+            .get("reviewers")
+            .and_then(|r| r.as_array())
+            .map_or(0, Vec::len);
+        if nombre == 0 {
+            return Err(refus("exige des relecteurs mais n'en désigne aucun"));
+        }
+        // Absent vaut inactif : on ne présume jamais une garde qu'on n'a pas lue.
+        if regle.get("prevent_self_review").and_then(|p| p.as_bool()) != Some(true) {
+            return Err(refus(
+                "laisse le titulaire du jeton approuver son propre dispatch \
+                 (prevent_self_review inactif)",
+            ));
+        }
+        Ok(())
+    }
+
     fn erreur(&self, detail: String) -> AppError {
         AppError::ServiceTiers {
             service: "GitHub".to_string(),
@@ -83,6 +151,8 @@ impl PasserelleGithub {
 
 impl PasserelleApprobation for PasserelleGithub {
     fn soumettre(&self, plan: &PlanChangement) -> Result<EtatApprobation, AppError> {
+        self.verifier_environnement(plan.environnement().nom())?;
+
         // L'empreinte voyage en entrée du workflow : c'est elle qui lie
         // l'approbation humaine à un plan précis, et pas à un autre.
         let corps = serde_json::json!({

@@ -57,6 +57,19 @@ pub enum AppError {
     #[error("introuvable : {quoi}")]
     Introuvable { quoi: String },
 
+    /// L'environnement GitHub visé par un dispatch de Tier 1 n'offre pas la
+    /// garde qu'ADR-008 suppose : absent, sans relecteur requis, ou qui laisse
+    /// le titulaire du jeton approuver son propre dispatch.
+    ///
+    /// Le refus a lieu **avant le dispatch** : un environnement absent serait
+    /// créé par GitHub sans protection au premier run, et le job passerait
+    /// sans approbation humaine.
+    #[error("dispatch Tier 1 refusé : l'environnement « {environnement} » {raison}")]
+    EnvironnementNonProtege {
+        environnement: String,
+        raison: String,
+    },
+
     /// Un service tiers a répondu une erreur.
     #[error("erreur du service {service} : {detail}")]
     ServiceTiers { service: String, detail: String },
