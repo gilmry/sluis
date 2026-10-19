@@ -27,6 +27,39 @@ pub struct FichierConfiguration {
     /// Section journal.
     #[serde(default)]
     pub journal: SectionJournal,
+    /// Section GitHub : la passerelle d'approbation (ADR-008, ADR-012).
+    ///
+    /// **Absente par défaut** : sans elle, aucune passerelle n'est composée et
+    /// le serveur ne peut rien soumettre.
+    #[serde(default)]
+    pub github: Option<SectionGithub>,
+}
+
+/// Réglages de la passerelle GitHub.
+///
+/// Le jeton n'y figure pas : il vient de `SLUIS_GITHUB_TOKEN`.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SectionGithub {
+    /// Propriétaire du dépôt cible.
+    pub proprietaire: String,
+    /// Dépôt cible, celui qui porte le workflow de Tier 1.
+    pub depot: String,
+    /// Fichier du workflow de Tier 1, par exemple `tier1-apply.yml`.
+    pub workflow: String,
+    /// Branche sur laquelle le workflow est déclenché.
+    #[serde(default = "branche_par_defaut")]
+    pub branche: String,
+    /// Point d'entrée de l'API.
+    #[serde(default = "api_github_par_defaut")]
+    pub api: String,
+}
+
+fn branche_par_defaut() -> String {
+    "main".to_string()
+}
+fn api_github_par_defaut() -> String {
+    "https://api.github.com".to_string()
 }
 
 /// Réglages OVH.
@@ -148,6 +181,8 @@ pub struct Configuration {
     pub autorisation: ListeAutorisation,
     /// Identité OVH, si les trois secrets sont présents.
     pub identite: Option<IdentiteOvh>,
+    /// Jeton GitHub de la passerelle, si `SLUIS_GITHUB_TOKEN` est non vide.
+    pub jeton_github: Option<Redacted<String>>,
 }
 
 impl Configuration {
@@ -157,6 +192,18 @@ impl Configuration {
     /// aucun projet autorisé, donc capable de tout lire localement et de ne
     /// rien voir chez OVH. C'est le défaut le plus sûr.
     pub fn charger(chemin: Option<&Path>) -> Result<Self, AppError> {
+        Self::charger_avec(chemin, |nom| std::env::var(nom).ok())
+    }
+
+    /// Charge la configuration en lisant les secrets par `lire_env`.
+    ///
+    /// Sépare la lecture de l'environnement du reste, pour que les tests
+    /// n'aient pas à modifier les variables du processus, partagées entre
+    /// tests parallèles.
+    pub fn charger_avec(
+        chemin: Option<&Path>,
+        lire_env: impl Fn(&str) -> Option<String>,
+    ) -> Result<Self, AppError> {
         let fichier = match chemin {
             Some(chemin) if chemin.exists() => {
                 let contenu =
@@ -178,9 +225,9 @@ impl Configuration {
         )?;
 
         let identite = match (
-            std::env::var("OVH_APPLICATION_KEY").ok(),
-            std::env::var("OVH_APPLICATION_SECRET").ok(),
-            std::env::var("OVH_CONSUMER_KEY").ok(),
+            lire_env("OVH_APPLICATION_KEY"),
+            lire_env("OVH_APPLICATION_SECRET"),
+            lire_env("OVH_CONSUMER_KEY"),
         ) {
             (Some(cle), Some(secret), Some(consommateur))
                 if !cle.is_empty() && !secret.is_empty() && !consommateur.is_empty() =>
@@ -194,10 +241,15 @@ impl Configuration {
             _ => None,
         };
 
+        let jeton_github = lire_env("SLUIS_GITHUB_TOKEN")
+            .filter(|jeton| !jeton.trim().is_empty())
+            .map(Redacted::new);
+
         Ok(Self {
             fichier,
             autorisation,
             identite,
+            jeton_github,
         })
     }
 
@@ -208,9 +260,12 @@ impl Configuration {
 
     /// Les valeurs secrètes connues, à effacer de toute sortie.
     pub fn secrets_connus(&self) -> Vec<Redacted<String>> {
-        self.identite
+        let mut secrets: Vec<Redacted<String>> = self
+            .identite
             .as_ref()
             .map(|i| vec![i.application_secret.clone(), i.consumer_key.clone()])
-            .unwrap_or_default()
+            .unwrap_or_default();
+        secrets.extend(self.jeton_github.clone());
+        secrets
     }
 }

@@ -36,9 +36,10 @@ services:
       OVH_APPLICATION_SECRET: ${OVH_APPLICATION_SECRET:-}
       OVH_CONSUMER_KEY: ${OVH_CONSUMER_KEY:-}
       OVH_ENDPOINT: ${OVH_ENDPOINT:-https://eu.api.ovh.com/1.0}
-      # Ce jeton n'ouvre qu'un droit : déclencher un workflow. Il ne donne
-      # aucun accès à l'infrastructure, qui reste derrière l'environnement
-      # GitHub protégé (ADR-008). Aucun outil ne le consomme encore.
+      # Déclenche le workflow de Tier 1 et lit l'environnement, les runs et
+      # leurs approbations. Aucun accès à l'infrastructure, qui reste derrière
+      # l'environnement GitHub protégé (ADR-008, ADR-012). Son identité ne doit
+      # être celle d'aucun relecteur. Sans section [github], il est ignoré.
       SLUIS_GITHUB_TOKEN: ${SLUIS_GITHUB_TOKEN:-}
     volumes:
       - ./sluis.toml:/app/sluis.toml:ro

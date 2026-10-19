@@ -17,7 +17,9 @@ use sluis::application::ports::Horloge;
 use sluis::configuration::Configuration;
 use sluis::domain::Horodatage;
 use sluis::infrastructure::audit::JsonlAuditLog;
-use sluis::infrastructure::composition::outil_campagne_si_configure;
+use sluis::infrastructure::composition::{
+    outil_campagne_si_configure, passerelle_github_si_configuree,
+};
 use sluis::infrastructure::diagnostic::DiagnosticSysteme;
 use sluis::infrastructure::fs_inventaire::FsInventaire;
 use sluis::infrastructure::mcp::outils_lecture::{OutilDoctor, OutilInventaire, OutilProfils};
@@ -75,6 +77,11 @@ fn executer() -> Result<(), sluis::domain::AppError> {
     )? {
         registre.enregistrer(campagne)?;
     }
+
+    // Composée dès le démarrage pour que son état soit dit, même avant que
+    // les outils qui la consomment n'existent (#4, story 4.3).
+    let passerelle = passerelle_github_si_configuree(&configuration);
+    eprintln!("sluis-mcp : {}", passerelle.diagnostic());
 
     eprintln!(
         "sluis-mcp {} — {} outil(s), journal « {} »",
