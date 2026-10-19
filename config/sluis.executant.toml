@@ -49,5 +49,19 @@ depots_autorises = ["/depots/koprogo/infrastructure"]
 # Fenêtre scellée : dans le volume, seul endroit inscriptible du conteneur.
 depot_derogation = "/app/donnees/sluis-derogation.json"
 
+# Empreintes de renouvellement déjà consommées : une approbation ne rouvre la
+# fenêtre qu'une fois (ADR-012, partie 3). Même volume, même raison.
+registre_renouvellements = "/app/donnees/sluis-renouvellements.json"
+
 [journal]
 chemin = "/app/donnees/sluis-audit.jsonl"
+
+# Lecture de l'approbation du renouvellement d'ADR-007 (ADR-012, partie 3).
+# L'exécutant n'a besoin que de LIRE les runs et leurs approbations : son jeton
+# (SLUIS_GITHUB_TOKEN_EXECUTANT dans le .env) doit être en lecture seule, et
+# distinct de celui du Sluis public. Sans cette section, `sluis_ouvrir_derogation`
+# n'est pas exposé et la fenêtre ne peut pas être renouvelée.
+[github]
+proprietaire = "gilmry"
+depot = "koprogo"
+workflow = "tier1-apply.yml"
