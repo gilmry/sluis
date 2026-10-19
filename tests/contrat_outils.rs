@@ -338,12 +338,14 @@ mod mise_en_ligne {
     use std::sync::Arc;
 
     use sluis::application::mise_en_ligne::MiseEnLigne;
+    use sluis::application::ports::HorlogeFigee;
     use sluis::application::ports::{
         EtatApprobation, EtatGate, PasserelleApprobation, VerificateurGates,
     };
+    use sluis::domain::Horodatage;
     use sluis::domain::{AppError, Empreinte, PlanChangement};
     use sluis::infrastructure::mcp::outils_mise_en_ligne::{
-        OutilEtatApprobation, OutilMiseEnLigne,
+        OutilEtatApprobation, OutilMiseEnLigne, OutilRenouvellementDerogation,
     };
     use sluis::infrastructure::mcp::ContratOutil;
 
@@ -372,7 +374,11 @@ mod mise_en_ligne {
                 MiseEnLigne::new(inerte.clone(), inerte.clone()),
                 "koprogo".to_string(),
             )),
-            Box::new(OutilEtatApprobation::new(inerte)),
+            Box::new(OutilEtatApprobation::new(inerte.clone())),
+            Box::new(OutilRenouvellementDerogation::new(
+                inerte,
+                Arc::new(HorlogeFigee::a(Horodatage::new(0))),
+            )),
         ];
         for outil in &outils {
             if let Err(faute) = super::verifier_contrat(outil.as_ref()) {

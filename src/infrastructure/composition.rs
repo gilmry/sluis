@@ -19,7 +19,9 @@ use crate::infrastructure::fs_charge::FsCharge;
 use crate::infrastructure::gates_github::VerificateurGatesGithub;
 use crate::infrastructure::github::PasserelleGithub;
 use crate::infrastructure::mcp::outil_campagne::{OutilCampagne, ReglagesCampagne};
-use crate::infrastructure::mcp::outils_mise_en_ligne::{OutilEtatApprobation, OutilMiseEnLigne};
+use crate::infrastructure::mcp::outils_mise_en_ligne::{
+    OutilEtatApprobation, OutilMiseEnLigne, OutilRenouvellementDerogation,
+};
 use crate::infrastructure::mcp::Outil;
 use crate::infrastructure::process::{ExecuteurSysteme, Tofu};
 
@@ -153,31 +155,37 @@ pub fn verificateur_gates_si_configure(
     ))
 }
 
-/// Construit `sluis_mise_en_ligne` et `sluis_etat_approbation` (ADR-012),
-/// **si et seulement si** la passerelle est composée **et** le vérificateur des
-/// gates aussi. L'un sans l'autre n'expose rien : une demande dont le plancher
-/// ne serait pas vérifié ne doit pas pouvoir être soumise.
+/// Construit les outils qui consomment la passerelle (ADR-012).
+///
+/// - `sluis_etat_approbation` et `sluis_renouvellement_derogation` dès que la
+///   passerelle est composée : ils ne dépendent d'aucune gate.
+/// - `sluis_mise_en_ligne` **seulement si** le vérificateur des gates l'est
+///   aussi : une demande dont le plancher ne serait pas vérifié ne doit pas
+///   pouvoir être soumise.
 pub fn outils_mise_en_ligne_si_configures(
     configuration: &Configuration,
     passerelle: EtatPasserelle,
+    horloge: Arc<dyn Horloge>,
 ) -> Vec<Box<dyn Outil>> {
     let EtatPasserelle::Composee(passerelle) = passerelle else {
         return Vec::new();
     };
-    let Some(verificateur) = verificateur_gates_si_configure(configuration) else {
-        return Vec::new();
-    };
-    let Some(section) = configuration.fichier.github.as_ref() else {
-        return Vec::new();
-    };
-
     let passerelle: Arc<dyn crate::application::ports::PasserelleApprobation> =
         Arc::new(passerelle);
-    vec![
-        Box::new(OutilMiseEnLigne::new(
+
+    let mut outils: Vec<Box<dyn Outil>> = Vec::new();
+    if let (Some(verificateur), Some(section)) = (
+        verificateur_gates_si_configure(configuration),
+        configuration.fichier.github.as_ref(),
+    ) {
+        outils.push(Box::new(OutilMiseEnLigne::new(
             MiseEnLigne::new(Arc::new(verificateur), passerelle.clone()),
             section.depot.clone(),
-        )),
-        Box::new(OutilEtatApprobation::new(passerelle)),
-    ]
+        )));
+    }
+    outils.push(Box::new(OutilEtatApprobation::new(passerelle.clone())));
+    outils.push(Box::new(OutilRenouvellementDerogation::new(
+        passerelle, horloge,
+    )));
+    outils
 }

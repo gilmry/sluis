@@ -309,7 +309,7 @@ scan_conteneur = "Scan image"
         .expect("chargement");
         let _ = std::fs::remove_file(&chemin);
         let passerelle = passerelle_github_si_configuree(&configuration);
-        outils_mise_en_ligne_si_configures(&configuration, passerelle)
+        outils_mise_en_ligne_si_configures(&configuration, passerelle, super::horloge())
             .iter()
             .map(|o| o.nom())
             .collect()
@@ -319,7 +319,11 @@ scan_conteneur = "Scan image"
     fn happy_une_configuration_complete_expose_les_deux_outils() {
         assert_eq!(
             noms(COMPLETE, "complete", Some("jeton")),
-            vec!["sluis_mise_en_ligne", "sluis_etat_approbation"]
+            vec![
+                "sluis_mise_en_ligne",
+                "sluis_etat_approbation",
+                "sluis_renouvellement_derogation"
+            ]
         );
     }
 
@@ -334,11 +338,17 @@ scan_conteneur = "Scan image"
     }
 
     #[test]
-    fn security_une_passerelle_sans_gates_n_expose_rien() {
+    fn security_sans_gates_la_mise_en_ligne_n_est_pas_exposee() {
         let sans_gates = COMPLETE.split("[github.gates]").next().expect("préfixe");
+        let noms = noms(sans_gates, "sans-gates", Some("jeton"));
         assert!(
-            noms(sans_gates, "sans-gates", Some("jeton")).is_empty(),
-            "une demande au plancher non vérifiable ne doit pas pouvoir être soumise"
+            !noms.contains(&"sluis_mise_en_ligne"),
+            "une demande au plancher non vérifiable ne doit pas pouvoir être soumise : {noms:?}"
+        );
+        // Le renouvellement ne dépend d'aucune gate : il reste demandable.
+        assert!(
+            noms.contains(&"sluis_renouvellement_derogation"),
+            "{noms:?}"
         );
     }
 }

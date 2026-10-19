@@ -14,7 +14,10 @@
 
 use serde::Serialize;
 
-use crate::domain::{AppError, Duree, Horodatage, JetonConsomme, ProjetBacASable, ValeurSure};
+use crate::domain::{
+    Action, AppError, Duree, Environnement, Horodatage, JetonConsomme, PlanChangement,
+    ProjetBacASable, Tier, ValeurSure,
+};
 
 /// Plafond de dépense d'une campagne.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize)]
@@ -374,4 +377,29 @@ impl FenetreScellee {
         }
         Ok(self.fenetre)
     }
+}
+
+/// Le plan de Tier 1 qui renouvelle la fenêtre d'ADR-007.
+///
+/// **Daté.** L'instant de la demande entre dans la description, donc dans
+/// l'empreinte : deux renouvellements n'ont jamais la même empreinte, et une
+/// approbation donnée pour l'un ne peut pas servir à rouvrir la fenêtre plus
+/// tard. Le plan vise la production, pour passer devant le même relecteur
+/// qu'une mise en ligne réelle.
+///
+/// L'exécutant le reconstruit à partir du seul instant de la demande : il ne
+/// reçoit jamais d'empreinte toute faite, donc ne peut pas être dirigé vers
+/// l'approbation d'un autre plan.
+pub fn plan_renouvellement(demande_le: Horodatage) -> Result<PlanChangement, AppError> {
+    PlanChangement::new(
+        Action::RenouvellementDerogation,
+        Environnement::Production,
+        Tier::One,
+        "adr-007".to_string(),
+        format!(
+            "renouvelle la fenêtre de dérogation d'ADR-007, demande du {}",
+            demande_le.secondes()
+        ),
+        String::new(),
+    )
 }

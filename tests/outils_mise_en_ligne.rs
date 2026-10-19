@@ -213,3 +213,71 @@ fn security_les_deux_outils_sont_de_tier_2_car_ils_ne_font_que_demander() {
     );
     assert_eq!(OutilEtatApprobation::new(passerelle).tier(), Tier::Two);
 }
+
+// ── Story 4.4a (#4) — sluis_renouvellement_derogation ────────
+
+mod renouvellement {
+    use std::sync::Arc;
+
+    use serde_json::json;
+    use sluis::application::ports::HorlogeFigee;
+    use sluis::domain::{plan_renouvellement, Action, Environnement, Horodatage, Tier};
+    use sluis::infrastructure::mcp::outils_mise_en_ligne::OutilRenouvellementDerogation;
+    use sluis::infrastructure::mcp::Outil;
+
+    use super::PasserelleDouble;
+
+    const INSTANT: i64 = 1_790_000_000;
+
+    fn outil(passerelle: Arc<PasserelleDouble>) -> OutilRenouvellementDerogation {
+        OutilRenouvellementDerogation::new(
+            passerelle,
+            Arc::new(HorlogeFigee::a(Horodatage::new(INSTANT))),
+        )
+    }
+
+    #[test]
+    fn happy_la_demande_soumet_un_plan_date_de_tier_1_en_production() {
+        let passerelle = Arc::new(PasserelleDouble::default());
+        let rendu = outil(passerelle.clone())
+            .appeler(&json!({}))
+            .expect("appel");
+
+        assert_eq!(rendu["demande_le"], INSTANT);
+        assert_eq!(rendu["approbation"]["etat"], "en_attente");
+        let soumis = passerelle.soumis.lock().expect("verrou");
+        assert_eq!(soumis.len(), 1);
+        let plan = &soumis[0];
+        assert_eq!(plan.action(), &Action::RenouvellementDerogation);
+        assert_eq!(plan.environnement(), Environnement::Production);
+        assert_eq!(plan.tier(), Tier::One);
+        assert_eq!(rendu["empreinte"], plan.empreinte().hexadecimal());
+    }
+
+    #[test]
+    fn negative_aucun_argument_n_est_accepte() {
+        let passerelle = Arc::new(PasserelleDouble::default());
+        let resultat = outil(passerelle.clone()).appeler(&json!({ "duree_jours": 365 }));
+        assert!(resultat.is_err());
+        assert!(passerelle.soumis.lock().expect("verrou").is_empty());
+    }
+
+    #[test]
+    fn edge_l_executant_reconstruit_la_meme_empreinte_depuis_le_seul_instant() {
+        let passerelle = Arc::new(PasserelleDouble::default());
+        let rendu = outil(passerelle).appeler(&json!({})).expect("appel");
+        let reconstruit = plan_renouvellement(Horodatage::new(INSTANT)).expect("plan");
+        assert_eq!(rendu["empreinte"], reconstruit.empreinte().hexadecimal());
+    }
+
+    #[test]
+    fn security_deux_demandes_n_ont_jamais_la_meme_empreinte() {
+        let a = plan_renouvellement(Horodatage::new(INSTANT)).expect("plan");
+        let b = plan_renouvellement(Horodatage::new(INSTANT + 1)).expect("plan");
+        assert_ne!(
+            a.empreinte(),
+            b.empreinte(),
+            "une approbation ancienne ne doit pas valoir pour une demande nouvelle"
+        );
+    }
+}
