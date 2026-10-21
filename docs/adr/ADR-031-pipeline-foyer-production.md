@@ -1,6 +1,7 @@
 # ADR-031 : Du staging à la production, par l'une des deux passerelles d'approbation
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 5) : la barrière est rejouée entre l'approbation et l'exécution. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 6) : l'étape de staging devient la répétition sur la seconde production éphémère ; tests de charge et recette sur un environnement à part. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 3) : l'étiquette d'approbation nomme son environnement cible. Amendement proposé, non contresigné.
 - **Irréversible** : oui : la mise en production est le point irréversible par excellence (`foyer/skills/convergence-iac.md`).
@@ -31,8 +32,9 @@ visibilité du dépôt, menant au même résultat.
 | **public** | environnement GitHub protégé à relecteur obligatoire (ADR-008) | l'interface GitHub du run | l'approbation enregistrée par GitHub, lue par Sluis (#3) |
 | **privé** | étiquette `approuve/<empreinte>` signée par la clé SSH de signature du superviseur (ADR-013), dont le message porte l'empreinte complète du plan **et l'environnement cible** | son poste, `git tag -s` | la signature, vérifiée par le tireur de la cible contre un `allowed_signers` hors dépôt ; chaque tireur refuse, et journalise en erreur, une étiquette qui ne nomme pas son propre environnement |
 
-6. **Exécution** : l'approbation déclenche le réconciliateur de la recette, **Coolify** sur VPS ou **Flux** sur K3s (ADR-029). Ni Sluis ni l'agent ne déclenchent ce réconciliateur autrement que par la passerelle.
-7. **Preuve** : l'approbation (qui, quand, quelle empreinte, quel commit) entre dans le rapport daté du déploiement (ADR-022), stocké hors du serveur.
+6. **Barrière rejouée** (ADR-021, point 6) : juste avant l'exécution, les mêmes contrôles sont relancés. Si l'un d'eux a changé depuis l'approbation, le déploiement s'arrête, l'approbation est annulée, et le superviseur reçoit une alerte qui dit quel contrôle a changé et pourquoi. Il réapprouve ; rien n'est retenté automatiquement.
+7. **Exécution** : l'approbation déclenche le réconciliateur de la recette, **Coolify** sur VPS ou **Flux** sur K3s (ADR-029). Ni Sluis ni l'agent ne déclenchent ce réconciliateur autrement que par la passerelle.
+8. **Preuve** : l'approbation (qui, quand, quelle empreinte, quel commit) entre dans le rapport daté du déploiement (ADR-022), stocké hors du serveur.
 
 **Pourquoi deux et pas une.** La passerelle GitHub est câblée et testée
 (ADR-012, #15 à #21) ; l'abandonner pour les dépôts publics retirerait un

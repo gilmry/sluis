@@ -1,6 +1,7 @@
 # ADR-021 : Barrière de déploiement, des contrôles déterministes qui bloquent
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 5) : la barrière est rejouée juste avant l'exécution, après l'approbation humaine ; un contrôle qui a changé arrête le déploiement et annule l'approbation. Amendement proposé, non contresigné.
 - **Irréversible** : non. Une gate s'ajoute ou se retire par configuration ; mais retirer une gate de la barrière relâche un garde-fou et se trace en ADR.
 - **S'articule avec** : FR-024 et les gates du plancher déjà câblées (lecture des check-runs GitHub, sluis#16, story 4.2 de #4) ; Epic 9 stories 9.2 (gates de conformité) et 9.5 (dérive) ; ADR-022 (chaque contrôle produit sa preuve) ; ADR-023 (supervision vivante) ; ADR-031 (la barrière précède toute demande d'approbation) ; `foyer/skills/gates.md`.
 - **Sert la vision (ADR-000)** : principe n°3, chaque contrôle croise une seconde source au lieu de croire un voyant ; principe n°5, chaque contrôle produit un verdict machine ; principe n°2, une barrière qui ne peut pas s'évaluer bloque au lieu de laisser passer.
@@ -43,6 +44,17 @@ passées montrent que ces situations existent sans que personne ne le sache.
 5. **La barrière est exécutée par Sluis**, côté exécutant pour ce qui exige un
    accès à la cible, et lue en Tier 2 : elle ne mute rien, elle conditionne la
    demande d'approbation (ADR-030, ADR-031).
+6. **La barrière est rejouée après l'approbation** (amendement du
+   2026-10-21). Juste avant l'exécution, après l'approbation humaine, elle
+   relance les mêmes contrôles : **dérive, supervision vivante, sauvegarde
+   récente, images signées**.
+   - **Si un contrôle a changé depuis l'approbation, le déploiement s'arrête
+     et l'approbation est annulée.** Elle ne vaut que pour l'état qu'elle a
+     vu.
+   - **Le superviseur reçoit une alerte** (ADR-023) qui indique quel contrôle
+     a changé et pourquoi. Il doit réapprouver en connaissance de cause.
+   - **Aucune nouvelle tentative automatique.** Une barrière rouge après
+     approbation ne se rejoue pas seule jusqu'à ce qu'elle repasse au vert.
 
 ## Alternatives écartées
 
@@ -67,9 +79,13 @@ passées montrent que ces situations existent sans que personne ne le sache.
   la gate doit rougir), sans quoi une gate toujours verte est une décoration.
 - **Coût d'une signature d'images** : la CI doit signer (cosign), et la clé ou
   l'identité de signature devient un secret de la chaîne de build.
-- **Limite** : la barrière constate un état à un instant. Une dérive qui
-  apparaît entre la barrière et le déploiement passe ; le contrôle de dérive
-  quotidien (ADR-025) la rattrape après coup.
+- **Limite** : la barrière constate un état à un instant. Rejouée après
+  l'approbation (point 6), elle réduit la fenêtre au temps qui sépare son
+  second passage de l'exécution, sans l'annuler ; le contrôle de dérive
+  quotidien (ADR-025) rattrape après coup ce qui s'y glisse.
+- **Une approbation peut être perdue** : si l'état change entre l'approbation
+  et l'exécution, le superviseur réapprouve. C'est voulu : il approuve un
+  état, pas une intention.
 
 ## Mesures CyFun 2025 couvertes
 
@@ -86,6 +102,9 @@ dans le livret.
 - **Dérogation datée** : une gate rouge bloque-t-elle toujours, ou existe-t-il
   une dérogation datée sur le modèle de la story 5.4 ? Question déjà ouverte
   dans sluis#10, à trancher par RFC.
-- **Ordre avec l'approbation** : la barrière est-elle rejouée juste avant
-  l'exécution, après l'approbation humaine, pour réduire la fenêtre entre
-  contrôle et déploiement ?
+- **Contrôle « détection cohérente »** : la décision du 2026-10-21 nomme quatre
+  contrôles à rejouer après l'approbation ; le cinquième (écart entre
+  détecteur et bouncer) l'est-il aussi ?
+- **Annulation selon la passerelle** : comment l'approbation est annulée,
+  concrètement, pour un run GitHub (ADR-008) et pour une étiquette signée
+  (ADR-013, dont l'empreinte consommée ne redéploie déjà plus).

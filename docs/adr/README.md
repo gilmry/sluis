@@ -35,7 +35,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-018](ADR-018-chiffrement-applicatif.md) | Chiffrement applicatif par enveloppe, une clé par personne | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : renvoi à ADR-020 mis en cohérence (proposé, non contresigné) |
 | [ADR-019](ADR-019-base-de-cles-et-effacement.md) | Base de clés séparée et effacement cryptographique | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : la base de clés est restaurée avec la seconde production éphémère, et sa restauration testée chaque nuit (proposé, non contresigné) |
 | [ADR-020](ADR-020-staging-nocturne.md) | Une seconde production éphémère, restaurée chaque nuit depuis la sauvegarde hors site | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : remplace le staging pseudonymisé ; échantillon déchiffré chaque nuit (proposé, non contresigné) |
-| [ADR-021](ADR-021-barriere-de-deploiement.md) | Barrière de déploiement, des contrôles déterministes qui bloquent | non | proposée le 2026-10-21, non contresignée |
+| [ADR-021](ADR-021-barriere-de-deploiement.md) | Barrière de déploiement, des contrôles déterministes qui bloquent | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : barrière rejouée après l'approbation (proposé, non contresigné) |
 | [ADR-022](ADR-022-preuves-cyfun.md) | Preuves CyFun, un rapport daté par déploiement, conservé hors du serveur | non | proposée le 2026-10-21, non contresignée |
 | [ADR-023](ADR-023-supervision.md) | Supervision sur la machine de confiance, surveillée de l'extérieur | non | proposée le 2026-10-21, non contresignée |
 | [ADR-024](ADR-024-agent-ia.md) | L'agent IA d'exploitation collecte, propose, et n'agit jamais seul | non | proposée le 2026-10-21, non contresignée |
@@ -45,7 +45,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-028](ADR-028-front-end-statique.md) | Le front-end est un site statique sur un stockage objet européen | non | proposée le 2026-10-21, non contresignée |
 | [ADR-029](ADR-029-recettes-vps-et-k3s.md) | Deux recettes, VPS puis K3s, derrière les mêmes outils MCP | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-030](ADR-030-serveur-mcp.md) | Le serveur MCP lit ou demande, il n'exécute jamais | **oui** | proposée le 2026-10-21, non contresignée |
-| [ADR-031](ADR-031-pipeline-foyer-production.md) | Du staging à la production, par l'une des deux passerelles d'approbation | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : l'étiquette nomme son environnement ; répétition sur la seconde production éphémère (proposé, non contresigné) |
+| [ADR-031](ADR-031-pipeline-foyer-production.md) | Du staging à la production, par l'une des deux passerelles d'approbation | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : l'étiquette nomme son environnement ; répétition sur la seconde production éphémère ; barrière rejouée avant l'exécution (proposé, non contresigné) |
 | [ADR-032](ADR-032-outil-de-convergence-ansible.md) | Ansible configure le socle, OpenTofu loue, Flux réconcilie le cluster | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-033](ADR-033-feuille-de-route.md) | Feuille de route, huit étapes utilisables seules | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : un VPS de plus à l'étape 2 ; étape 6 renommée (proposé, non contresigné) |
 
