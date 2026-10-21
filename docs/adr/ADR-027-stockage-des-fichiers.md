@@ -1,8 +1,9 @@
 # ADR-027 : Les fichiers vivent dans un fork communautaire de MinIO, chiffrés avant envoi
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 6) : le bucket de staging à fichiers factices devient le bucket de la seconde production éphémère, protégé comme la production ; les fichiers factices vont à l'environnement de charge et de recette. Amendement proposé, non contresigné.
 - **Irréversible** : **oui** pour le format des données stockées et pour toute migration d'un volume existant vers une nouvelle version ; le choix de l'image reste réversible tant qu'aucun volume de production n'en dépend.
-- **S'articule avec** : ADR-018 (chiffrement applicatif, s'applique aussi aux fichiers), ADR-020 (bucket de staging séparé), ADR-021 (images épinglées et signées), ADR-025 (montées de version), `foyer/KITS.md` (adaptateur de stockage enfichable).
+- **S'articule avec** : ADR-018 (chiffrement applicatif, s'applique aussi aux fichiers), ADR-020 (bucket propre à la seconde production éphémère), ADR-021 (images épinglées et signées), ADR-025 (montées de version), `foyer/KITS.md` (adaptateur de stockage enfichable).
 - **Sert la vision (ADR-000)** : principe 4, une brique S3 déjà maîtrisée plutôt qu'une nouvelle ; principe 3, la réplication hors région est vérifiée par une seconde source, la restauration ; règle « aucune brique ne détient tout », le stockage ne voit que du chiffré.
 
 ## Contexte
@@ -33,9 +34,11 @@ Le même problème touche les autres projets qui utilisent MinIO.
    en écriture** (objet non modifiable pendant sa rétention). Un rançongiciel qui
    obtient les droits d'écriture ne peut ni écraser ni supprimer les versions
    verrouillées.
-5. **Un bucket de staging séparé**, peuplé de fichiers factices ou de fichiers
-   chiffrés sans leur clé : le staging (ADR-020) ne lit jamais un fichier
-   réel en clair.
+5. **Un bucket séparé pour la seconde production éphémère** (ADR-020),
+   restauré depuis la réplique hors région et détruit avec elle. Les fichiers
+   y sont réels et lisibles avec la base de clés restaurée : le bucket est
+   protégé comme celui de la production. **L'environnement de charge et de
+   recette n'a que des fichiers factices.**
 6. **L'adaptateur de stockage reste un port** côté application
    (`foyer/KITS.md`) : passer de MinIO à Garage ou à un stockage objet managé ne
    touche pas au métier.
@@ -76,6 +79,8 @@ ID.AM-02.1 et ID.AM-02.2 via le SBOM.
 ## Points ouverts
 
 - Garage ou fork de MinIO comme cible durable ? À trancher après évaluation.
+- La seconde production éphémère restaure-t-elle tous les fichiers chaque nuit,
+  ou un échantillon vérifié ? Volume, durée et coût de transfert à mesurer.
 - Durée de verrouillage en écriture : elle doit rester compatible avec
   l'effacement cryptographique (ADR-019), qui détruit la clé et non l'objet.
 - Le même retrait touche les autres projets qui utilisent MinIO : un suivi par

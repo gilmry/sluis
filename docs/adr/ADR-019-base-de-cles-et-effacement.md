@@ -1,8 +1,9 @@
 # ADR-019 : Base de clés séparée et effacement cryptographique
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 6) : la base de clés est restaurée chaque nuit avec la seconde production éphémère (ADR-020), ce qui remplace la règle « la base de clés ne vient jamais en staging ». Amendement proposé, non contresigné.
 - **Irréversible** : oui. Une fois des données chiffrées sous ce schéma, en sortir exige de tout rechiffrer ; et une clé effacée l'est pour de bon, c'est le but.
-- **S'articule avec** : ADR-017 (OpenBao hors cluster, détient la clé maîtresse), ADR-018 (enveloppe applicative, une clé par personne), ADR-020 (le staging ne reçoit jamais la base de clés), ADR-026 (sauvegardes des données par archivage WAL).
+- **S'articule avec** : ADR-017 (OpenBao hors cluster, détient la clé maîtresse), ADR-018 (enveloppe applicative, une clé par personne), ADR-020 (la seconde production éphémère restaure la base de clés), ADR-026 (sauvegardes des données par archivage WAL).
 - **Sert la vision (ADR-000)** : principe n°1, l'effacement d'une personne devient un geste unique et automatisable au lieu d'une chasse dans toutes les sauvegardes ; principe n°5, la preuve d'effacement est l'absence de la clé, constatable par un outil.
 
 ## Contexte
@@ -38,9 +39,17 @@ a demandé leur suppression.
    technique de la clé, date de destruction, date de fin de rétention de la
    dernière sauvegarde qui la contient. Ce journal est la preuve, produite par
    l'outil, que l'effacement est en cours puis complet.
-5. **La base de clés ne quitte jamais la production.** Ni le staging (ADR-020),
-   ni un bac à sable (ADR-007) ne la reçoivent ; c'est ce qui rend leurs
-   copies de données inexploitables sans elle.
+5. **La base de clés ne sort de la production que vers la seconde production
+   éphémère** (ADR-020, amendement du 2026-10-21), qui la restaure chaque nuit
+   depuis la sauvegarde hors site, l'utilise sous une règle OpenBao dédiée qui
+   journalise chaque déchiffrement, puis la détruit avec elle. Un bac à sable
+   (ADR-007) ne la reçoit jamais.
+6. **Ce que la copie éphémère fait à l'effacement.** Elle restaure la base de
+   clés de la dernière sauvegarde, donc **des clés détruites depuis cette
+   sauvegarde**. Une personne effacée reste ainsi lisible dans la copie
+   éphémère pendant le délai d'effacement annoncé (point 3), comme elle l'est
+   déjà dans les sauvegardes. Le délai annoncé ne change pas ; la copie
+   éphémère y est comptée, et disparaît chaque matin.
 
 ## Alternatives écartées
 
@@ -66,8 +75,8 @@ a demandé leur suppression.
 - **Restauration en deux temps** : restaurer les données exige de restaurer
   aussi la base de clés à une date compatible. Une base de clés plus récente
   que les données est sans danger ; une base de clés plus ancienne rend
-  illisibles les personnes créées entre-temps. Le test de restauration
-  (ADR-020) doit couvrir ce couple, sinon il ne prouve rien.
+  illisibles les personnes créées entre-temps. La restauration nocturne
+  (ADR-020) restaure ce couple ensemble, sans quoi elle ne prouverait rien.
 - **Fenêtre d'effacement non nulle** : entre la destruction de la clé et
   l'expiration de sa dernière sauvegarde, la clé existe encore hors ligne. Le
   délai se publie dans la politique de confidentialité, il ne se cache pas.
@@ -97,6 +106,9 @@ CyFun : catégorie PR.DS, identifiant à confirmer dans le livret.
 - **Où vit la base de clés** : schéma dédié dans le même cluster CloudNativePG
   (ADR-026) ou instance distincte. Une instance distincte coûte plus mais
   sépare aussi les sauvegardes à la source.
+- **Effacement rejoué dans la copie éphémère** : faut-il appliquer à la copie,
+  avant de l'ouvrir, les destructions de clés journalisées depuis la dernière
+  sauvegarde (point 4), pour qu'une personne effacée n'y soit plus lisible ?
 - **Effacement d'une personne co-titulaire** de données partagées (un document
   commun à plusieurs personnes) : quelle clé chiffre le partagé ? À trancher
   avec le modèle de données d'ADR-018.
