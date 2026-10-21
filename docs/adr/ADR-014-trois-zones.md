@@ -1,6 +1,7 @@
 # ADR-014 : Trois zones, la production, la confiance, le hors-ligne
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 2) : le Sluis exécutant quitte la machine de confiance pour un VPS séparé. Amendement proposé, non contresigné.
 - **Irréversible** : oui. Le découpage fixe où vivent les clés, les journaux et les sauvegardes ; le déplacer après coup oblige à re-créer des identités et à migrer des données.
 - **S'articule avec** : ADR-010 (deux déploiements de Sluis : ce qui est exposé ne détient rien, ce qui détient n'est pas exposé ; l'exécutant sur un VPS séparé), ADR-011 (image exécutante exemptée du gate de scan pour `tofu`), ADR-008, ADR-012 et ADR-013 (Sluis ne peut que demander), ADR-007 (bacs à sable éphémères, hors des trois zones). Prolongé par ADR-015 à ADR-017, ADR-023 et ADR-033.
@@ -105,8 +106,8 @@ dans l'Epic 9 de Sluis. Ce découpage en est le support :
   de la production, protégées et éprouvées.
 - **PR.AA-05.3 ★, PR.AA-05.6** (conformite.md) : moindre privilège et séparation,
   ici portés par l'infrastructure.
-- Journaux hors hôte : catégorie **DE.CM** et **PR.PS**, identifiant à confirmer
-  dans le livret.
+- Journaux hors hôte : **PR.PS-04.3 I** (données d'audit transférées vers un
+  système distinct), avec **PR.PS-04.1 ★B** et **DE.AE-03.1 ★B**.
 
 ## Points ouverts
 

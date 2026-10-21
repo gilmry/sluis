@@ -1,6 +1,7 @@
 # ADR-032 : Ansible configure le socle, OpenTofu loue, Flux réconcilie le cluster
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Irréversible** : oui : le durcissement serveur et le chiffrement des disques sont des points irréversibles (`foyer/skills/convergence-iac.md`), et les playbooks deviennent la mémoire de chaque machine.
 - **S'articule avec** : ADR-010 (OpenTofu est le moteur de **location** d'infrastructure, inchangé) ; ADR-015 (certificats SSH courts) ; ADR-016 (SOPS) ; ADR-025 (dérive quotidienne) ; ADR-029 (recettes) ; **écart assumé avec `foyer/skills/convergence-iac.md`**, qui cite `salt-ssh`.
 - **Sert la vision (ADR-000)** : principe 1, la configuration devient rejouable et non plus mémorisée ; principe 2, la dérive se détecte chaque jour et alerte ; principe 3, l'état réel est confronté à l'état déclaré, pas à ce qu'on croit avoir fait.
@@ -51,7 +52,7 @@ installé, joignable en SSH, avec un écosystème suffisant pour LUKS, K3s et SO
 Mapping dans `foyer/skills/conformite.md`, couche **plateforme**.
 
 - Dérive de configuration détectée : PR.PS-01.1 ★ et DE.CM-09.1 (Epic 9, story 9.5).
-- Durcissement et configuration de référence : catégorie PR.PS, identifiant à confirmer dans le livret.
+- Durcissement et configuration de référence : PR.PS-01.1 ★I (configuration de référence), PR.PS-01.2 E et PR.PS-01.3 E (durcissement).
 
 ## Proposition de PR sur Foyer
 
