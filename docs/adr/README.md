@@ -282,6 +282,63 @@ forme d'une étiquette git signée par sa clé.
   seul : la mesure compensatoire est la signature personnelle et le journal
   (même raisonnement que les mesures compensatoires du porteur seul de Foyer).
 
+**Mode opératoire du superviseur.** À faire sur **son poste**, jamais sur un
+serveur : la clé de signature ne doit résider nulle part ailleurs.
+
+1. *Créer une clé de signature dédiée*, distincte de la clé de connexion SSH,
+   protégée par une phrase de passe :
+
+   ```bash
+   # support matériel FIDO2, recommandé
+   ssh-keygen -t ed25519-sk -C "signature git" -f ~/.ssh/signature_git
+   # à défaut
+   ssh-keygen -t ed25519 -C "signature git" -f ~/.ssh/signature_git
+   ```
+
+2. *Configurer git pour signer en SSH* :
+
+   ```bash
+   git config --global gpg.format ssh
+   git config --global user.signingkey ~/.ssh/signature_git.pub
+   git config --global tag.gpgsign true      # optionnel : commit.gpgsign aussi
+   ```
+
+3. *Déclarer la clé à GitHub* comme **Signing Key** (*Settings → SSH and GPG
+   keys*), pour que l'état rapporté par Sluis et le badge « Verified »
+   reflètent la signature. Ce badge est informatif : il ne fait pas foi.
+
+4. *Approuver un plan* : Sluis rend la commande exacte, de la forme
+
+   ```bash
+   git tag -s approuve/<empreinte courte> <commit> -m "<empreinte complète>"
+   git push origin approuve/<empreinte courte>
+   ```
+
+5. *Vérifier localement* avant de pousser, avec le même mécanisme que le
+   tireur :
+
+   ```bash
+   echo "<courriel> $(cat ~/.ssh/signature_git.pub)" > ~/.ssh/allowed_signers
+   git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers
+   git tag -v approuve/<empreinte courte>     # attendu : Good "git" signature
+   ```
+
+6. *Installer la clé publique sur la cible* : le même format de ligne, dans un
+   `allowed_signers` hors du dépôt, propriété de `root`, en lecture seule pour
+   le compte qui déploie, et ne contenant **que** la clé du superviseur.
+
+**Révocation et perte.** Retirer la ligne de la clé dans l'`allowed_signers` de
+chaque cible suffit à révoquer : plus aucune étiquette signée par elle ne
+déploie. Une clé perdue se remplace par une nouvelle clé, installée de la même
+façon ; les étiquettes déjà consommées restent valides dans le journal, qui
+garde l'identité de la clé.
+
+**Ce qu'un agent signe, et ce qu'il ne signe pas.** Les commits produits par un
+agent ne portent pas la signature du superviseur et ne doivent jamais la
+porter. Un commit « Unverified » d'agent à côté d'une étiquette « Verified » du
+superviseur est la distinction voulue entre ce qui est **proposé** et ce qui
+est **approuvé**.
+
 **Alternatives écartées.** GitHub Enterprise (coût récurrent pour un projet
 expérimental) ; dépôt de déploiement public séparé (journaux de runs publics,
 deux dépôts à tenir) ; environnement sans relecteur (l'invariant « Sluis ne
