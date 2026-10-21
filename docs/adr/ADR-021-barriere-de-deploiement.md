@@ -1,0 +1,91 @@
+# ADR-021 : Barrière de déploiement, des contrôles déterministes qui bloquent
+
+- **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Irréversible** : non. Une gate s'ajoute ou se retire par configuration ; mais retirer une gate de la barrière relâche un garde-fou et se trace en ADR.
+- **S'articule avec** : FR-024 et les gates du plancher déjà câblées (lecture des check-runs GitHub, sluis#16, story 4.2 de #4) ; Epic 9 stories 9.2 (gates de conformité) et 9.5 (dérive) ; ADR-022 (chaque contrôle produit sa preuve) ; ADR-023 (supervision vivante) ; ADR-031 (la barrière précède toute demande d'approbation) ; `foyer/skills/gates.md`.
+- **Sert la vision (ADR-000)** : principe n°3, chaque contrôle croise une seconde source au lieu de croire un voyant ; principe n°5, chaque contrôle produit un verdict machine ; principe n°2, une barrière qui ne peut pas s'évaluer bloque au lieu de laisser passer.
+
+## Contexte
+
+Sluis vérifie déjà quatre gates du plancher avant toute mise en ligne (FR-024) :
+il lit les check-runs de la référence, et une gate absente compte rouge. Ces
+gates portent sur le **logiciel** : tests, secrets, SBOM, scan d'image. Elles ne
+disent rien de l'**état de la plateforme** au moment de déployer : la production
+a-t-elle dérivé de Git, la supervision tourne-t-elle, la dernière sauvegarde
+est-elle récente ?
+
+Déployer sur une plateforme dont la supervision est morte, ou dont la dernière
+sauvegarde date de trois jours, c'est prendre un risque sans le voir. Les pannes
+passées montrent que ces situations existent sans que personne ne le sache.
+
+## Décision
+
+1. **La barrière est un ensemble de contrôles déterministes oui/non**, évalués
+   avant toute demande d'approbation. **Un seul échec bloque.** Pas de score,
+   pas de seuil, pas de « presque vert ».
+2. **Chaque contrôle est une gate Foyer** : un exécutable qui rend un **code
+   de sortie** (0 passe, autre chose bloque) et écrit un rapport. Le verdict
+   est le code de sortie, jamais une analyse de la sortie texte.
+3. **Contrôles de la première version**, chacun croisant deux sources :
+   - **dérive nulle** : l'état réel de la cible ne diffère pas de Git (contrôle
+     de dérive d'ADR-032 pour le socle, réconciliateur pour le cluster) ;
+   - **détection cohérente** : l'écart entre ce que détecte le détecteur
+     d'intrusion et ce que bannit le bouncer est sous un seuil, sans quoi la
+     protection périmétrique est aveugle ;
+   - **supervision vivante** : la supervision a collecté récemment **et** le
+     témoin externe la voit (ADR-023) ; l'un sans l'autre ne suffit pas ;
+   - **sauvegarde récente** : la dernière sauvegarde a moins de N heures **et**
+     la dernière restauration nocturne a réussi (ADR-020) ;
+   - **images signées** : chaque image à déployer porte une signature cosign
+     vérifiée contre la clé ou l'identité attendue (ADR-015).
+4. **Indétermination = échec** (fail-closed, comme ADR-007) : un contrôle qui
+   ne peut pas s'exécuter, faute de réseau ou de source, bloque.
+5. **La barrière est exécutée par Sluis**, côté exécutant pour ce qui exige un
+   accès à la cible, et lue en Tier 2 : elle ne mute rien, elle conditionne la
+   demande d'approbation (ADR-030, ADR-031).
+
+## Alternatives écartées
+
+- **Contrôles consultatifs** (un avertissement qu'on peut ignorer) : un
+  avertissement ignoré une fois l'est toujours ; le principe n°2 les assimile à
+  une automatisation muette.
+- **Score global de santé** : agrège et masque. Une sauvegarde absente ne se
+  compense pas par une supervision parfaite.
+- **Contrôles dans le workflow de déploiement de chaque projet** : chaque projet
+  les réécrirait et les ferait dériver ; ils relèvent de la couche plateforme,
+  portée une fois par le déployeur (`foyer/skills/conformite.md` §2bis).
+- **Analyse de journaux par un modèle** : non déterministe, et exposée au texte
+  libre (ADR-024).
+
+## Conséquences
+
+- **Les mises en ligne seront bloquées plus souvent au début.** C'est voulu :
+  chaque blocage révèle un défaut de plateforme qui existait déjà sans être vu.
+  Risque : la tentation de désactiver la gate gênante. Toute désactivation se
+  trace en ADR avec une date de réexamen.
+- **Entretien** : cinq gates à maintenir et à tester par témoin (défaut remis,
+  la gate doit rougir), sans quoi une gate toujours verte est une décoration.
+- **Coût d'une signature d'images** : la CI doit signer (cosign), et la clé ou
+  l'identité de signature devient un secret de la chaîne de build.
+- **Limite** : la barrière constate un état à un instant. Une dérive qui
+  apparaît entre la barrière et le déploiement passe ; le contrôle de dérive
+  quotidien (ADR-025) la rattrape après coup.
+
+## Mesures CyFun 2025 couvertes
+
+Story 9.2 de l'Epic 9 : PR.DS-11.1 ★, PR.PS-04.3, PR.AA-03.2 ★, PR.IR-01.1 ★.
+Story 9.5 : PR.PS-01.1 ★, DE.CM-09.1. Les gates vertes avant mise en production
+répondent à PR.PS-06.2 I (`foyer/skills/conformite.md` §2ter). La vérification
+de signature des images relève de la catégorie PR.PS, identifiant à confirmer
+dans le livret.
+
+## Points ouverts
+
+- **Seuils** : âge maximal de la sauvegarde (proposition : 26 h), fraîcheur de
+  la supervision (proposition : 10 min), écart détecteur/bannissement toléré.
+- **Dérogation datée** : une gate rouge bloque-t-elle toujours, ou existe-t-il
+  une dérogation datée sur le modèle de la story 5.4 ? Question déjà ouverte
+  dans sluis#10, à trancher par RFC.
+- **Ordre avec l'approbation** : la barrière est-elle rejouée juste avant
+  l'exécution, après l'approbation humaine, pour réduire la fenêtre entre
+  contrôle et déploiement ?
