@@ -31,7 +31,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-014](ADR-014-trois-zones.md) | Trois zones, la production, la confiance, le hors-ligne | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-015](ADR-015-identites.md) | Identités, des YubiKeys pour les humains, step-ca pour les machines | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-016](ADR-016-secrets-de-deploiement.md) | Secrets de déploiement chiffrés dans Git avec SOPS et age | non | proposée le 2026-10-21, non contresignée |
-| [ADR-017](ADR-017-openbao-hors-cluster.md) | OpenBao hors du cluster, gardien de la seule clé maîtresse | **oui** | proposée le 2026-10-21, non contresignée |
+| [ADR-017](ADR-017-openbao-hors-cluster.md) | OpenBao hors du cluster, gardien de la seule clé maîtresse | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : déverrouillage automatique par le KMS d'OVHcloud (proposé, non contresigné) |
 | [ADR-018](ADR-018-chiffrement-applicatif.md) | Chiffrement applicatif par enveloppe, une clé par personne | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-019](ADR-019-base-de-cles-et-effacement.md) | Base de clés séparée et effacement cryptographique | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-020](ADR-020-staging-nocturne.md) | Staging restauré chaque nuit depuis la sauvegarde hors site, pseudonymisé | non | proposée le 2026-10-21, non contresignée |
