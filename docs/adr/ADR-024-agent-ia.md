@@ -1,6 +1,7 @@
 # ADR-024 : L'agent IA d'exploitation collecte, propose, et n'agit jamais seul
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Irréversible** : non. C'est une règle de placement des droits ; la relâcher plus tard serait possible, mais chaque relâchement exigerait un nouvel ADR.
 - **S'articule avec** : ADR-008, ADR-012 et ADR-013 (l'action passe par une passerelle d'approbation), ADR-030 (outils MCP de lecture séparés des outils d'action), ADR-023 (l'alerte qui déclenche la persona platform engineer), `foyer/skills/enforcement.md` §Le contenu externe et anneau 3.
 - **Sert la vision (ADR-000)** : principe 1, l'agent prend en charge le diagnostic récurrent ; principe 3, la proposition du modèle est toujours lue à côté des preuves brutes ; règle « ce qui a des droits ne lit pas de texte libre ».
@@ -77,8 +78,9 @@ consigne :
 Mapping dans `foyer/skills/conformite.md` (§2bis, couche plateforme). Moindre
 privilège appliqué à l'agent : PR.AA-05.3 (key measure, Basic), déjà cité par
 `foyer/skills/enforcement.md`. Analyse d'incident appuyée sur des données
-datées : RS.AN-06.1 (Epic 9, story 9.3). Le reste relève des catégories RS.AN et
-DE.AE du NIST CSF 2.0, identifiants à confirmer dans le livret.
+datées : RS.AN-06.1 (Epic 9, story 9.3). Le reste : RS.AN-03.1 E (cause
+établie), RS.AN-07.1 E (données d'incident collectées et protégées),
+RS.AN-08.1 E (ampleur estimée), DE.AE-02.2 E et DE.AE-04.1 E.
 
 ## Points ouverts
 

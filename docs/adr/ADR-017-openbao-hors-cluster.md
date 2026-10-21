@@ -1,6 +1,7 @@
 # ADR-017 : OpenBao hors du cluster, gardien de la seule clé maîtresse
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 1) : déverrouillage automatique par le KMS d'OVHcloud, parts de secours hors ligne. Amendement proposé, non contresigné.
 - **Irréversible** : oui. La clé maîtresse chiffre toutes les clés de données (ADR-018) ; sa perte rend les données illisibles, et la migrer vers un autre gardien est une opération sur chaque enveloppe.
 - **S'articule avec** : ADR-014 (zone de confiance, parts de secours en zone 3), ADR-025 (redémarrages automatiques), ADR-015 (accès par certificat step-ca et YubiKey), ADR-016 (les secrets de déploiement n'y vivent pas), ADR-018 (le backend lui demande d'envelopper et de désenvelopper), ADR-019 (la base de clés est séparée), ADR-023 (audit et alerte sur déchiffrements anormaux).
@@ -104,11 +105,13 @@ Renvoi à `foyer/skills/conformite.md` §2bis :
   repos, ici outillée et auditée.
 - **PR.AA-05.3 ★** : la politique d'OpenBao limite chaque backend à son SaaS et à
   deux opérations.
-- Gestion du cycle de vie des clés cryptographiques : catégorie **PR.DS**,
-  identifiant à confirmer dans le livret.
-- Journalisation et détection d'usage anormal : **DE.CM-09.1** (Epic 9, story
-  9.5) pour la surveillance, catégorie **DE.AE** pour l'analyse, identifiant à
-  confirmer dans le livret.
+- Gestion du cycle de vie des clés cryptographiques : pas de mesure dédiée
+  dans CyFun 2025 ; couverte indirectement par **GV.PO-01.2 I**, avec
+  **PR.AA-01.5 E** pour la désactivation des moyens d'authentification à
+  risque (révocation).
+- Journalisation et détection d'usage anormal : **DE.CM-09.1 I** (Epic 9,
+  story 9.5) pour la surveillance ; **PR.AA-01.5 E** (usages atypiques des
+  moyens d'authentification) et **DE.AE-02.1 I** pour l'analyse.
 
 ## Points ouverts
 

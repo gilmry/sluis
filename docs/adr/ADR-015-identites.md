@@ -1,6 +1,7 @@
 # ADR-015 : Identités, des YubiKeys pour les humains, step-ca pour les machines
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Irréversible** : oui. Les clés racines des humains et de l'autorité de certification ancrent toutes les autres identités ; les changer oblige à re-signer, re-déployer et re-déclarer partout.
 - **S'articule avec** : ADR-013 (la clé SSH de signature des approbations, conservée à la demande du superviseur), ADR-014 (step-ca vit en zone de confiance, les YubiKeys en zone hors ligne), ADR-016 (age), ADR-032 (Ansible se connecte par certificat SSH court).
 - **Sert la vision (ADR-000)** : principe n°1, parce que le renouvellement des certificats machines est automatique et que plus aucune clé statique n'attend d'être oubliée ; principe n°2, parce qu'un renouvellement qui échoue alerte avant l'expiration ; règle « aucune brique ne détient tout », parce que la clé privée humaine ne quitte jamais son support matériel.
@@ -95,8 +96,10 @@ Renvoi à `foyer/skills/conformite.md` §2bis (couches) et §2ter (preuves) :
   processus, MFA ; ici appliqués à la plateforme elle-même.
 - **PR.AA-01.1 ★** : aucun moyen d'authentification de service dans le code.
 - **PR.AA-05.3 ★** : moindre privilège par certificat dédié et court.
-- Gestion du cycle de vie des clés : catégorie **PR.DS**, identifiant à
-  confirmer dans le livret.
+- Gestion du cycle de vie des clés : CyFun 2025 n'a pas de mesure dédiée. Elle
+  est couverte indirectement par **GV.PO-01.2 I** (politique, dont l'usage de
+  la cryptographie) et, pour des certificats courts renouvelés
+  automatiquement, par **PR.AA-01.2 I**.
 
 ## Points ouverts
 
