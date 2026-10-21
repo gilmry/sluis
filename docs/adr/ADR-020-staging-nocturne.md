@@ -1,6 +1,7 @@
 # ADR-020 : Une seconde production éphémère, restaurée chaque nuit depuis la sauvegarde hors site
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 4) : un échantillon est déchiffré chaque nuit dans la copie éphémère pour prouver que les clés se restaurent. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 6) : le staging pseudonymisé devient une seconde production éphémère, restaurée avec sa base de clés, protégée comme la production et détruite après usage ; la pseudonymisation est abandonnée ; tests de charge et recette fonctionnelle partent sur un environnement à part. Amendement proposé, non contresigné.
 - **Irréversible** : non pour le mécanisme ; **oui** pour la décision de restaurer des données réelles, avec les clés qui les ouvrent, dans un second environnement : elle engage la responsabilité RGPD du porteur.
 - **S'articule avec** : ADR-007 (**inchangé** : il continue de régir les bacs à sable éphémères, sans aucune donnée de production ; la seconde production n'en relève pas), ADR-017 (règle OpenBao dédiée), ADR-019 (la base de clés est restaurée avec les données, et ce que cela implique pour l'effacement), ADR-026 (sauvegardes WAL), ADR-027 (bucket propre à la copie éphémère), ADR-031 (répétition des releases et des migrations), Epic 9 story 9.4 (restauration éprouvée).
@@ -50,11 +51,19 @@ répète pas celle de la production.
    commit de l'outil, verdict d'intégrité. Ce relevé est la preuve de
    restauration, produite par l'outil (ADR-022), et la mesure du délai de
    reprise réel.
-8. **Échec bruyant** : une restauration qui échoue, qui dépasse sa durée
+8. **Test de restauration de la base de clés** (amendement du 2026-10-21,
+   décision 4). Dans la copie restaurée, **un échantillon de données est
+   déchiffré** avec la base de clés restaurée, par la règle OpenBao dédiée
+   (point 6). C'est la preuve que les clés se restaurent, et pas seulement les
+   données. Aucun environnement isolé séparé n'est créé pour ce test : la
+   seconde production le couvre. Le test émet un **signal de succès** ; une
+   alerte part s'il échoue ou s'il ne s'exécute pas (ADR-000, principe n°2 ;
+   ADR-025).
+9. **Échec bruyant** : une restauration qui échoue, qui dépasse sa durée
    habituelle de façon anormale, ou qui **ne s'exécute pas** déclenche une
    alerte (ADR-023, ADR-025). L'absence du relevé du matin est elle-même une
    alerte.
-9. **Les tests de charge et la recette fonctionnelle se font ailleurs**, sur un
+10. **Les tests de charge et la recette fonctionnelle se font ailleurs**, sur un
    environnement à part, avec des comptes de test et des données factices.
    Aucune donnée réelle n'y entre.
 
@@ -112,6 +121,8 @@ conformite.md §2bis.
 - **Où tourne la copie éphémère** : chez quel hébergeur, dans quelle zone
   (ADR-014), et par quel moyen l'absence de sortie réseau vers des tiers est
   vérifiée (témoin : un appel sortant doit échouer).
+- **Échantillon déchiffré** : taille, mode de tirage (fixe ou aléatoire chaque
+  nuit) et ce qui compte pour un succès.
 - **Seuil d'anomalie de durée** : proposition, alerte au-delà de deux fois la
   médiane des sept dernières nuits.
 - **Destruction non faite** : une copie qui survit au matin doit-elle alerter,

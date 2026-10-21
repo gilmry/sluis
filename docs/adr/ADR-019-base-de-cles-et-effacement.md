@@ -1,6 +1,7 @@
 # ADR-019 : Base de clés séparée et effacement cryptographique
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 4) : la restauration de la base de clés est testée chaque nuit par le déchiffrement d'un échantillon (ADR-020). Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 6) : la base de clés est restaurée chaque nuit avec la seconde production éphémère (ADR-020), ce qui remplace la règle « la base de clés ne vient jamais en staging ». Amendement proposé, non contresigné.
 - **Irréversible** : oui. Une fois des données chiffrées sous ce schéma, en sortir exige de tout rechiffrer ; et une clé effacée l'est pour de bon, c'est le but.
 - **S'articule avec** : ADR-017 (OpenBao hors cluster, détient la clé maîtresse), ADR-018 (enveloppe applicative, une clé par personne), ADR-020 (la seconde production éphémère restaure la base de clés), ADR-026 (sauvegardes des données par archivage WAL).
@@ -76,7 +77,10 @@ a demandé leur suppression.
   aussi la base de clés à une date compatible. Une base de clés plus récente
   que les données est sans danger ; une base de clés plus ancienne rend
   illisibles les personnes créées entre-temps. La restauration nocturne
-  (ADR-020) restaure ce couple ensemble, sans quoi elle ne prouverait rien.
+  (ADR-020) restaure ce couple ensemble, sans quoi elle ne prouverait rien,
+  et **déchiffre un échantillon** avec la base de clés restaurée : c'est le
+  test automatique de restauration des clés, avec son signal de succès et
+  son alerte d'absence (ADR-025).
 - **Fenêtre d'effacement non nulle** : entre la destruction de la clé et
   l'expiration de sa dernière sauvegarde, la clé existe encore hors ligne. Le
   délai se publie dans la politique de confidentialité, il ne se cache pas.
