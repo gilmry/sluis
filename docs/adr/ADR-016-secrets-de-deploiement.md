@@ -1,6 +1,7 @@
 # ADR-016 : Secrets de déploiement chiffrés dans Git avec SOPS et age
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Irréversible** : non pour l'outil, oui pour les secrets eux-mêmes : un secret poussé une fois en clair dans un dépôt est compromis pour toujours, quoi qu'on réécrive ensuite.
 - **S'articule avec** : ADR-008 (les secrets de mutation vivent hors de Sluis), ADR-015 (destinataires age et GPG sur YubiKey), ADR-017 (les clés applicatives, elles, vivent dans OpenBao), ADR-029 et ADR-032 (Coolify, Flux et Ansible les consomment).
 - **Sert la vision (ADR-000)** : principe n°1, parce qu'un secret versionné ne dépend plus de la mémoire de qui l'a posé sur le serveur ; principe n°2, parce qu'un déchiffrement qui échoue fait échouer le déploiement au lieu de démarrer une pile aux secrets vides ; principe n°5, parce que l'historique Git date chaque changement de secret.
@@ -82,8 +83,10 @@ Renvoi à `foyer/skills/conformite.md` §2ter :
 - Protection des données au repos (secrets) : **PR.DS-01.x** et **GV.PO-01.2**,
   cités par conformite.md pour la couche application et appliqués ici à la
   plateforme.
-- Traçabilité des changements de configuration : catégorie **PR.PS**,
-  identifiant à confirmer dans le livret.
+- Traçabilité des changements de configuration : pas de mesure dédiée dans
+  CyFun 2025. Au plus près, **PR.PS-06.2 I** (changement validé avant mise en
+  œuvre, prouvé par l'historique des PR) et **PR.PS-01.5 E** (changements non
+  autorisés détectés).
 
 ## Points ouverts
 

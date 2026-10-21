@@ -1,6 +1,7 @@
 # ADR-019 : Base de clés séparée et effacement cryptographique
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 4) : la restauration de la base de clés est testée chaque nuit par le déchiffrement d'un échantillon (ADR-020). Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 6) : la base de clés est restaurée chaque nuit avec la seconde production éphémère (ADR-020), ce qui remplace la règle « la base de clés ne vient jamais en staging ». Amendement proposé, non contresigné.
 - **Irréversible** : oui. Une fois des données chiffrées sous ce schéma, en sortir exige de tout rechiffrer ; et une clé effacée l'est pour de bon, c'est le but.
@@ -100,7 +101,8 @@ applicatif reçoit ici son volet cycle de vie. Le journal d'effacement est une
 preuve au sens de §2ter. Les exigences de sauvegarde (PR.DS-11.x, Epic 9) et la
 protection des données en transit (PR.DS-02.2 E) restent portées par ADR-020,
 ADR-026 et ADR-027. L'effacement sur demande relève du RGPD plus que de
-CyFun : catégorie PR.DS, identifiant à confirmer dans le livret.
+CyFun ; la destruction sûre correspond, en partie, à ID.AM-08.5 E et
+PR.DS-01.9 B.
 
 ## Points ouverts
 

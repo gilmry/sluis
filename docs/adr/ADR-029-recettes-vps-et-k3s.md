@@ -1,6 +1,7 @@
 # ADR-029 : Deux recettes, VPS puis K3s, derrière les mêmes outils MCP
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Irréversible** : oui pour la recette VPS en production : les données d'un SaaS y naissent, et en sortir est une migration (ADR-026, ADR-027). Le passage VPS → K3s est un point irréversible à valider le moment venu.
 - **S'articule avec** : ADR-010 (OpenTofu loue, il ne configure pas), ADR-014 (trois zones), ADR-016 (secrets SOPS), ADR-030 (serveur MCP), ADR-031 (pipeline), ADR-032 (Ansible) ; sluis#6 (ordre des deux portes, tranché le 2026-10-17 : elles se cumulent) ; sluis#7 (réserve H1-Recette) ; `foyer/skills/convergence-iac.md`.
 - **Sert la vision (ADR-000)** : principe 4, on commence petit (un VPS) et on ne paie la complexité d'un cluster que quand elle sert ; principe 1, le déploiement applicatif est confié à un réconciliateur, pas à un humain.
@@ -63,7 +64,7 @@ Mapping dans `foyer/skills/conformite.md` §2bis, couche **plateforme**.
 
 - Séparation production / test : PR.IR-01.2 ★ et PR.IR-01.7 (Epic 9, story 9.6), avec ADR-014 et ADR-020.
 - Pare-feu réseau actif : PR.IR-01.1 ★ (Epic 9, story 9.2).
-- Accès à privilèges sur Coolify (tunnel, MFA) : catégorie PR.AA, identifiant à confirmer dans le livret.
+- Accès à privilèges sur Coolify (tunnel, MFA) : PR.AA-03.2 ★B, PR.AA-05.7 I, PR.AA-03.4 E et PR.AA-05.9 E.
 
 ## Points ouverts
 

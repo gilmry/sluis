@@ -1,6 +1,7 @@
 # ADR-023 : Supervision sur la machine de confiance, surveillée de l'extérieur
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Irréversible** : non. Les composants se remplacent (les adaptateurs sont enfichables) ; les seuils et routes d'alerte se versionnent.
 - **S'articule avec** : ADR-014 (zone de la machine de confiance, zone externe du témoin), ADR-017 (audit OpenBao envoyé hors machine), ADR-018 (déchiffrements), ADR-021 (« supervision vivante » est une gate de la barrière), ADR-025 (chaque tâche émet un signal de succès que la supervision attend), ADR-024 (l'agent IA lit les alertes sans droits), `foyer/skills/convergence-iac.md` (une alerte Alertmanager ré-entre dans le cercle et déclenche le platform engineer).
 - **Sert la vision (ADR-000)** : c'est la brique qui rend la vision possible, puisque l'humain ne fait plus que lire les alertes. Principe n°2, l'absence de signal alerte ; principe n°3, le témoin externe croise la supervision avec une source indépendante.
@@ -73,7 +74,8 @@ supervision qui se surveille elle-même ne voit pas sa propre mort.
 Story 9.5 de l'Epic 9 : DE.CM-09.1 (surveillance des environnements) ; journaux
 hors hôte de la couche plateforme (`foyer/skills/conformite.md` §2bis), qui sont
 aussi la mesure compensatoire de PR.AA-05.6 I. La détection d'événements
-anormaux relève de la catégorie DE.AE, identifiant à confirmer dans le livret.
+anormaux relève de DE.AE-02.1 I, DE.AE-06.1 I (alerte transmise) et DE.AE-02.2 E
+(analyse automatisée), avec DE.AE-03.1 ★B.
 Le reporting d'incident déclenché par alerte reste un angle mort nommé par
 conformite.md §5.
 

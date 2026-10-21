@@ -1,6 +1,7 @@
 # ADR-021 : Barrière de déploiement, des contrôles déterministes qui bloquent
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 5) : la barrière est rejouée juste avant l'exécution, après l'approbation humaine ; un contrôle qui a changé arrête le déploiement et annule l'approbation. Amendement proposé, non contresigné.
 - **Irréversible** : non. Une gate s'ajoute ou se retire par configuration ; mais retirer une gate de la barrière relâche un garde-fou et se trace en ADR.
 - **S'articule avec** : FR-024 et les gates du plancher déjà câblées (lecture des check-runs GitHub, sluis#16, story 4.2 de #4) ; Epic 9 stories 9.2 (gates de conformité) et 9.5 (dérive) ; ADR-022 (chaque contrôle produit sa preuve) ; ADR-023 (supervision vivante) ; ADR-031 (la barrière précède toute demande d'approbation) ; `foyer/skills/gates.md`.
@@ -92,8 +93,8 @@ passées montrent que ces situations existent sans que personne ne le sache.
 Story 9.2 de l'Epic 9 : PR.DS-11.1 ★, PR.PS-04.3, PR.AA-03.2 ★, PR.IR-01.1 ★.
 Story 9.5 : PR.PS-01.1 ★, DE.CM-09.1. Les gates vertes avant mise en production
 répondent à PR.PS-06.2 I (`foyer/skills/conformite.md` §2ter). La vérification
-de signature des images relève de la catégorie PR.PS, identifiant à confirmer
-dans le livret.
+de signature des images relève de PR.DS-01.1 I (intégrité des logiciels), avec
+PR.PS-05.2 I, et PR.DS-01.2 E pour l'alerte automatique.
 
 ## Points ouverts
 
