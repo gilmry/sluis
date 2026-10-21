@@ -1,6 +1,7 @@
 # ADR-031 : Du staging à la production, par l'une des deux passerelles d'approbation
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 3) : l'étiquette d'approbation nomme son environnement cible. Amendement proposé, non contresigné.
 - **Irréversible** : oui : la mise en production est le point irréversible par excellence (`foyer/skills/convergence-iac.md`).
 - **S'articule avec** : **amende ADR-008** sans le remplacer (ADR-008 reste la passerelle des dépôts publics) ; ADR-012 (la demande passe par un outil MCP) ; **ADR-013** (étiquette signée, passerelle des dépôts privés) ; ADR-020 (staging) ; ADR-021 (barrière) ; ADR-022 (preuves) ; ADR-029 (Coolify et Flux) ; ADR-030 (le MCP demande, n'exécute pas).
 - **Sert la vision (ADR-000)** : le seul geste humain de la chaîne est la validation de l'irréversible ; principe 5, l'approbation est elle-même la preuve datée, produite par l'outil.
@@ -27,7 +28,7 @@ visibilité du dépôt, menant au même résultat.
 | Dépôt | Passerelle | Où l'humain approuve | Ce qui fait foi |
 |---|---|---|---|
 | **public** | environnement GitHub protégé à relecteur obligatoire (ADR-008) | l'interface GitHub du run | l'approbation enregistrée par GitHub, lue par Sluis (#3) |
-| **privé** | étiquette `approuve/<empreinte>` signée par la clé SSH de signature du superviseur (ADR-013) | son poste, `git tag -s` | la signature, vérifiée par le tireur de la cible contre un `allowed_signers` hors dépôt |
+| **privé** | étiquette `approuve/<empreinte>` signée par la clé SSH de signature du superviseur (ADR-013), dont le message porte l'empreinte complète du plan **et l'environnement cible** | son poste, `git tag -s` | la signature, vérifiée par le tireur de la cible contre un `allowed_signers` hors dépôt ; chaque tireur refuse, et journalise en erreur, une étiquette qui ne nomme pas son propre environnement |
 
 6. **Exécution** : l'approbation déclenche le réconciliateur de la recette, **Coolify** sur VPS ou **Flux** sur K3s (ADR-029). Ni Sluis ni l'agent ne déclenchent ce réconciliateur autrement que par la passerelle.
 7. **Preuve** : l'approbation (qui, quand, quelle empreinte, quel commit) entre dans le rapport daté du déploiement (ADR-022), stocké hors du serveur.
@@ -47,7 +48,7 @@ pas approuver.
 
 ## Conséquences
 
-- **Deux chemins à maintenir et à tester**, chacun avec son témoin (approbation absente ou mauvaise clé : rien ne se déploie).
+- **Deux chemins à maintenir et à tester**, chacun avec son témoin (approbation absente ou mauvaise clé : rien ne se déploie). Pour l'étiquette signée, un témoin de plus : **une étiquette valide pour le staging ne déploie rien en production** (ADR-013, garde-fou 6).
 - La skill Foyer ne voit pas la différence : `sluis_etat_approbation` rend le même état pour les deux passerelles (ADR-030).
 - **Limite** : il n'y a pas de relecteur distinct de l'auteur chez un porteur seul. La signature personnelle, la barrière et le journal hors machine sont la mesure compensatoire (`foyer/skills/conformite.md`, §2bis).
 - **Limite** : l'étiquette signée suppose la clé SSH de signature du superviseur, distincte de son identité GPG (ADR-015) ; sa perte bloque les mises en production des dépôts privés jusqu'au remplacement.
