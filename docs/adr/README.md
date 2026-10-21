@@ -27,7 +27,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | ADR-010 | Deux déploiements, et OpenTofu comme moteur | **oui** | **contresignée le 2026-10-18** · **amendée le 2026-10-21** : l'exécutant tourne sur un VPS séparé, hors de la machine de confiance (proposé, non contresigné) |
 | ADR-011 | Gate de scan différencié par image | non | **contresignée le 2026-10-18** |
 | ADR-012 | La mise en ligne se demande par un outil MCP du Sluis public · amende ADR-010 | **oui** | **contresignée le 2026-10-19** · relance d'un run approuvé à vérifier au premier essai (#4, 4.5) |
-| ADR-013 | Pour un dépôt privé, l'approbation est une étiquette signée par le superviseur, vérifiée par le tireur GitOps de la cible · amende ADR-008 | **oui** | **proposée le 2026-10-21, non contresignée** |
+| ADR-013 | Pour un dépôt privé, l'approbation est une étiquette signée par le superviseur, vérifiée par le tireur GitOps de la cible · amende ADR-008 | **oui** | **proposée le 2026-10-21, non contresignée** · **amendée le 2026-10-21** : l'étiquette nomme son environnement (proposé, non contresigné) |
 | [ADR-014](ADR-014-trois-zones.md) | Trois zones, la production, la confiance, le hors-ligne | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : le Sluis exécutant quitte la machine de confiance (proposé, non contresigné) |
 | [ADR-015](ADR-015-identites.md) | Identités, des YubiKeys pour les humains, step-ca pour les machines | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-016](ADR-016-secrets-de-deploiement.md) | Secrets de déploiement chiffrés dans Git avec SOPS et age | non | proposée le 2026-10-21, non contresignée |
@@ -45,7 +45,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-028](ADR-028-front-end-statique.md) | Le front-end est un site statique sur un stockage objet européen | non | proposée le 2026-10-21, non contresignée |
 | [ADR-029](ADR-029-recettes-vps-et-k3s.md) | Deux recettes, VPS puis K3s, derrière les mêmes outils MCP | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-030](ADR-030-serveur-mcp.md) | Le serveur MCP lit ou demande, il n'exécute jamais | **oui** | proposée le 2026-10-21, non contresignée |
-| [ADR-031](ADR-031-pipeline-foyer-production.md) | Du staging à la production, par l'une des deux passerelles d'approbation | **oui** | proposée le 2026-10-21, non contresignée |
+| [ADR-031](ADR-031-pipeline-foyer-production.md) | Du staging à la production, par l'une des deux passerelles d'approbation | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : l'étiquette nomme son environnement (proposé, non contresigné) |
 | [ADR-032](ADR-032-outil-de-convergence-ansible.md) | Ansible configure le socle, OpenTofu loue, Flux réconcilie le cluster | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-033](ADR-033-feuille-de-route.md) | Feuille de route, huit étapes utilisables seules | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : un VPS de plus à l'étape 2 (proposé, non contresigné) |
 
@@ -264,6 +264,9 @@ essai bout en bout (#4, story 4.5), avant toute mise en ligne réelle.
 
 **Statut : proposée le 2026-10-21, non contresignée.** Amende ADR-008 pour les
 dépôts privés ; ADR-008 reste la règle pour les dépôts publics.
+**Amendée le 2026-10-21** (revue des ADR, décision 3) : le message signé nomme
+l'environnement cible, et chaque tireur refuse une étiquette qui ne nomme pas
+le sien. Amendement proposé, non contresigné.
 
 **Contexte.** ADR-008 fait reposer l'approbation de Tier 1 sur un environnement
 GitHub protégé à **relecteurs requis**. Or, selon la documentation de GitHub
@@ -281,7 +284,7 @@ forme d'une étiquette git signée par sa clé.
 1. **L'acte d'approbation est une étiquette git signée par la clé du
    superviseur**, posée sur le commit à mettre en ligne, au nom réservé
    `approuve/<empreinte courte>`. Son message porte l'empreinte complète du plan
-   de changement. La clé de signature (SSH de préférence, GPG accepté) ne quitte
+   de changement **et l'environnement cible** (amendement du 2026-10-21). La clé de signature (SSH de préférence, GPG accepté) ne quitte
    jamais le poste du superviseur, et ne réside sur aucun serveur.
 2. **La signature est vérifiée par le tireur GitOps de la cible, pas dans un
    workflow.** Un workflow vit dans le dépôt : quiconque peut y écrire pourrait
@@ -290,7 +293,10 @@ forme d'une étiquette git signée par sa clé.
    `approuve/*` dont la signature se vérifie contre un fichier
    `allowed_signers` **conservé sur la cible, hors du dépôt, en lecture seule
    pour le compte qui déploie**. Une étiquette non signée, signée par une autre
-   clé, ou qui ne désigne pas le commit attendu, ne déploie rien.
+   clé, ou qui ne désigne pas le commit attendu, ne déploie rien. **Chaque
+   tireur refuse une étiquette qui ne nomme pas son propre environnement**, et
+   journalise ce refus en erreur : une approbation donnée pour le staging ne
+   vaut pas pour la production.
 3. **Sluis prépare, ne signe jamais.** Pour un dépôt privé, `sluis_mise_en_ligne`
    vérifie les gates du plancher comme aujourd'hui, calcule l'empreinte, et rend
    au superviseur la commande exacte à signer. `sluis_etat_approbation` lit les
@@ -309,8 +315,13 @@ forme d'une étiquette git signée par sa clé.
 4. **Journal.** Le tireur écrit l'empreinte, le commit, l'identité de la clé et
    l'horodatage de chaque déploiement : c'est la preuve datée qu'attend la
    conformité (Epic 9, PR.PS-04.1).
-5. **Échec bruyant.** Une étiquette `approuve/*` qui ne se vérifie pas est
-   journalisée en erreur, pas ignorée en silence.
+5. **Échec bruyant.** Une étiquette `approuve/*` qui ne se vérifie pas, ou qui
+   nomme un autre environnement que celui du tireur, est journalisée en erreur,
+   pas ignorée en silence.
+6. **Témoin d'environnement.** Une étiquette valide pour le staging, posée sur
+   un commit que le tireur de production surveille, ne déploie rien en
+   production et produit l'erreur du garde-fou 5. Ce témoin se rejoue à chaque
+   modification du tireur.
 
 **Ce que la décision ne couvre pas, et qu'il faut savoir.**
 
@@ -351,7 +362,7 @@ serveur : la clé de signature ne doit résider nulle part ailleurs.
 4. *Approuver un plan* : Sluis rend la commande exacte, de la forme
 
    ```bash
-   git tag -s approuve/<empreinte courte> <commit> -m "<empreinte complète>"
+   git tag -s approuve/<empreinte courte> <commit> -m "<environnement> <empreinte complète>"
    git push origin approuve/<empreinte courte>
    ```
 
@@ -386,6 +397,11 @@ deux dépôts à tenir) ; environnement sans relecteur (l'invariant « Sluis ne
 peut que demander » tomberait) ; vérification dans un workflow GitHub
 (contournable par qui peut écrire dans le dépôt) ; mutation par l'exécutant de
 Sluis (il n'est pas déployé, et ce serait plus de code pour la même garantie).
+
+**Point ouvert (amendement du 2026-10-21).** Le format exact du message signé
+(ordre et séparateur de l'environnement et de l'empreinte), que Sluis construit
+et que le tireur analyse, reste à fixer ; il doit refuser toute ambiguïté
+plutôt que la deviner.
 
 **Irréversible ?** Oui : c'est une seconde passerelle d'approbation. À
 contresigner par le superviseur avant toute mise en œuvre.
