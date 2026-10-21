@@ -9,7 +9,8 @@ finit par diverger.
 (`ADR-0NN-titre.md`, ce dossier), et ce tableau en reste l'index. ADR-000 pose la
 vision dont chacun se réclame. ADR-014 à ADR-033 décrivent l'architecture de
 plateforme et de sécurité visée (alignement CyFun 2025 Essential) ; ADR-033 en
-donne l'ordre de construction. Aucun ADR antérieur n'est supprimé ni remplacé :
+donne l'ordre de construction. ADR-034 fixe le contrat entre la skill Foyer qui
+génère un dépôt et Sluis qui l'exécute. Aucun ADR antérieur n'est supprimé ni remplacé :
 ceux qui sont amendés le disent dans leur ligne.
 
 | # | Décision | Irréversible | Statut |
@@ -48,6 +49,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-031](ADR-031-pipeline-foyer-production.md) | Du staging à la production, par l'une des deux passerelles d'approbation | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : l'étiquette nomme son environnement ; répétition sur la seconde production éphémère ; barrière rejouée avant l'exécution (proposé, non contresigné) |
 | [ADR-032](ADR-032-outil-de-convergence-ansible.md) | Ansible configure le socle, OpenTofu loue, Flux réconcilie le cluster | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-033](ADR-033-feuille-de-route.md) | Feuille de route, huit étapes utilisables seules | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : un VPS de plus à l'étape 2 ; étape 6 renommée (proposé, non contresigné) |
+| [ADR-034](ADR-034-contrat-du-depot-cible.md) | Le contrat du dépôt cible : une skill Foyer génère, Sluis valide puis exécute | à qualifier (proposition : **oui**) | proposée le 2026-10-21, non contresignée |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
