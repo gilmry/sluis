@@ -1,6 +1,7 @@
 # ADR-033 : Feuille de route, huit étapes utilisables seules
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 2) : l'étape 2 compte un VPS de plus pour le Sluis exécutant. Amendement proposé, non contresigné.
 - **Irréversible** : non pour l'ordre, qui se révise en gate review. Chaque étape porte ses propres points irréversibles, décidés dans son ADR.
 - **S'articule avec** : ADR-000 à ADR-032 ; l'Epic 9 de Sluis, conformité de plateforme (sluis#10, `docs/bmad/04-epics-stories.md`) ; la gouvernance du jalon zéro du porteur ; la future production chez OVH.
 - **Sert la vision (ADR-000)** : principe 4, aucune étape n'est construite avant d'être utile ; principe 1, chaque étape automatise d'abord ce que l'étape précédente laissait à la main.
@@ -21,7 +22,7 @@ découpe en stories XS, et l'ordre lui-même se réévalue à chaque gate review
 | # | Étape | ADR | Ce qu'elle apporte seule | Critère de fin vérifiable | Taille |
 |---|---|---|---|---|---|
 | 1 | **Identités humaines et clés hors ligne** : deux YubiKeys, GPG, `age` | 015, 016 | Les secrets de déploiement sont chiffrés dans Git ; la perte d'une clé ne bloque rien (la seconde YubiKey) | Un fichier SOPS se déchiffre avec chacune des deux YubiKeys, et avec aucune autre clé | S |
-| 2 | **Machine de confiance** : step-ca, OpenBao, supervision, témoin externe | 014, 015, 017, 023 | Certificats SSH courts au lieu de clés statiques ; supervision hors des machines surveillées ; un témoin chez un autre hébergeur qui alerte si la supervision se tait | Une connexion SSH avec un certificat expiré est refusée ; arrêter la supervision déclenche une alerte reçue par le témoin externe | M |
+| 2 | **Machine de confiance** : step-ca, OpenBao, supervision, témoin externe ; **Sluis exécutant sur un VPS séparé** (un VPS de plus, ADR-014) | 014, 015, 017, 023 | Certificats SSH courts au lieu de clés statiques ; supervision hors des machines surveillées ; un témoin chez un autre hébergeur qui alerte si la supervision se tait ; l'image exemptée du gate de scan ne côtoie pas la clé maîtresse | Une connexion SSH avec un certificat expiré est refusée ; arrêter la supervision déclenche une alerte reçue par le témoin externe | M |
 | 3 | **Recette VPS** : Ansible et Coolify | 029, 032, 031 | Un SaaS déployable sur une machine, socle rejouable, dérive détectée chaque jour | Second passage Ansible à `changed=0` ; une mise en ligne passe par une approbation (ADR-031) et rien d'autre | M |
 | 4 | **CloudNativePG et archivage des WAL** | 026 | Une base restaurable à la seconde près depuis une autre région | Restauration à un instant donné réussie et chronométrée depuis le stockage distant | M |
 | 5 | **Backend chiffré** dans kit-actix | 018, 019 | Données personnelles chiffrées par personne ; effacement par destruction de clé | Le test d'effacement cryptographique passe : après destruction de la clé, la donnée n'est plus lisible, même depuis une sauvegarde | L |
