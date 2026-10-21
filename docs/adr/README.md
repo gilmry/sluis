@@ -24,11 +24,11 @@ ceux qui sont amendés le disent dans leur ligne.
 | ADR-007 | Dérogation Tier 2 bornée **et à durée limitée** pour les bacs à sable | **oui** | **contresignée le 2026-08-29** · fenêtre ouverte jusqu'au **2026-11-27** |
 | ADR-008 | Passerelle d'approbation = environnement GitHub protégé | **oui** | acceptée · **amendée** pour les dépôts privés par ADR-013 et ADR-031 (proposées) |
 | ADR-009 | Mapping branche → environnement | **oui** | acceptée |
-| ADR-010 | Deux déploiements, et OpenTofu comme moteur | **oui** | **contresignée le 2026-10-18** |
+| ADR-010 | Deux déploiements, et OpenTofu comme moteur | **oui** | **contresignée le 2026-10-18** · **amendée le 2026-10-21** : l'exécutant tourne sur un VPS séparé, hors de la machine de confiance (proposé, non contresigné) |
 | ADR-011 | Gate de scan différencié par image | non | **contresignée le 2026-10-18** |
 | ADR-012 | La mise en ligne se demande par un outil MCP du Sluis public · amende ADR-010 | **oui** | **contresignée le 2026-10-19** · relance d'un run approuvé à vérifier au premier essai (#4, 4.5) |
 | ADR-013 | Pour un dépôt privé, l'approbation est une étiquette signée par le superviseur, vérifiée par le tireur GitOps de la cible · amende ADR-008 | **oui** | **proposée le 2026-10-21, non contresignée** |
-| [ADR-014](ADR-014-trois-zones.md) | Trois zones, la production, la confiance, le hors-ligne | **oui** | proposée le 2026-10-21, non contresignée |
+| [ADR-014](ADR-014-trois-zones.md) | Trois zones, la production, la confiance, le hors-ligne | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : le Sluis exécutant quitte la machine de confiance (proposé, non contresigné) |
 | [ADR-015](ADR-015-identites.md) | Identités, des YubiKeys pour les humains, step-ca pour les machines | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-016](ADR-016-secrets-de-deploiement.md) | Secrets de déploiement chiffrés dans Git avec SOPS et age | non | proposée le 2026-10-21, non contresignée |
 | [ADR-017](ADR-017-openbao-hors-cluster.md) | OpenBao hors du cluster, gardien de la seule clé maîtresse | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : déverrouillage automatique par le KMS d'OVHcloud (proposé, non contresigné) |
@@ -47,7 +47,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-030](ADR-030-serveur-mcp.md) | Le serveur MCP lit ou demande, il n'exécute jamais | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-031](ADR-031-pipeline-foyer-production.md) | Du staging à la production, par l'une des deux passerelles d'approbation | **oui** | proposée le 2026-10-21, non contresignée |
 | [ADR-032](ADR-032-outil-de-convergence-ansible.md) | Ansible configure le socle, OpenTofu loue, Flux réconcilie le cluster | **oui** | proposée le 2026-10-21, non contresignée |
-| [ADR-033](ADR-033-feuille-de-route.md) | Feuille de route, huit étapes utilisables seules | non | proposée le 2026-10-21, non contresignée |
+| [ADR-033](ADR-033-feuille-de-route.md) | Feuille de route, huit étapes utilisables seules | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : un VPS de plus à l'étape 2 (proposé, non contresigné) |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
@@ -80,6 +80,10 @@ jour où le volume l'exigera. Amendement contresigné le 2026-10-18.
 
 
 ## ADR-010 — Deux déploiements, et OpenTofu comme moteur
+
+**Amendée le 2026-10-21** (revue des ADR, décision 2) : le Sluis exécutant
+tourne sur un VPS séparé, hors de la machine de confiance. Amendement proposé,
+non contresigné ; le reste de l'ADR reste contresigné.
 
 **Contexte.** Le Sprint 5 a livré la campagne de charge, donc du code capable de
 lancer `apply` et `destroy`. Un déploiement unique aurait fait du service exposé
@@ -127,6 +131,15 @@ vérifiée sur les modules réels, ce que la première campagne dira.
 **Irréversible ?** Oui pour la seconde partie : les modules mesurés porteront des
 états écrits par OpenTofu. Contresigné le 2026-10-18. Le moteur de charge
 `wrk` sera remplacé par k6 (#8), ce qui amendera cet ADR et ADR-011.
+
+**Amendement du 2026-10-21 : où tourne l'exécutant.** Le Sluis exécutant tourne
+sur **un VPS séparé**, hors de la machine de confiance d'ADR-014 (step-ca,
+OpenBao, supervision). Motif : son image est exemptée du gate de scan pour le
+binaire `tofu` (ADR-011) ; une image qui porte des vulnérabilités tolérées ne
+cohabite pas avec le gardien de la clé maîtresse. « Ce qui détient n'est pas
+exposé » reste vrai : le VPS de l'exécutant n'a pas d'entrée depuis Internet.
+**Conséquence** : un VPS de plus à louer, tenir et superviser (ADR-014,
+ADR-033 étape 2). Proposé, non contresigné.
 
 
 ## ADR-011 — Gate de scan différencié par image
