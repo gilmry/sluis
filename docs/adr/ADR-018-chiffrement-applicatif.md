@@ -1,8 +1,9 @@
 # ADR-018 : Chiffrement applicatif par enveloppe, une clé par personne
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 6) : mise en cohérence du renvoi à ADR-020, qui n'est plus un staging pseudonymisé. Amendement proposé, non contresigné.
 - **Irréversible** : oui. Le format des données chiffrées s'inscrit dans chaque ligne et chaque fichier ; en changer exige de tout re-chiffrer, et une migration de schéma qui l'introduit est un point irréversible au sens de `foyer/skills/convergence-iac.md`.
-- **S'articule avec** : ADR-017 (OpenBao enveloppe les clés de données), ADR-019 (base de clés séparée, effacement cryptographique), ADR-020 (staging pseudonymisé), ADR-027 (fichiers chiffrés avant envoi), `foyer/KITS.md` (port et adaptateurs enfichables de kit-actix).
+- **S'articule avec** : ADR-017 (OpenBao enveloppe les clés de données), ADR-019 (base de clés séparée, effacement cryptographique), ADR-020 (seconde production éphémère, restaurée avec la base de clés), ADR-027 (fichiers chiffrés avant envoi), `foyer/KITS.md` (port et adaptateurs enfichables de kit-actix).
 - **Sert la vision (ADR-000)** : règle « aucune brique ne détient tout », parce qu'une copie de la base sans OpenBao ne livre rien ; principe n°4, parce que le chiffrement vit dans un port unique du kit au lieu d'être réinventé par chaque SaaS ; principe n°5, parce que l'effacement d'une personne devient vérifiable par l'absence de sa clé.
 
 ## Contexte

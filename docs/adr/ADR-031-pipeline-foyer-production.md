@@ -1,9 +1,10 @@
 # ADR-031 : Du staging à la production, par l'une des deux passerelles d'approbation
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Amendé le 2026-10-21** (revue des ADR, décision 6) : l'étape de staging devient la répétition sur la seconde production éphémère ; tests de charge et recette sur un environnement à part. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 3) : l'étiquette d'approbation nomme son environnement cible. Amendement proposé, non contresigné.
 - **Irréversible** : oui : la mise en production est le point irréversible par excellence (`foyer/skills/convergence-iac.md`).
-- **S'articule avec** : **amende ADR-008** sans le remplacer (ADR-008 reste la passerelle des dépôts publics) ; ADR-012 (la demande passe par un outil MCP) ; **ADR-013** (étiquette signée, passerelle des dépôts privés) ; ADR-020 (staging) ; ADR-021 (barrière) ; ADR-022 (preuves) ; ADR-029 (Coolify et Flux) ; ADR-030 (le MCP demande, n'exécute pas).
+- **S'articule avec** : **amende ADR-008** sans le remplacer (ADR-008 reste la passerelle des dépôts publics) ; ADR-012 (la demande passe par un outil MCP) ; **ADR-013** (étiquette signée, passerelle des dépôts privés) ; ADR-020 (seconde production éphémère) ; ADR-021 (barrière) ; ADR-022 (preuves) ; ADR-029 (Coolify et Flux) ; ADR-030 (le MCP demande, n'exécute pas).
 - **Sert la vision (ADR-000)** : le seul geste humain de la chaîne est la validation de l'irréversible ; principe 5, l'approbation est elle-même la preuve datée, produite par l'outil.
 
 ## Contexte
@@ -20,7 +21,7 @@ visibilité du dépôt, menant au même résultat.
 **La chaîne, identique pour tout SaaS :**
 
 1. La branche est construite par la CI ; les gates du plancher sont vertes ; l'image porte le hash du commit.
-2. **Staging** (ADR-020) : déploiement sur des données restaurées et pseudonymisées, puis **tests de charge** (campagne Sluis, moteur k6 visé par sluis#8).
+2. **Recette et répétition**. Les **tests de charge** (campagne Sluis, moteur k6 visé par sluis#8) et la **recette fonctionnelle** se jouent sur un environnement à part, avec des comptes de test et des données factices. Puis la release, et sa migration s'il y en a une, est **jouée sur la seconde production éphémère** (ADR-020), restaurée de la nuit, avant la vraie production.
 3. **Barrière de déploiement** (ADR-021) : contrôles déterministes oui/non ; un échec bloque la demande.
 4. **Demande** : l'agent appelle `sluis_mise_en_ligne` (ADR-012, ADR-030), qui construit un plan empreinté.
 5. **Approbation humaine**, par l'une des deux passerelles :
