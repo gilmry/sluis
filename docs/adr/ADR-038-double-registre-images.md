@@ -83,8 +83,8 @@ dans les deux registres. **Ce qui ne vaut qu'en K3s** : le point 5,
   déverrouillage d'OpenBao (ADR-017) et la source des images dépendraient
   tous du même fournisseur et du même compte. Une panne ou une suspension
   empêcherait à la fois de servir et de redémarrer ou de revenir en arrière.
-  GHCR est déjà en place, sans coût, chez un autre fournisseur : il donne un
-  second chemin qui ne partage pas cette panne.
+  GHCR est déjà en place, chez un autre fournisseur : il donne un second
+  chemin qui ne partage pas cette panne.
 - **GHCR seul, comme aujourd'hui.** Écarté par la demande du superviseur. Le
   registre principal d'une production européenne est mis chez l'hébergeur
   européen, GHCR restant le secours.
@@ -92,7 +92,8 @@ dans les deux registres. **Ce qui ne vaut qu'en K3s** : le point 5,
 ## Conséquences
 
 - **Coût** : un abonnement au registre géré d'OVHcloud, sur un compte payant
-  que seul le superviseur ouvre ; GHCR ne coûte rien pour un dépôt public.
+  que seul le superviseur ouvre ; GHCR ne coûte rien pour les images
+  publiques, et le stockage des images privées dépend du forfait GitHub.
 - **La CI pousse deux fois et signe** : un jeton d'écriture de plus, pour le
   registre d'OVHcloud, devient un secret de la chaîne de build ; l'identité de
   signature en est un autre (déjà relevé par ADR-021).
