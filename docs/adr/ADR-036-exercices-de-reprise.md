@@ -169,9 +169,9 @@ sens de `foyer/skills/conformite.md` §2ter.
   2 : à trancher dans ADR-035.
 - **Enchaîner les scénarios 1 et 2** (perte totale, zone 2 et zone 1
   ensemble) : variante à jouer, et à quelle cadence ?
-- **Où vit la procédure** : dans ce dépôt public, épurée de tout détail
-  d'infrastructure, ou dans un dépôt privé auquel le tiers reçoit un accès en
-  lecture pour l'exercice ?
+- **Accès du tiers à la procédure** : elle vit dans un dépôt privé, sans aucun
+  secret (lettre de mission du 2026-10-22, ADR-037). Le tiers reçoit-il un accès
+  en lecture limité à la durée de l'exercice, ou une copie imprimée ?
 - **Seuil d'alerte sur la durée** : à partir de quel écart avec le cycle
   précédent un délai de reprise mesuré doit-il alerter ?
 - **Ce que l'amorce exige** (ADR-037) : quels secrets, comptes et objets
