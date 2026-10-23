@@ -1,10 +1,10 @@
 # ADR-040 : Gestion des clés matérielles, trois YubiKeys, une copie papier, une station hors ligne
 
-- **Statut** : Proposé le 2026-10-22, non contresigné.
+- **Statut** : Proposé le 2026-10-22, contresigné le 2026-10-23.
 - **Décisions du superviseur du 2026-10-23** : partage à seuil 2 sur 3 de la phrase de passe GPG (point 7) ; intégrée au point 2 : le destinataire SOPS humain est la sous-clé de chiffrement GPG (amende ADR-016 sur ce point).
 - **Amende ADR-015** : trois YubiKeys au lieu de deux (point 1 d'ADR-015, « deux YubiKeys : une d'usage, une de secours »). Le reste d'ADR-015 est inchangé.
-- **Irréversible** : en partie. **Oui** pour ce que les clés ancrent : la clé GPG maîtresse, la racine de step-ca et les identités qui déchiffrent les secrets et les sauvegardes, déjà qualifiées d'irréversibles par ADR-015, ADR-016 et ADR-035 (proposé) ; une copie papier perdue ou un partage à seuil distribué ne se rattrape pas, il se remplace par une cérémonie complète. **Non** pour le nombre de clés, leurs lieux et la cadence de vérification, qui se révisent sans re-signer quoi que ce soit.
-- **S'articule avec** : ADR-013 (clé SSH de signature `ed25519-sk` des approbations, `allowed_signers` de chaque cible), ADR-014 (les YubiKeys et leur copie de secours vivent en zone 3), ADR-015 (qu'il amende), ADR-016 (destinataires SOPS et age), ADR-017 (parts de secours d'OpenBao, en zone 3), ADR-025 (signal de succès des tâches récurrentes), ADR-033 (étape 1) ; ADR-035 (proposé) (sauvegardes de la zone 2 chiffrées vers les seules identités humaines) ; ADR-037 (proposé) (cérémonie hors ligne, phase 1 de l'amorce, ancres en zone 3).
+- **Irréversible** : en partie. **Oui** pour ce que les clés ancrent : la clé GPG maîtresse, la racine de step-ca et les identités qui déchiffrent les secrets et les sauvegardes, déjà qualifiées d'irréversibles par ADR-015, ADR-016 et ADR-035 ; une copie papier perdue ou un partage à seuil distribué ne se rattrape pas, il se remplace par une cérémonie complète. **Non** pour le nombre de clés, leurs lieux et la cadence de vérification, qui se révisent sans re-signer quoi que ce soit.
+- **S'articule avec** : ADR-013 (clé SSH de signature `ed25519-sk` des approbations, `allowed_signers` de chaque cible), ADR-014 (les YubiKeys et leur copie de secours vivent en zone 3), ADR-015 (qu'il amende), ADR-016 (destinataires SOPS et age), ADR-017 (parts de secours d'OpenBao, en zone 3), ADR-025 (signal de succès des tâches récurrentes), ADR-033 (étape 1) ; ADR-035 (sauvegardes de la zone 2 chiffrées vers les seules identités humaines) ; ADR-037 (cérémonie hors ligne, phase 1 de l'amorce, ancres en zone 3).
 - **Sert la vision (ADR-000)** : principe n°2, parce que chaque clé rangée est vérifiée à date fixe et qu'une vérification manquée alerte ; principe n°3, parce qu'une clé de secours ne vaut que par un essai réussi, pas par sa présence dans un tiroir ; principe n°4, parce que le partage à seuil se limite à un seul petit secret, en 2 sur 3 ; règle « aucune brique ne détient tout », parce qu'aucun lieu ne réunit une clé et ce qui l'ouvre.
 
 ## Contexte
@@ -18,8 +18,8 @@ sinistre qui touche les deux lieux à la fois, ni la perte du support qui porte
 la clé maîtresse.
 
 ADR-015 laisse aussi ouverts la cérémonie de génération et la procédure de
-perte. ADR-037 (proposé) fixe l'ordre de l'amorce et place la cérémonie hors
-ligne en phase 1, sans dire sur quel poste ni ce qui en sort. ADR-035 (proposé)
+perte. ADR-037 fixe l'ordre de l'amorce et place la cérémonie hors
+ligne en phase 1, sans dire sur quel poste ni ce qui en sort. ADR-035
 chiffre les sauvegardes de la zone 2 vers les seules identités humaines : la
 perte de toutes ces identités rend chaque sauvegarde inutilisable.
 
@@ -56,7 +56,7 @@ superviseur et n'est écrit dans aucun dépôt.
 |---|---|---|---|---|---|
 | Sous-clés GPG de signature, de chiffrement et d'authentification (ADR-015) | oui | oui | oui | oui, depuis la station hors ligne | Les trois clés sont interchangeables pour GPG ; la perte de l'une compromet les sous-clés des trois |
 | Clé SSH de signature `ed25519-sk` (ADR-013) | la sienne | la sienne | la sienne | **non**, générée sur chaque YubiKey | Trois lignes dans chaque `allowed_signers` ; une perte ne retire qu'une ligne |
-| Identité age, si `age-plugin-yubikey` est retenu (ADR-015, ADR-016) | la sienne | la sienne | la sienne | **non** | Trois destinataires dans chaque `.sops.yaml` et pour les sauvegardes d'ADR-035 (proposé) |
+| Identité age, si `age-plugin-yubikey` est retenu (ADR-015, ADR-016) | la sienne | la sienne | la sienne | **non** | Trois destinataires dans chaque `.sops.yaml` et pour les sauvegardes d'ADR-035 |
 | Clé GPG maîtresse, racine de step-ca | non | non | non | sans objet | Elles ne vivent sur aucune YubiKey (point 3) |
 
 ADR-015 laissait ouvert le choix entre la sous-clé de chiffrement GPG et une
@@ -73,7 +73,7 @@ réseau, qui ne conserve rien entre deux démarrages :
 - génération de la clé GPG maîtresse et de ses sous-clés, chargement des
   sous-clés sur A, B et C, prolongation de leur échéance, révocation ;
 - génération de la racine de step-ca et signature de l'intermédiaire
-  (ADR-015, ADR-037 (proposé), phase 4) ;
+  (ADR-015, ADR-037, phase 4) ;
 - impression de la copie papier.
 
 La clé maîtresse GPG et la racine de step-ca vivent, chiffrées par phrase de
@@ -156,7 +156,7 @@ clé maîtresse GPG** (décision du superviseur du 2026-10-23). Trois parts :
 
 **8. Les gestes sont réservés au superviseur.** L'achat des clés, leur
 configuration, la cérémonie, le dépôt au coffre, le choix des lieux et de la
-personne de confiance sont faits par lui, en personne (ADR-037 (proposé),
+personne de confiance sont faits par lui, en personne (ADR-037,
 invariants 1 et 2). Cet ADR décide ; la procédure, dans un dépôt privé sans
 aucun secret, exécute.
 
@@ -221,7 +221,7 @@ aucun secret, exécute.
   chiffrement GPG, la clé maîtresse restaurée depuis le coffre ou le papier
   rend tout lisible à nouveau. Avec `age-plugin-yubikey`, les trois
   identités auraient disparu avec les trois clés, et avec elles les secrets et
-  les sauvegardes d'ADR-035 (proposé). C'est la raison du choix de la sous-clé
+  les sauvegardes d'ADR-035. C'est la raison du choix de la sous-clé
   GPG (décision du 2026-10-23).
 - **La phrase de passe ne vit plus dans une seule mémoire** (point 7) : le
   coffre et la personne de confiance, ensemble, permettent une reprise sans le
@@ -256,7 +256,7 @@ Renvoi à `foyer/skills/conformite.md` §2bis et §2ter :
   `allowed_signers`. Ce serait un amendement d'ADR-033 ; de même pour le tableau
   de validation de `README.md` (« deux YubiKeys »).
 - **Mentions de « deux YubiKeys » ailleurs** : ADR-016 (Conséquences) et, s'ils
-  sont acceptés, ADR-035 et ADR-037 (proposés) parlent de deux YubiKeys. À
+  sont acceptés, ADR-035 et ADR-037 parlent de deux YubiKeys. À
   mettre en cohérence à leur prochaine révision.
 - **Racine de step-ca sur la copie papier** : faut-il y ajouter sa clé chiffrée,
   pour qu'elle survive à la perte des supports du coffre ? Sans cela, une perte
@@ -274,6 +274,6 @@ Renvoi à `foyer/skills/conformite.md` §2bis et §2ter :
 - **Modèle et micrologiciel des YubiKeys** : la prise en charge de `ed25519-sk`
   et d'`age-plugin-yubikey` dépend de la version ; à vérifier avant l'achat.
 - **Cadence des vérifications** : annuelle ici, comme ADR-015 ; à aligner, le
-  cas échéant, sur les exercices de reprise d'ADR-036 (proposé).
+  cas échéant, sur les exercices de reprise d'ADR-036.
 - **Choix du système live** de la station hors ligne et manière de prouver
   qu'il est sans réseau : à fixer dans la procédure privée.

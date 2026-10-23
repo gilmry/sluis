@@ -2,7 +2,7 @@
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
-- **Amendé le 2026-10-22 par ADR-040** (proposé, non contresigné) : trois YubiKeys au lieu de deux.
+- **Amendé le 2026-10-22 par ADR-040** (contresigné le 2026-10-23) : trois YubiKeys au lieu de deux.
 - **Irréversible** : oui. Les clés racines des humains et de l'autorité de certification ancrent toutes les autres identités ; les changer oblige à re-signer, re-déployer et re-déclarer partout.
 - **S'articule avec** : ADR-013 (la clé SSH de signature des approbations, conservée à la demande du superviseur), ADR-014 (step-ca vit en zone de confiance, les YubiKeys en zone hors ligne), ADR-016 (age), ADR-032 (Ansible se connecte par certificat SSH court).
 - **Sert la vision (ADR-000)** : principe n°1, parce que le renouvellement des certificats machines est automatique et que plus aucune clé statique n'attend d'être oubliée ; principe n°2, parce qu'un renouvellement qui échoue alerte avant l'expiration ; règle « aucune brique ne détient tout », parce que la clé privée humaine ne quitte jamais son support matériel.
