@@ -56,6 +56,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-036](ADR-036-exercices-de-reprise.md) | Exercices de reprise trimestriels, la plateforme se reconstruit et quelqu'un d'autre sait le faire | non | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 | [ADR-037](ADR-037-amorce.md) | Le problème de l'amorce : les secrets d'avant le coffre, créés une fois à la main par le superviseur, puis tournés | en partie | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 | [ADR-038](ADR-038-double-registre-images.md) | Double registre d'images : OVHcloud en principal, GHCR en secours, images référencées par empreinte et signées | non | proposée le 2026-10-22, **contresignée le 2026-10-23** |
+| [ADR-039](ADR-039-dependance-github.md) | Dépendance à GitHub : inventaire, et miroir automatique des dépôts vers Codeberg | non (probablement) | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
