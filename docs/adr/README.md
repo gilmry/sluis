@@ -58,6 +58,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-038](ADR-038-double-registre-images.md) | Double registre d'images : OVHcloud en principal, GHCR en secours, images référencées par empreinte et signées | non | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 | [ADR-039](ADR-039-dependance-github.md) | Dépendance à GitHub : inventaire, et miroir automatique des dépôts vers Codeberg | non (probablement) | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 | [ADR-040](ADR-040-cles-materielles.md) | Gestion des clés matérielles : trois YubiKeys, une copie papier scellée, une station hors ligne · amende ADR-015 | en partie (**oui** pour les ancres, ADR-015) | proposée le 2026-10-22, **contresignée le 2026-10-23** |
+| [ADR-041](ADR-041-federation-identites.md) | Fédération des identités, Keycloak fournisseur d'identité commun des utilisateurs des SaaS | **oui** | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
