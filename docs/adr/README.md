@@ -52,7 +52,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-032](ADR-032-outil-de-convergence-ansible.md) | Ansible configure le socle, OpenTofu loue, Flux réconcilie le cluster | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : identifiants CyFun complétés (proposé, non contresigné) |
 | [ADR-033](ADR-033-feuille-de-route.md) | Feuille de route, huit étapes utilisables seules | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : un VPS de plus à l'étape 2 ; étape 6 renommée (proposé, non contresigné) |
 | [ADR-034](ADR-034-contrat-du-depot-cible.md) | Le contrat du dépôt cible : une skill Foyer génère, Sluis valide puis exécute | **oui** | **contresignée le 2026-10-21** |
-| [ADR-041](ADR-041-federation-identites.md) | Fédération des identités, Keycloak fournisseur d'identité commun des utilisateurs des SaaS | **oui** | proposée le 2026-10-22, non contresignée |
+| [ADR-041](ADR-041-federation-identites.md) | Fédération des identités, Keycloak fournisseur d'identité commun des utilisateurs des SaaS | **oui** | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
