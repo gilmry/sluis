@@ -1,6 +1,6 @@
 # ADR-039 : Dépendance à GitHub, et miroir automatique vers Codeberg et Forgejo
 
-- **Statut** : Proposé le 2026-10-22, non contresigné.
+- **Statut** : Proposé le 2026-10-22, contresigné le 2026-10-23.
 - **Décision du superviseur du 2026-10-23**, intégrée aux points 1 et 4 : les dépôts privés sont copiés vers un **Forgejo auto-hébergé**, les dépôts publics vers Codeberg.
 - **Irréversible** : probablement non. Un miroir s'ajoute et se retire sans toucher au dépôt d'origine ni à la production. Deux réserves : un dépôt privé poussé une fois sur un service tiers y a été copié, ce qui ne se défait pas ; et l'identité du miroir détient un jeton dont la fuite permettrait d'écrire sur le miroir.
 - **S'articule avec** : ADR-008, ADR-012 et ADR-031 (la passerelle d'approbation est un environnement GitHub protégé) ; ADR-013 (l'étiquette signée transite par le dépôt d'origine) ; ADR-007 (son renouvellement passe par cette passerelle) ; ADR-016 (secrets dans Git, lisibles sans GitHub) ; ADR-021 et ADR-034 (gates lues sur les check-runs) ; ADR-022 (preuves conservées hors du serveur) ; ADR-025 (Renovate, prévu) ; ADR-033 (feuille de route) ; ADR-035 et ADR-036 (proposés, reconstruction depuis Git) ; ADR-038 (proposé en parallèle, double registre d'images).
@@ -68,8 +68,7 @@ locaux, dont la fraîcheur dépend de la mémoire de quelqu'un.
 
 - **Le code et son historique**, commits, branches, étiquettes, signatures
   comprises : une fermeture du compte GitHub ne les emporte plus.
-- **La capacité de reconstruire depuis Git** visée par ADR-035 et ADR-036
-  (proposés) : un clone du miroir suffit à reconstruire une image, à rejouer
+- **La capacité de reconstruire depuis Git** visée par ADR-035 et ADR-036 : un clone du miroir suffit à reconstruire une image, à rejouer
   le plancher sur une machine nue (NFR-06) et à relire les secrets chiffrés
   par SOPS (ADR-016), qui ne dépendent d'aucune forge.
 - **La preuve des approbations par étiquette** (ADR-013) : l'étiquette signée
