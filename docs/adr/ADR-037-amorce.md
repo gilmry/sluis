@@ -1,6 +1,7 @@
 # ADR-037 : Le problème de l'amorce
 
 - **Statut** : Proposé le 2026-10-22, non contresigné.
+- **Décisions du superviseur du 2026-10-23**, intégrées au texte : la supervision passe avant OpenBao (phases 5 et 6 inversées, alignement sur ADR-035) ; le destinataire SOPS humain est la sous-clé de chiffrement GPG (ADR-040).
 - **Irréversible** : en partie. L'ordre et les invariants se révisent comme tout ADR. Mais l'amorce produit les ancres d'ADR-015 et d'ADR-017 (clé GPG maîtresse, racine de step-ca, parts de secours d'OpenBao), dont le remplacement est déjà qualifié d'irréversible par ces ADR ; et un secret exposé pendant l'amorce est compromis pour toujours, comme un secret poussé en clair (ADR-016).
 - **S'articule avec** : ADR-014 (la zone de confiance qu'il faut mettre debout, la zone 3 où vivent les ancres), ADR-015 (YubiKeys, racine et intermédiaire de step-ca), ADR-016 (SOPS et age, destination de la plupart des secrets d'amorce), ADR-017 (OpenBao, déverrouillage par le KMS d'OVHcloud, parts de secours), ADR-010 (OpenTofu loue les machines), ADR-013 (clé SSH de signature des approbations), ADR-023 (supervision et témoin externe), ADR-024 (l'agent IA n'a aucun droit), ADR-032 (Ansible, certificats SSH courts), ADR-033 (étapes 1 et 2). Renvoie à ADR-035 (reprise après perte totale) et ADR-036 (exercices de reprise).
 - **Sert la vision (ADR-000)** : principe n°1 à rebours, parce qu'un geste rare et risqué reste humain, et l'amorce est le plus rare et le plus risqué de tous ; principe n°3, parce que la fin de l'amorce se prouve par des refus constatés, pas par une liste cochée ; règle « aucune brique ne détient tout », parce qu'aucune machine ni aucun agent ne détient les secrets d'amorce, et qu'aucun ne survit à la mise en place de la zone de confiance.
@@ -44,7 +45,7 @@ ensuite suivent le régime ordinaire d'ADR-016 ou d'ADR-017.
 | Secret | Classe | Créé par | Pendant l'amorce | Après | Fin du secret d'amorce |
 |---|---|---|---|---|---|
 | Comptes humains chez les fournisseurs (hébergeur, second hébergeur du témoin, forge) et leurs codes de secours | ancre | superviseur | double authentification par YubiKey ; codes de secours en zone 3 | inchangé, jamais dans un coffre | tournés si un code de secours a servi |
-| Clé GPG maîtresse, sous-clés, identité age du superviseur (ADR-015, ADR-016) | ancre | superviseur, cérémonie hors ligne | maîtresse hors ligne, sous-clés sur les deux YubiKeys | inchangé | à l'échéance des sous-clés |
+| Clé GPG maîtresse et sous-clés ; la sous-clé de chiffrement est le destinataire SOPS humain (ADR-015, ADR-016, ADR-040) | ancre | superviseur, cérémonie hors ligne | maîtresse hors ligne, sous-clés sur les deux YubiKeys | inchangé | à l'échéance des sous-clés |
 | Clé SSH de signature des approbations, `ed25519-sk` (ADR-013, ADR-015) | ancre | superviseur, sur YubiKey | résidente sur les deux YubiKeys | inchangé | sur perte ou compromission |
 | Racine de step-ca (ADR-015) | ancre | superviseur, cérémonie hors ligne | hors ligne, zone 3 | inchangé | à son échéance |
 | Jeton d'API de l'hébergeur pour la location (ADR-010) | temporaire | superviseur | poste du superviseur, chiffré par SOPS | jetons bornés par usage, dans SOPS (point ouvert sur leur détenteur) | révoqué à la clôture |
@@ -70,9 +71,12 @@ et peut se clore seule.
 3. **Socle** : premier passage Ansible, identités age des machines.
 4. **step-ca** : intermédiaire signé hors ligne ; Ansible passe aux certificats
    courts.
-5. **OpenBao** : initialisation, parts de secours en zone 3, identifiant du KMS,
-   administration par YubiKey.
-6. **Supervision et témoin externe**, alerte d'absence éprouvée.
+5. **Supervision et témoin externe**, alerte d'absence éprouvée. La
+   supervision est debout avant OpenBao : elle est la destination de son
+   audit (ADR-035, étape 3).
+6. **OpenBao** : initialisation, parts de secours en zone 3, identifiant du KMS,
+   administration par YubiKey ; l'audit part vers la supervision dès la
+   première opération.
 7. **Clôture** : révocations, migration de l'état, rotations, refus constatés,
    journal signé.
 
@@ -191,7 +195,7 @@ Renvoi à `foyer/skills/conformite.md` §2bis et §2ter :
   Rejoint le point ouvert « Cérémonie de génération » d'ADR-015.
 - **Lieu de l'identifiant du KMS sur la machine de confiance** et alerte sur son
   usage hors redémarrage connu : déjà ouverts dans ADR-017, ils conditionnent la
-  phase 5.
+  phase 6.
 - **Critère de fin de l'étape 2** : faut-il ajouter à ADR-033 la clôture de
   l'amorce (refus constatés, journal signé) comme critère de fin ? Ce serait un
   amendement d'ADR-033.
