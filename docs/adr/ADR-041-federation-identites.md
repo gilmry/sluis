@@ -1,6 +1,7 @@
 # ADR-041 : Fédération des identités, Keycloak fournisseur d'identité commun des utilisateurs des SaaS
 
 - **Statut** : Proposé le 2026-10-22, non contresigné.
+- **Décisions du superviseur du 2026-10-23**, intégrées au texte : déploiement par **Flux** (et non Argo CD) ; **un realm par SaaS**. Le déploiement avant K3s (recette VPS, Coolify) reste ouvert.
 - **Irréversible** : oui, à mesure que des comptes y naissent. Les comptes, leurs empreintes de mots de passe, leurs seconds facteurs et leurs liens de fédération vivent dans la base du fournisseur d'identité ; l'identifiant qu'il attribue à chaque personne s'inscrit dans les données de chaque SaaS. En changer est une migration de comptes : réinitialisation probable des mots de passe et des seconds facteurs, ré-association des identifiants, nouvelle déclaration de chaque fédération. Réversible à faible coût tant qu'aucun utilisateur réel n'y a de compte.
 - **S'articule avec** : ADR-014 (zone de production, exposition), ADR-015 (identités d'administration et des machines, **inchangé**), ADR-016 (secrets du fournisseur de configuration), ADR-018 et ADR-019 (identifiant de personne, effacement), ADR-020 (seconde production éphémère), ADR-023 (supervision et journaux), ADR-026 (base sous CloudNativePG), ADR-029 (recettes VPS et K3s), ADR-030 (Sluis public et son propre serveur OAuth 2.1), ADR-032 (rôle d'OpenTofu, réconciliateur du cluster), ADR-033 (feuille de route), ADR-034 (liste blanche des fournisseurs OpenTofu).
 - **Sert la vision (ADR-000)** : principe n°4, parce qu'une brique d'authentification construite une fois évite à chaque SaaS de réécrire comptes, mots de passe, second facteur et fédération ; principe n°1, parce que la configuration des realms et des clients se déclare dans Git et se rejoue ; règle « aucune brique ne détient tout », parce que le fournisseur d'identité authentifie les utilisateurs sans détenir les clés de leurs données (ADR-017, ADR-018). Le principe n°4 est aussi ce qui le met en tension : voir les points ouverts.
@@ -47,11 +48,12 @@ Demande du superviseur (lettre de mission du 2026-10-22), proposée ici :
 2. **Protocoles exposés aux SaaS : OIDC** (code d'autorisation avec PKCE en
    S256, comme le serveur OAuth 2.1 de Sluis). Un SaaS ne voit jamais un mot de
    passe ; il reçoit et vérifie des jetons.
-3. **Déploiement par Argo CD avec l'opérateur Keycloak**, selon la mission.
-   L'opérateur fournit la ressource `Keycloak` ; il **ne déploie pas la base de
-   données**, à fournir à part (documentation de l'opérateur, vérifiée). Le
-   choix d'Argo CD contredit Flux, retenu par ADR-029 et ADR-032 : la tension
-   n'est pas tranchée ici (points ouverts).
+3. **Déploiement par Flux avec l'opérateur Keycloak** en recette K3s. La
+   lettre de mission parlait d'Argo CD ; le superviseur a retenu **Flux** le
+   2026-10-23, par cohérence avec ADR-029 et ADR-032, qui refusent deux
+   réconciliateurs sur un même cluster. L'opérateur fournit la ressource
+   `Keycloak` ; il **ne déploie pas la base de données**, à fournir à part
+   (documentation de l'opérateur, vérifiée).
 4. **Configuration par le fournisseur OpenTofu de Keycloak**
    (`keycloak/keycloak`, maintenu dans l'organisation du projet Keycloak,
    Apache 2.0, vérifié). Realms, clients, fournisseurs d'identité fédérés,
@@ -76,11 +78,11 @@ Demande du superviseur (lettre de mission du 2026-10-22), proposée ici :
      supervision, un thème de base.
    - **Propre au SaaS** : son client OIDC, ses rôles, son thème dérivé du thème
      de base, et ses fédérations éventuelles.
-   - **Proposition, pas imposition : un realm par SaaS.** Il isole les comptes,
-     les politiques et les fédérations d'un SaaS de ceux des autres, et une ESN
-     fédérée à un SaaS n'apparaît pas dans un autre. L'alternative, un realm
-     partagé avec un client par SaaS, donne une connexion unique entre SaaS au
-     prix de cette isolation. Le choix reste au superviseur.
+   - **Un realm par SaaS** (décision du superviseur du 2026-10-23). Il isole
+     les comptes, les politiques et les fédérations d'un SaaS de ceux des
+     autres, et une ESN fédérée à un SaaS n'apparaît pas dans un autre. Le
+     realm partagé, qui aurait donné une connexion unique entre SaaS, est
+     écarté au prix de cette commodité.
 8. **Fédération avec Entra ID pour les ESN.** Keycloak sait déléguer
    l'authentification à un fournisseur OIDC v1.0 ou SAML v2.0 (*identity
    brokering*, documentation vérifiée). **OIDC par défaut**, plus simple à
@@ -189,11 +191,9 @@ utilisateurs des SaaS est à confirmer.
 
 ## Points ouverts
 
-- **Argo CD contre Flux.** La mission demande Argo CD ; ADR-029 et ADR-032
-  retiennent Flux comme réconciliateur du cluster, et ADR-029 refuse deux
-  réconciliateurs sur un même cluster. Le PRD de Sluis prévoit par ailleurs la
-  lecture du statut Argo CD (FR-012). À trancher par le superviseur : amender
-  ADR-029 et ADR-032, ou déployer l'opérateur Keycloak par Flux.
+- **Lecture du statut Argo CD** (FR-012 du PRD de Sluis) : Flux étant retenu,
+  l'outil MCP correspondant devra lire le statut de Flux. À reprendre dans le
+  PRD.
 - **Avant K3s.** L'opérateur suppose Kubernetes (étape 8 d'ADR-033) ; la recette
   VPS (étape 3) déploie par Coolify. Comment Keycloak est-il déployé d'ici là :
   conteneur sous Coolify, configuré par le même fournisseur OpenTofu qui parle à
@@ -208,8 +208,8 @@ utilisateurs des SaaS est à confirmer.
   configurer Keycloak en fait un moteur de configuration applicative. Amender
   ADR-032, et ajouter `keycloak/keycloak` à la liste blanche d'ADR-034 ? Quel
   exécutant détient l'identifiant d'administration de Keycloak ?
-- **Realm par SaaS ou realm partagé** (point 7), et faut-il une connexion unique
-  entre SaaS ?
+- **Connexion unique entre SaaS** : écartée par le choix d'un realm par SaaS ;
+  à rouvrir seulement si un besoin réel apparaît.
 - **Haute disponibilité** : une instance au démarrage, combien à terme, et sur
   quels nœuds ?
 - **Seconde production éphémère (ADR-020)** : restaure-t-elle la base de
