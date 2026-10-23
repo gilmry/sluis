@@ -1,6 +1,7 @@
 # ADR-038 : Double registre d'images, référencées par empreinte et signées
 
 - **Statut** : Proposé le 2026-10-22, non contresigné.
+- **Décision du superviseur du 2026-10-23** : en recette VPS, le double registre reste sous Coolify (images par empreinte, repli manuel par la passerelle d'approbation) ; `registries.yaml` et Kyverno n'arrivent qu'avec K3s.
 - **Irréversible** : non, pour l'essentiel. Une empreinte désigne un contenu, pas un emplacement : changer de registre ne change pas les références, et une image se recopie. Deux choix s'en approchent sans l'être tout à fait : l'**identité de signature**, dont le changement oblige à re-signer les images en service et à redéclarer l'identité attendue partout où elle est vérifiée ; et l'**ouverture du compte payant** chez OVHcloud, un engagement contractuel réservé au superviseur.
 - **S'articule avec** : ADR-010 (le dépôt publie déjà ses images sur un registre public) ; ADR-011 (gate de scan avant tout envoi vers un registre) ; ADR-014 (trois zones) ; ADR-015 (identités machines, dont relèverait l'identité de signature) ; ADR-016 (les jetons de registre sont des secrets de déploiement) ; ADR-021 (contrôle « images signées » de la barrière) ; ADR-022 (preuves) ; ADR-027 (images tierces épinglées) ; ADR-028 (même artefact empreinté, promu sans reconstruction) ; ADR-029 (Coolify puis K3s) ; ADR-031 (l'image porte le hash du commit) ; ADR-033 (feuille de route, étapes 3 et 8) ; ADR-034 (contrat du dépôt cible).
 - **Sert la vision (ADR-000)** : règle « aucune brique ne détient tout », parce que le registre stocke les images sans pouvoir les rendre acceptables, la signature venant d'ailleurs ; principe n°3, parce que la barrière croise l'empreinte demandée et la signature au lieu de croire le registre ; principe n°2, parce qu'une image non vérifiable bloque au lieu de passer ; principe n°4, parce que le registre principal est un service géré, pas une brique de plus à opérer.
@@ -53,6 +54,15 @@ superviseur a demandé, par lettre de mission du 2026-10-22, de le fixer.
    une image non signée ou non référencée par empreinte.
 6. **Place dans la feuille de route** : cet ADR ne bloque pas les étapes 1 à 3
    d'ADR-033 et se construit après elles. Son étape exacte reste ouverte.
+
+**En recette VPS, sous Coolify** (décision du superviseur du 2026-10-23). Le
+double registre reste sous Coolify jusqu'à l'étape 8 : chaque application
+Coolify désigne son image par empreinte (`image@sha256:…`, forme prise en
+charge selon la documentation de Coolify, vérifiée le 2026-10-23). Le repli
+vers le registre de secours n'est **pas automatique** : il consiste à changer
+le registre désigné, à empreinte égale, et ce changement de configuration de
+la cible passe par la passerelle d'approbation (ADR-031). C'est la limite
+acceptée avant K3s.
 
 **Ce qui vaut quelle que soit la recette** : les points 1 à 4, soit
 l'empreinte, la signature vérifiée par la barrière, et la présence de l'image
@@ -132,15 +142,9 @@ Mapping dans `foyer/skills/conformite.md` §2bis, couche plateforme.
 
 ## Points ouverts
 
-- **Recette VPS et recette K3s.** La première production est la recette VPS
-  avec Coolify (ADR-029, étape 3 d'ADR-033) ; `registries.yaml` et Kyverno
-  n'existent qu'avec K3s (étape 8). Ce que la recette VPS doit tenir des
-  points 1 à 4 avant l'étape 8 reste à fixer, sans trancher ici :
-  - Coolify accepte-t-il une référence par empreinte, et où la conserve-t-il ?
-  - le repli vers GHCR sur VPS est-il manuel, et passe-t-il par la passerelle
-    d'approbation (ADR-031) puisqu'il change la configuration de la cible ?
-  - Docker n'offre de miroir transparent que pour son registre par défaut :
-    faut-il un autre mécanisme, ou accepter un repli non transparent ?
+- **Repli manuel en recette VPS** : délai acceptable pour basculer vers le
+  secours, et qui le déclenche (point tranché le 2026-10-23 : repli par la
+  passerelle d'approbation, non automatique).
 - **Kyverno ou la barrière, en K3s.** La lettre de mission dit « à la barrière
   ou par Kyverno ». En K3s, Kyverno remplace-t-il la vérification de la
   barrière ou s'y ajoute-t-il ? Flux sait aussi vérifier des signatures
