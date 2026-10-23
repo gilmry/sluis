@@ -1,7 +1,7 @@
 # ADR-034 : Le contrat du dépôt cible
 
 - **Statut** : Proposé le 2026-10-21 (revue des ADR, décision 8), contresigné le 2026-10-21.
-- **Irréversible** : à qualifier par le superviseur. Proposition : **oui** pour la forme du contrat, comme ADR-005 : une fois des dépôts générés selon lui, en changer sans version oblige à reprendre chaque dépôt. Le versionnement du schéma est ce qui rend ses évolutions possibles sans casser l'existant.
+- **Irréversible** : **oui** (qualifié par le superviseur le 2026-10-23), pour la forme du contrat, comme ADR-005 : une fois des dépôts générés selon lui, en changer sans version oblige à reprendre chaque dépôt. Le versionnement du schéma est ce qui rend ses évolutions possibles sans casser l'existant.
 - **S'articule avec** : ADR-005 (le contrat MCP est matérialisé, pas décrit : même modèle ici), ADR-009 (mapping branche → environnement), ADR-010 (OpenTofu, moteur de location), ADR-011 (image exécutante), ADR-012 et ADR-013 (le workflow de Tier 1 et sa vérification d'empreinte), ADR-016 (`.sops.yaml`), ADR-022 (journal et preuves), ADR-026 (CloudNativePG), ADR-029 et ADR-032 (playbooks Ansible, manifestes Flux), ADR-030 (famille lecture des outils MCP), ADR-033 (étape 3).
 - **Sert la vision (ADR-000)** : règle « aucune brique ne détient tout », parce que la skill Foyer qui écrit les fichiers ne les exécute pas, et que Sluis qui les exécute ne les écrit pas ; règle « ce qui a des droits ne lit pas de texte libre », parce que Sluis n'exécute que ce que le contrat admet ; principe n°3, parce que la skill et Sluis vérifient le même dépôt avec le même schéma, chacun de son côté ; principe n°5, parce que la conformité d'un dépôt est un verdict d'outil.
 
@@ -114,4 +114,3 @@ d'audit des fichiers lus : PR.PS-04.1 ★B.
   évoluer.
 - **Règle de version** du schéma : quand un changement est-il incompatible, et
   combien de versions Sluis accepte-t-il à la fois ?
-- **Irréversibilité** : l'ADR est contresigné, sa qualification (proposition : oui) reste à confirmer.
