@@ -50,9 +50,8 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-030](ADR-030-serveur-mcp.md) | Le serveur MCP lit ou demande, il n'exécute jamais | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : identifiants CyFun complétés (proposé, non contresigné) |
 | [ADR-031](ADR-031-pipeline-foyer-production.md) | Du staging à la production, par l'une des deux passerelles d'approbation | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : l'étiquette nomme son environnement ; répétition sur la seconde production éphémère ; barrière rejouée avant l'exécution (proposé, non contresigné) |
 | [ADR-032](ADR-032-outil-de-convergence-ansible.md) | Ansible configure le socle, OpenTofu loue, Flux réconcilie le cluster | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : identifiants CyFun complétés (proposé, non contresigné) |
-| [ADR-033](ADR-033-feuille-de-route.md) | Feuille de route, huit étapes utilisables seules | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : un VPS de plus à l'étape 2 ; étape 6 renommée (proposé, non contresigné) |
-| [ADR-034](ADR-034-contrat-du-depot-cible.md) | Le contrat du dépôt cible : une skill Foyer génère, Sluis valide puis exécute | **oui** | **contresignée le 2026-10-21** |
 | [ADR-033](ADR-033-feuille-de-route.md) | Feuille de route, huit étapes utilisables seules | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : un VPS de plus à l'étape 2 ; étape 6 renommée (proposé, non contresigné) · **amendée le 2026-10-22** : étapes 3a à 3d (miroir, exercices, double registre, identités) après les trois premières (proposé, non contresigné) |
+| [ADR-034](ADR-034-contrat-du-depot-cible.md) | Le contrat du dépôt cible : une skill Foyer génère, Sluis valide puis exécute | **oui** | **contresignée le 2026-10-21** |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
