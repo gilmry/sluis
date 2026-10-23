@@ -94,9 +94,9 @@ Autrement dit, le miroir garantit qu'on peut **repartir**, pas qu'on peut
 - **Ne rien faire, compter sur les clones locaux.** Leur fraîcheur dépend d'un
   geste humain, et ils n'ont pas forcément les étiquettes poussées par
   d'autres. Contraire au principe n°1.
-- **Forgejo auto-hébergé dès maintenant.** Plus complet, mais hors de
-  proportion avec la règle de capacité actuelle ; noté comme évolution
-  (décision, point 4).
+- **Forgejo comme forge complète dès maintenant** (CI, issues, approbations).
+  Hors de proportion avec la règle de capacité actuelle ; seul son usage comme
+  miroir des dépôts privés est retenu (décision, point 4).
 - **Migrer hors de GitHub.** La passerelle d'ADR-008, câblée et testée (ADR-031),
   devrait être refaite. Le besoin exprimé est une assurance, pas un
   déménagement.
