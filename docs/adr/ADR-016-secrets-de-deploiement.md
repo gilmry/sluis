@@ -2,6 +2,7 @@
 
 - **Statut** : Proposé le 2026-10-21, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
+- **Amendé le 2026-10-22 par ADR-040** (proposé, non contresigné) : le destinataire humain des secrets SOPS est la sous-clé de chiffrement GPG du superviseur, et non une identité `age-plugin-yubikey` (décision du 2026-10-23).
 - **Irréversible** : non pour l'outil, oui pour les secrets eux-mêmes : un secret poussé une fois en clair dans un dépôt est compromis pour toujours, quoi qu'on réécrive ensuite.
 - **S'articule avec** : ADR-008 (les secrets de mutation vivent hors de Sluis), ADR-015 (destinataires age et GPG sur YubiKey), ADR-017 (les clés applicatives, elles, vivent dans OpenBao), ADR-029 et ADR-032 (Coolify, Flux et Ansible les consomment).
 - **Sert la vision (ADR-000)** : principe n°1, parce qu'un secret versionné ne dépend plus de la mémoire de qui l'a posé sur le serveur ; principe n°2, parce qu'un déchiffrement qui échoue fait échouer le déploiement au lieu de démarrer une pile aux secrets vides ; principe n°5, parce que l'historique Git date chaque changement de secret.

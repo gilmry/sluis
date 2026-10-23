@@ -1,6 +1,7 @@
 # ADR-040 : Gestion des clés matérielles, trois YubiKeys, une copie papier, une station hors ligne
 
 - **Statut** : Proposé le 2026-10-22, non contresigné.
+- **Décision du superviseur du 2026-10-23**, intégrée au point 2 : le destinataire SOPS humain est la sous-clé de chiffrement GPG (amende ADR-016 sur ce point).
 - **Amende ADR-015** : trois YubiKeys au lieu de deux (point 1 d'ADR-015, « deux YubiKeys : une d'usage, une de secours »). Le reste d'ADR-015 est inchangé.
 - **Irréversible** : en partie. **Oui** pour ce que les clés ancrent : la clé GPG maîtresse, la racine de step-ca et les identités qui déchiffrent les secrets et les sauvegardes, déjà qualifiées d'irréversibles par ADR-015, ADR-016 et ADR-035 (proposé) ; une copie papier perdue ou un partage à seuil distribué ne se rattrape pas, il se remplace par une cérémonie complète. **Non** pour le nombre de clés, leurs lieux et la cadence de vérification, qui se révisent sans re-signer quoi que ce soit.
 - **S'articule avec** : ADR-013 (clé SSH de signature `ed25519-sk` des approbations, `allowed_signers` de chaque cible), ADR-014 (les YubiKeys et leur copie de secours vivent en zone 3), ADR-015 (qu'il amende), ADR-016 (destinataires SOPS et age), ADR-017 (parts de secours d'OpenBao, en zone 3), ADR-025 (signal de succès des tâches récurrentes), ADR-033 (étape 1) ; ADR-035 (proposé) (sauvegardes de la zone 2 chiffrées vers les seules identités humaines) ; ADR-037 (proposé) (cérémonie hors ligne, phase 1 de l'amorce, ancres en zone 3).
@@ -58,9 +59,12 @@ superviseur et n'est écrit dans aucun dépôt.
 | Identité age, si `age-plugin-yubikey` est retenu (ADR-015, ADR-016) | la sienne | la sienne | la sienne | **non** | Trois destinataires dans chaque `.sops.yaml` et pour les sauvegardes d'ADR-035 (proposé) |
 | Clé GPG maîtresse, racine de step-ca | non | non | non | sans objet | Elles ne vivent sur aucune YubiKey (point 3) |
 
-ADR-015 laisse ouvert le choix entre la sous-clé de chiffrement GPG et une
-identité `age-plugin-yubikey` comme destinataire SOPS. Cet ADR ne le tranche
-pas ; il en tire la conséquence pour la perte totale (Conséquences).
+ADR-015 laissait ouvert le choix entre la sous-clé de chiffrement GPG et une
+identité `age-plugin-yubikey` comme destinataire SOPS. **Le superviseur l'a
+tranché le 2026-10-23 : la sous-clé de chiffrement GPG**, parce que la clé
+maîtresse restaurée suffit alors à tout relire, même après la perte des trois
+YubiKeys (Conséquences). Cet ADR amende donc aussi ADR-016 sur ce point ; la
+ligne `age-plugin-yubikey` du tableau ci-dessus ne s'applique pas.
 
 **3. Une station hors ligne sur système live.** Les opérations sur les ancres
 se font sur un poste démarré depuis un système live en lecture seule, sans
@@ -198,10 +202,10 @@ aucun secret, exécute.
   deux autres, donc à aller au coffre. C'est le prix de clés interchangeables.
 - **Perte totale et identités age.** Si le destinataire SOPS est la sous-clé de
   chiffrement GPG, la clé maîtresse restaurée depuis le coffre ou le papier
-  rend tout lisible à nouveau. Si c'est `age-plugin-yubikey`, les trois
-  identités disparaissent avec les trois clés, et avec elles les secrets et les
-  sauvegardes d'ADR-035 (proposé) qui ne sont chiffrés que vers elles. Le choix
-  laissé ouvert par ADR-015 a donc une conséquence de reprise (point ouvert).
+  rend tout lisible à nouveau. Avec `age-plugin-yubikey`, les trois
+  identités auraient disparu avec les trois clés, et avec elles les secrets et
+  les sauvegardes d'ADR-035 (proposé). C'est la raison du choix de la sous-clé
+  GPG (décision du 2026-10-23).
 - **Limite, la phrase de passe.** Sans partage à seuil, la phrase de passe de la
   clé maîtresse ne vit que dans la mémoire du superviseur. Le papier et les
   supports du coffre ne servent qu'à lui.
@@ -236,9 +240,6 @@ Renvoi à `foyer/skills/conformite.md` §2bis et §2ter :
 - **Mentions de « deux YubiKeys » ailleurs** : ADR-016 (Conséquences) et, s'ils
   sont acceptés, ADR-035 et ADR-037 (proposés) parlent de deux YubiKeys. À
   mettre en cohérence à leur prochaine révision.
-- **Destinataire SOPS humain** : sous-clé GPG ou `age-plugin-yubikey` ? Déjà
-  ouvert par ADR-015 ; la reprise après perte totale (Conséquences) pèse
-  désormais dans ce choix.
 - **Racine de step-ca sur la copie papier** : faut-il y ajouter sa clé chiffrée,
   pour qu'elle survive à la perte des supports du coffre ? Sans cela, une perte
   du coffre oblige à une nouvelle racine et au ré-enrôlement de toutes les
