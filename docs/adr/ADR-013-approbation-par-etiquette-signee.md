@@ -2,11 +2,11 @@
 
 - **Sorti de l'index le 2026-10-21** (revue des ADR, décision 7) : texte déplacé depuis `README.md` sans modification de fond.
 
-**Statut : proposée le 2026-10-21, non contresignée.** Amende ADR-008 pour les
+**Statut : proposée le 2026-10-21, contresignée le 2026-10-21.** Amende ADR-008 pour les
 dépôts privés ; ADR-008 reste la règle pour les dépôts publics.
 **Amendée le 2026-10-21** (revue des ADR, décision 3) : le message signé nomme
 l'environnement cible, et chaque tireur refuse une étiquette qui ne nomme pas
-le sien. Amendement proposé, non contresigné.
+le sien. Amendement contresigné le 2026-10-21.
 
 **Contexte.** ADR-008 fait reposer l'approbation de Tier 1 sur un environnement
 GitHub protégé à **relecteurs requis**. Or, selon la documentation de GitHub
@@ -138,10 +138,13 @@ peut que demander » tomberait) ; vérification dans un workflow GitHub
 (contournable par qui peut écrire dans le dépôt) ; mutation par l'exécutant de
 Sluis (il n'est pas déployé, et ce serait plus de code pour la même garantie).
 
-**Point ouvert (amendement du 2026-10-21).** Le format exact du message signé
-(ordre et séparateur de l'environnement et de l'empreinte), que Sluis construit
-et que le tireur analyse, reste à fixer ; il doit refuser toute ambiguïté
-plutôt que la deviner.
+**Format du message signé (décidé par le superviseur le 2026-10-23).**
+`<environnement> <empreinte complète>` : deux champs séparés par une seule
+espace, l'environnement pris dans la liste connue (ADR-009), l'empreinte en
+64 caractères hexadécimaux minuscules. Tout autre message est refusé, jamais
+deviné. Le format vit dans une seule constante, que Sluis construit et que le
+tireur analyse (#24, #25).
 
-**Irréversible ?** Oui : c'est une seconde passerelle d'approbation. À
-contresigner par le superviseur avant toute mise en œuvre.
+**Irréversible ?** Oui : c'est une seconde passerelle d'approbation.
+Contresignée par le superviseur le 2026-10-21, en session (règle de
+contresignature d'avant la première release, voir l'index).
