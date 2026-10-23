@@ -1,6 +1,7 @@
 # ADR-035 : Sauvegarde et reconstruction des briques communes
 
 - **Statut** : Proposé le 2026-10-22, non contresigné.
+- **Décision du superviseur du 2026-10-23**, intégrée au point 4 : les sauvegardes sont chiffrées vers la sous-clé de chiffrement GPG (ADR-040), et non par `age`.
 - **Irréversible** : en partie. **Oui** pour le stockage verrouillé en écriture (ce qui y entre ne s'efface pas avant la fin de sa rétention, comme pour ADR-022) et pour le choix des identités qui déchiffrent (les perdre toutes rend chaque sauvegarde inutilisable). **Non** pour l'ordre de reconstruction et la procédure, révisés après chaque exercice.
 - **S'articule avec** : ADR-014 (zone 2 à reconstruire, zone 3 en ajout seul), ADR-015 (racine step-ca hors ligne, YubiKeys, accès d'urgence), ADR-016 (secrets de déploiement lisibles depuis Git), ADR-017 (OpenBao, KMS d'OVHcloud, parts de secours, rotation), ADR-019 (perte du stockage d'OpenBao = perte des données), ADR-022 et ADR-027 (stockage verrouillé dans une autre région), ADR-023 (supervision, témoin externe), ADR-025 (signal de succès), ADR-026 (sauvegardes de la zone 1, à ne pas mélanger), ADR-032 (socle rejoué depuis Git) ; **ADR-036** (exercices de reprise trimestriels) pour la preuve ; **ADR-037** (problème de l'amorce) pour les secrets nécessaires avant que le coffre existe.
 - **Sert la vision (ADR-000)** : principe n°1, la reconstruction se rejoue depuis Git au lieu de se refaire de mémoire ; principe n°2, une sauvegarde muette alerte ; principe n°3, une sauvegarde ne vaut que par sa restauration (ADR-036) ; règle « aucune brique ne détient tout », aucune sauvegarde n'est rangée avec ce qui l'ouvre.
@@ -50,10 +51,12 @@ manquer si la supervision est tombée.
 **versioning et verrouillage en écriture**. La zone 2 y écrit avec un
 identifiant qui ne peut ni lire, ni écraser, ni supprimer.
 
-**4. Qui déchiffre.** Chaque sauvegarde est chiffrée avant l'envoi par `age`,
-**vers les seules identités humaines** : les deux YubiKeys du superviseur
-(ADR-015). La machine de confiance ne peut pas relire ses propres sauvegardes.
-Restaurer exige une YubiKey : un acte humain, rare et irréversible (ADR-000).
+**4. Qui déchiffre.** Chaque sauvegarde est chiffrée avant l'envoi **vers la
+seule sous-clé de chiffrement GPG du superviseur** (décision du 2026-10-23,
+ADR-040), chargée sur ses YubiKeys. La machine de confiance ne peut pas relire
+ses propres sauvegardes. Restaurer exige une YubiKey, ou à défaut la clé
+maîtresse GPG restaurée hors ligne : un acte humain, rare et irréversible
+(ADR-000).
 
 **5. Jamais au même endroit que ce qu'il protège.**
 
