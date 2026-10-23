@@ -1,6 +1,7 @@
-# ADR-039 : Dépendance à GitHub, et miroir automatique vers Codeberg
+# ADR-039 : Dépendance à GitHub, et miroir automatique vers Codeberg et Forgejo
 
 - **Statut** : Proposé le 2026-10-22, non contresigné.
+- **Décision du superviseur du 2026-10-23**, intégrée aux points 1 et 4 : les dépôts privés sont copiés vers un **Forgejo auto-hébergé**, les dépôts publics vers Codeberg.
 - **Irréversible** : probablement non. Un miroir s'ajoute et se retire sans toucher au dépôt d'origine ni à la production. Deux réserves : un dépôt privé poussé une fois sur un service tiers y a été copié, ce qui ne se défait pas ; et l'identité du miroir détient un jeton dont la fuite permettrait d'écrire sur le miroir.
 - **S'articule avec** : ADR-008, ADR-012 et ADR-031 (la passerelle d'approbation est un environnement GitHub protégé) ; ADR-013 (l'étiquette signée transite par le dépôt d'origine) ; ADR-007 (son renouvellement passe par cette passerelle) ; ADR-016 (secrets dans Git, lisibles sans GitHub) ; ADR-021 et ADR-034 (gates lues sur les check-runs) ; ADR-022 (preuves conservées hors du serveur) ; ADR-025 (Renovate, prévu) ; ADR-033 (feuille de route) ; ADR-035 et ADR-036 (proposés, reconstruction depuis Git) ; ADR-038 (proposé en parallèle, double registre d'images).
 - **Sert la vision (ADR-000)** : règle « aucune brique ne détient tout », parce qu'aujourd'hui un seul fournisseur détient à la fois le code, la CI, les gates, l'approbation, les secrets de mutation et les images ; principe n°3, parce qu'une copie tenue par un second fournisseur se compare à l'original ; principe n°2, parce que le miroir doit signaler son propre échec.
@@ -45,17 +46,22 @@ locaux, dont la fraîcheur dépend de la mémoire de quelqu'un.
 
 ## Décision
 
-1. **Chaque dépôt est copié automatiquement vers Codeberg**, branches et
-   étiquettes comprises, dont les étiquettes `approuve/*` d'ADR-013.
+1. **Chaque dépôt est copié automatiquement hors de GitHub**, branches et
+   étiquettes comprises, dont les étiquettes `approuve/*` d'ADR-013 :
+   - les **dépôts publics, sous licence libre, vers Codeberg** ;
+   - les **dépôts privés vers un Forgejo auto-hébergé** (décision du
+     superviseur du 2026-10-23), puisque les conditions de Codeberg n'admettent
+     pas les dépôts privés non libres.
 2. **Le miroir est en lecture seule.** On n'y pousse rien à la main, on n'y
    ouvre ni issue ni PR. GitHub reste la source de vérité ; le miroir est une
    copie, pas une seconde forge.
 3. **Le miroir signale son échec** (ADR-000, principe n°2) : un miroir qui
    cesse de se mettre à jour doit alerter, et l'écart entre les deux têtes de
    branche se compare (principe n°3).
-4. **Forgejo auto-hébergé est noté comme évolution future, pas maintenant.**
-   Il donnerait une forge complète sous notre contrôle, mais c'est un service
-   de plus à tenir, sauvegarder et surveiller (principe n°4). À rouvrir si une
+4. **Forgejo sert de miroir aux dépôts privés, pas encore de forge.** Il est
+   en lecture seule comme Codeberg (point 2). En faire une forge complète
+   (CI, issues, approbations) reste une évolution future : c'est un service de
+   plus à tenir, sauvegarder et surveiller (principe n°4), à rouvrir si une
    bascule réelle hors de GitHub devient nécessaire.
 
 ### Ce que le miroir protège
@@ -139,14 +145,13 @@ Renvoi à `foyer/skills/conformite.md` :
 - **Identité et jeton du miroir, et leur détenteur.** Quel compte, sur quelle
   machine, avec quelle portée et quelle rotation. Ce ne peut être ni
   l'identité de la passerelle (ADR-012) ni celle d'un relecteur.
-- **Dépôts privés.** Les conditions d'utilisation de Codeberg, lues le
-  2026-10-22, réservent le service aux projets sous licence libre (§ 1 (2)) et
-  n'admettent les dépôts privés que pour ce qu'exige un projet libre
-  (§ 2 (1) 2). Copier un dépôt privé non libre y paraît donc exclu. Elles ne
-  disent rien des miroirs, mais demandent de ne pas garder longtemps les
-  copies sans contribution propre et inactives depuis plus d'un mois
-  (§ 2 (1) 4). À relire par le superviseur ; pour les dépôts privés, il faut
-  une autre destination ou le Forgejo noté au point 4.
+- **Où vit le Forgejo des dépôts privés.** Il contient le code privé : ni
+  sur la machine de confiance (zone 2, non exposée, et aucune brique ne détient
+  tout), ni chez le même hébergeur que la production si l'on veut survivre à la
+  fermeture de ce compte. Machine, hébergeur, sauvegarde de Forgejo lui-même,
+  supervision et coût sont à décider ; les conditions de Codeberg (lues le
+  2026-10-22, § 1 (2) et § 2 (1) 2) motivent ce choix et restent à relire par
+  le superviseur.
 - **Export des issues.** Le miroir ne les couvre pas. Faut-il un export
   périodique (API GitHub vers fichiers versionnés), et où le conserver ?
 - **Secrets d'Actions.** Vérifier que chaque secret de mutation existe aussi
