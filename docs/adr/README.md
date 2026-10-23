@@ -52,6 +52,9 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-032](ADR-032-outil-de-convergence-ansible.md) | Ansible configure le socle, OpenTofu loue, Flux réconcilie le cluster | **oui** | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : identifiants CyFun complétés (proposé, non contresigné) |
 | [ADR-033](ADR-033-feuille-de-route.md) | Feuille de route, huit étapes utilisables seules | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : un VPS de plus à l'étape 2 ; étape 6 renommée (proposé, non contresigné) |
 | [ADR-034](ADR-034-contrat-du-depot-cible.md) | Le contrat du dépôt cible : une skill Foyer génère, Sluis valide puis exécute | **oui** | **contresignée le 2026-10-21** |
+| [ADR-035](ADR-035-reconstruction-zone-2.md) | Sauvegarde et reconstruction des briques communes de la zone de confiance : Git reconstruit, la sauvegarde restaure l'état unique | **oui**, en partie (stockage verrouillé, identités qui déchiffrent) | proposée le 2026-10-22, **contresignée le 2026-10-23** |
+| [ADR-036](ADR-036-exercices-de-reprise.md) | Exercices de reprise trimestriels, la plateforme se reconstruit et quelqu'un d'autre sait le faire | non | proposée le 2026-10-22, **contresignée le 2026-10-23** |
+| [ADR-037](ADR-037-amorce.md) | Le problème de l'amorce : les secrets d'avant le coffre, créés une fois à la main par le superviseur, puis tournés | en partie | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 | [ADR-038](ADR-038-double-registre-images.md) | Double registre d'images : OVHcloud en principal, GHCR en secours, images référencées par empreinte et signées | non | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 
 Tout point marqué irréversible exige une validation humaine explicite
