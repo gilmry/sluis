@@ -1,7 +1,7 @@
 # ADR-041 : Fédération des identités, Keycloak fournisseur d'identité commun des utilisateurs des SaaS
 
 - **Statut** : Proposé le 2026-10-22, non contresigné.
-- **Décisions du superviseur du 2026-10-23**, intégrées au texte : déploiement par **Flux** (et non Argo CD) ; **un realm par SaaS**. Le déploiement avant K3s (recette VPS, Coolify) reste ouvert.
+- **Décisions du superviseur du 2026-10-23**, intégrées au texte : déploiement par **Flux** (et non Argo CD) ; **un realm par SaaS**. Avant K3s : Coolify si un SaaS a de vrais utilisateurs avant l'étape 8, sinon Keycloak attend K3s (point 11).
 - **Irréversible** : oui, à mesure que des comptes y naissent. Les comptes, leurs empreintes de mots de passe, leurs seconds facteurs et leurs liens de fédération vivent dans la base du fournisseur d'identité ; l'identifiant qu'il attribue à chaque personne s'inscrit dans les données de chaque SaaS. En changer est une migration de comptes : réinitialisation probable des mots de passe et des seconds facteurs, ré-association des identifiants, nouvelle déclaration de chaque fédération. Réversible à faible coût tant qu'aucun utilisateur réel n'y a de compte.
 - **S'articule avec** : ADR-014 (zone de production, exposition), ADR-015 (identités d'administration et des machines, **inchangé**), ADR-016 (secrets du fournisseur de configuration), ADR-018 et ADR-019 (identifiant de personne, effacement), ADR-020 (seconde production éphémère), ADR-023 (supervision et journaux), ADR-026 (base sous CloudNativePG), ADR-029 (recettes VPS et K3s), ADR-030 (Sluis public et son propre serveur OAuth 2.1), ADR-032 (rôle d'OpenTofu, réconciliateur du cluster), ADR-033 (feuille de route), ADR-034 (liste blanche des fournisseurs OpenTofu).
 - **Sert la vision (ADR-000)** : principe n°4, parce qu'une brique d'authentification construite une fois évite à chaque SaaS de réécrire comptes, mots de passe, second facteur et fédération ; principe n°1, parce que la configuration des realms et des clients se déclare dans Git et se rejoue ; règle « aucune brique ne détient tout », parce que le fournisseur d'identité authentifie les utilisateurs sans détenir les clés de leurs données (ADR-017, ADR-018). Le principe n°4 est aussi ce qui le met en tension : voir les points ouverts.
@@ -111,6 +111,16 @@ Demande du superviseur (lettre de mission du 2026-10-22), proposée ici :
     (ADR-023). Les secrets du fournisseur OpenTofu (identifiant du client
     d'administration) sont chiffrés par SOPS (ADR-016).
 
+11. **Avant K3s, règle de déploiement** (décision du superviseur du
+    2026-10-23). **Si un SaaS doit accueillir de vrais utilisateurs avant
+    l'étape 8**, Keycloak tourne d'ici là comme service Compose sous Coolify,
+    configuré par le même fournisseur OpenTofu (qui parle à son API quel que
+    soit le mode de déploiement), avec une base PostgreSQL sauvegardée hors
+    hôte ; le passage à l'opérateur et à CloudNativePG au moment de K3s est
+    alors une **migration de données**, planifiée et approuvée comme telle.
+    **Sinon**, Keycloak n'arrive qu'avec K3s, directement dans sa forme cible,
+    et aucune migration des comptes n'a lieu.
+
 ## Alternatives écartées
 
 Comparaison sur ce qui a été vérifié le 2026-10-22 ; le reste est marqué
@@ -194,10 +204,9 @@ utilisateurs des SaaS est à confirmer.
 - **Lecture du statut Argo CD** (FR-012 du PRD de Sluis) : Flux étant retenu,
   l'outil MCP correspondant devra lire le statut de Flux. À reprendre dans le
   PRD.
-- **Avant K3s.** L'opérateur suppose Kubernetes (étape 8 d'ADR-033) ; la recette
-  VPS (étape 3) déploie par Coolify. Comment Keycloak est-il déployé d'ici là :
-  conteneur sous Coolify, configuré par le même fournisseur OpenTofu qui parle à
-  son API quel que soit le mode de déploiement, ou pas de Keycloak avant K3s ?
+- **Seuil de la règle « avant K3s »** : qu'est-ce qui compte comme « vrais
+  utilisateurs » (premier client, première inscription publique) ; la règle
+  est tranchée (point 11), son déclencheur reste à préciser.
 - **Place dans ADR-033.** Après les trois premières étapes, sans les bloquer :
   étape nouvelle, ou sous-étape de la recette VPS ou de l'étape 5 (backend
   chiffré, qui touche aussi l'identifiant de personne) ?
