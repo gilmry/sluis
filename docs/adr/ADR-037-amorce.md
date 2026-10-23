@@ -1,6 +1,6 @@
 # ADR-037 : Le problème de l'amorce
 
-- **Statut** : Proposé le 2026-10-22, non contresigné.
+- **Statut** : Proposé le 2026-10-22, contresigné le 2026-10-23.
 - **Décisions du superviseur du 2026-10-23**, intégrées au texte : la supervision passe avant OpenBao (phases 5 et 6 inversées, alignement sur ADR-035) ; le destinataire SOPS humain est la sous-clé de chiffrement GPG (ADR-040).
 - **Irréversible** : en partie. L'ordre et les invariants se révisent comme tout ADR. Mais l'amorce produit les ancres d'ADR-015 et d'ADR-017 (clé GPG maîtresse, racine de step-ca, parts de secours d'OpenBao), dont le remplacement est déjà qualifié d'irréversible par ces ADR ; et un secret exposé pendant l'amorce est compromis pour toujours, comme un secret poussé en clair (ADR-016).
 - **S'articule avec** : ADR-014 (la zone de confiance qu'il faut mettre debout, la zone 3 où vivent les ancres), ADR-015 (YubiKeys, racine et intermédiaire de step-ca), ADR-016 (SOPS et age, destination de la plupart des secrets d'amorce), ADR-017 (OpenBao, déverrouillage par le KMS d'OVHcloud, parts de secours), ADR-010 (OpenTofu loue les machines), ADR-013 (clé SSH de signature des approbations), ADR-023 (supervision et témoin externe), ADR-024 (l'agent IA n'a aucun droit), ADR-032 (Ansible, certificats SSH courts), ADR-033 (étapes 1 et 2). Renvoie à ADR-035 (reprise après perte totale) et ADR-036 (exercices de reprise).
