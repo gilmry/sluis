@@ -53,6 +53,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-033](ADR-033-feuille-de-route.md) | Feuille de route, huit étapes utilisables seules | non | proposée le 2026-10-21, non contresignée · **amendée le 2026-10-21** : un VPS de plus à l'étape 2 ; étape 6 renommée (proposé, non contresigné) |
 | [ADR-034](ADR-034-contrat-du-depot-cible.md) | Le contrat du dépôt cible : une skill Foyer génère, Sluis valide puis exécute | **oui** | **contresignée le 2026-10-21** |
 | [ADR-035](ADR-035-reconstruction-zone-2.md) | Sauvegarde et reconstruction des briques communes de la zone de confiance : Git reconstruit, la sauvegarde restaure l'état unique | **oui**, en partie (stockage verrouillé, identités qui déchiffrent) | proposée le 2026-10-22, **contresignée le 2026-10-23** |
+| [ADR-036](ADR-036-exercices-de-reprise.md) | Exercices de reprise trimestriels, la plateforme se reconstruit et quelqu'un d'autre sait le faire | non | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
