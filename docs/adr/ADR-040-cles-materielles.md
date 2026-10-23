@@ -1,11 +1,11 @@
 # ADR-040 : Gestion des clés matérielles, trois YubiKeys, une copie papier, une station hors ligne
 
 - **Statut** : Proposé le 2026-10-22, non contresigné.
-- **Décision du superviseur du 2026-10-23**, intégrée au point 2 : le destinataire SOPS humain est la sous-clé de chiffrement GPG (amende ADR-016 sur ce point).
+- **Décisions du superviseur du 2026-10-23** : partage à seuil 2 sur 3 de la phrase de passe GPG (point 7) ; intégrée au point 2 : le destinataire SOPS humain est la sous-clé de chiffrement GPG (amende ADR-016 sur ce point).
 - **Amende ADR-015** : trois YubiKeys au lieu de deux (point 1 d'ADR-015, « deux YubiKeys : une d'usage, une de secours »). Le reste d'ADR-015 est inchangé.
 - **Irréversible** : en partie. **Oui** pour ce que les clés ancrent : la clé GPG maîtresse, la racine de step-ca et les identités qui déchiffrent les secrets et les sauvegardes, déjà qualifiées d'irréversibles par ADR-015, ADR-016 et ADR-035 (proposé) ; une copie papier perdue ou un partage à seuil distribué ne se rattrape pas, il se remplace par une cérémonie complète. **Non** pour le nombre de clés, leurs lieux et la cadence de vérification, qui se révisent sans re-signer quoi que ce soit.
 - **S'articule avec** : ADR-013 (clé SSH de signature `ed25519-sk` des approbations, `allowed_signers` de chaque cible), ADR-014 (les YubiKeys et leur copie de secours vivent en zone 3), ADR-015 (qu'il amende), ADR-016 (destinataires SOPS et age), ADR-017 (parts de secours d'OpenBao, en zone 3), ADR-025 (signal de succès des tâches récurrentes), ADR-033 (étape 1) ; ADR-035 (proposé) (sauvegardes de la zone 2 chiffrées vers les seules identités humaines) ; ADR-037 (proposé) (cérémonie hors ligne, phase 1 de l'amorce, ancres en zone 3).
-- **Sert la vision (ADR-000)** : principe n°2, parce que chaque clé rangée est vérifiée à date fixe et qu'une vérification manquée alerte ; principe n°3, parce qu'une clé de secours ne vaut que par un essai réussi, pas par sa présence dans un tiroir ; principe n°4, parce que le partage à seuil reste une option tant que son coût n'est pas justifié ; règle « aucune brique ne détient tout », parce qu'aucun lieu ne réunit une clé et ce qui l'ouvre.
+- **Sert la vision (ADR-000)** : principe n°2, parce que chaque clé rangée est vérifiée à date fixe et qu'une vérification manquée alerte ; principe n°3, parce qu'une clé de secours ne vaut que par un essai réussi, pas par sa présence dans un tiroir ; principe n°4, parce que le partage à seuil se limite à un seul petit secret, en 2 sur 3 ; règle « aucune brique ne détient tout », parce qu'aucun lieu ne réunit une clé et ce qui l'ouvre.
 
 ## Contexte
 
@@ -136,8 +136,23 @@ des sous-clés.
 Chaque vérification produit une trace datée, signée par la clé vérifiée. Une
 tâche planifiée (ADR-025) attend cette trace : son absence à l'échéance alerte.
 
-**7. Partage de secret à seuil : une option documentée, non décidée.** Voir
-Alternatives et Points ouverts. Cet ADR ne le met pas en œuvre.
+**7. Partage de secret à seuil, 2 sur 3, sur la seule phrase de passe de la
+clé maîtresse GPG** (décision du superviseur du 2026-10-23). Trois parts :
+**le superviseur, le coffre, la personne de confiance**. Deux parts suffisent
+à reconstituer la phrase de passe ; une seule ne livre rien.
+
+- Le partage s'ajoute à la copie papier, il ne la remplace pas. Aucun lieu ne
+  réunit seul une clé et ce qui l'ouvre : le coffre garde le support de la clé
+  maîtresse et une part ; la personne de confiance garde le papier et une
+  part ; il faut les deux, ou l'un des deux et le superviseur.
+- La clé maîtresse elle-même, la racine de step-ca et les parts de secours
+  d'OpenBao ne sont pas partagées : OpenBao fait déjà son propre partage
+  (ADR-017).
+- La reconstitution est **exercée** : au moins une fois par an, avec la
+  vérification des clés (point 6), sur la station hors ligne, sans révéler la
+  phrase de passe hors de celle-ci. L'essai laisse une trace datée.
+- L'outil reste à choisir : `ssss` (Shamir) convient à un secret court comme
+  une phrase de passe ; son entretien est **à évaluer** avant la cérémonie.
 
 **8. Les gestes sont réservés au superviseur.** L'achat des clés, leur
 configuration, la cérémonie, le dépôt au coffre, le choix des lieux et de la
@@ -169,7 +184,9 @@ aucun secret, exécute.
   achat ; ADR-015 a été écrit pour des YubiKeys. Écartée pour ce lot faute
   d'évaluation, pas sur le fond (point ouvert).
 - **Partage de secret à seuil comme mécanisme principal, à la place de la
-  copie papier.** Non décidé, présenté ici avec ses pour et contre :
+  copie papier, ou sur un secret plus large, ou en 3 sur 5.** Écarté le
+  2026-10-23 au profit du 2 sur 3 sur la seule phrase de passe (point 7). Pour
+  mémoire, les pour et contre examinés :
   - *Ce qu'il partagerait* : la phrase de passe de la clé maîtresse et des
     supports du coffre (petit secret, le plus simple) ; ou la clé maîtresse
     elle-même (plus lourd) ; ou les parts de secours d'OpenBao, qu'OpenBao
@@ -206,9 +223,10 @@ aucun secret, exécute.
   identités auraient disparu avec les trois clés, et avec elles les secrets et
   les sauvegardes d'ADR-035 (proposé). C'est la raison du choix de la sous-clé
   GPG (décision du 2026-10-23).
-- **Limite, la phrase de passe.** Sans partage à seuil, la phrase de passe de la
-  clé maîtresse ne vit que dans la mémoire du superviseur. Le papier et les
-  supports du coffre ne servent qu'à lui.
+- **La phrase de passe ne vit plus dans une seule mémoire** (point 7) : le
+  coffre et la personne de confiance, ensemble, permettent une reprise sans le
+  superviseur. En contrepartie, ces deux détenteurs réunis peuvent tout
+  ouvrir : leur choix et leur indépendance l'un de l'autre comptent.
 - **Limite, porteur seul.** Trois clés protègent contre la perte, pas contre
   l'absence de second regard ; la personne de confiance garde un objet, elle ne
   contrôle rien (mesure compensatoire, `foyer/skills/conformite.md` §2bis).
@@ -247,8 +265,8 @@ Renvoi à `foyer/skills/conformite.md` §2bis et §2ter :
 - **Supports de la clé maîtresse disparus avec B** : faut-il remplacer la clé
   maîtresse d'office, comme pour la copie papier, ou se fier à la phrase de
   passe ?
-- **Partage à seuil** : retenir ou non l'option, sur quel secret, avec quel
-  seuil, quels détenteurs et quel outil. Décision du superviseur.
+- **Partage à seuil** : outil (`ssss` à évaluer), forme des parts (papier,
+  support), et procédure si un détenteur change.
 - **Lieu de C** par rapport à la personne de confiance : deux lieux distincts
   sont supposés ici ; à confirmer.
 - **Autre marque de clé** : évaluer une Nitrokey sur OpenPGP, `ed25519-sk` et
