@@ -9,6 +9,7 @@ pub mod charge;
 pub mod composition;
 pub mod derogation_depot;
 pub mod diagnostic;
+pub mod etiquette_signee;
 pub mod fs_charge;
 pub mod fs_inventaire;
 pub mod gates_github;
