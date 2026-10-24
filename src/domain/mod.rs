@@ -15,6 +15,7 @@ pub mod error;
 pub mod etiquette_signee;
 pub mod inventaire;
 pub mod jeton_acces;
+pub mod module_tofu;
 pub mod oauth;
 pub mod ovh;
 pub mod redacted;
@@ -43,6 +44,7 @@ pub use inventaire::{
     Cellule, Environnement, MatriceInfrastructure, ModuleTerraform, ProfilCluster, Topologie,
 };
 pub use jeton_acces::{hmac_sha256, Revendications};
+pub use module_tofu::{verifier_module, Construction, FichierModule, ModuleSoumis, Violation};
 pub use oauth::{
     base64url_sans_remplissage, empreinte_sha256, verifier_pkce, ClientOAuth, CodeAutorisation,
     DemandeCode, JetonRafraichissement, Portee,

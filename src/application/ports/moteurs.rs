@@ -1,7 +1,8 @@
 //! Ports des moteurs d'exécution externes.
 
 use crate::domain::{
-    AppError, BailBacASable, MutationTerraform, PlanTerraform, StatutArgocd, StatutHelm, ValeurSure,
+    AppError, BailBacASable, ModuleSoumis, MutationTerraform, PlanTerraform, StatutArgocd,
+    StatutHelm, ValeurSure,
 };
 
 /// Sortie brute d'un processus.
@@ -38,6 +39,20 @@ pub trait Executeur: Send + Sync {
         arguments: &[String],
         dossier: Option<&str>,
     ) -> Result<SortieProcessus, AppError>;
+}
+
+/// Lit un module OpenTofu pour qu'il soit vérifié avant d'être lancé.
+///
+/// Séparé du moteur pour que la vérification reste pure : l'adaptateur lit,
+/// le domaine juge, et le pilote n'appelle l'exécuteur qu'après un verdict
+/// vide (ADR-034, point 3).
+pub trait LecteurModule: Send + Sync {
+    /// Rend les fichiers du module et ceux des modules partagés qu'il peut
+    /// appeler, chemins relatifs à la racine du dépôt.
+    ///
+    /// Refuse (`AppError::CheminHorsRacine`) un module qui ne descend d'aucune
+    /// racine autorisée.
+    fn lire(&self, module: &ValeurSure) -> Result<ModuleSoumis, AppError>;
 }
 
 /// Pilote le moteur d'infrastructure as code.

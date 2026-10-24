@@ -53,6 +53,14 @@ depot_derogation = "/app/donnees/sluis-derogation.json"
 # fenêtre qu'une fois (ADR-012, partie 3). Même volume, même raison.
 registre_renouvellements = "/app/donnees/sluis-renouvellements.json"
 
+# Fournisseurs OpenTofu qu'un module a le droit de verrouiller (ADR-034,
+# point 3), par adresse complète telle qu'elle figure dans
+# `.terraform.lock.hcl`. **Vide, tout module est refusé** avant le moindre
+# appel à `tofu` : le contenu initial de cette liste est un point ouvert
+# d'ADR-034, à trancher par le superviseur.
+[tofu]
+fournisseurs_autorises = []
+
 [journal]
 chemin = "/app/donnees/sluis-audit.jsonl"
 

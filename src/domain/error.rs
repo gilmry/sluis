@@ -70,6 +70,14 @@ pub enum AppError {
         raison: String,
     },
 
+    /// Un module OpenTofu sort du contrat d'ADR-034 (point 3).
+    ///
+    /// Le refus a lieu **avant toute commande `tofu`** : un module qui y
+    /// manque n'est ni initialisé, ni planifié, ni appliqué. Chaque motif
+    /// nomme le fichier, la ligne et la construction refusée.
+    #[error("module OpenTofu « {module} » refusé : {motifs}")]
+    ModuleRefuse { module: String, motifs: String },
+
     /// Un service tiers a répondu une erreur.
     #[error("erreur du service {service} : {detail}")]
     ServiceTiers { service: String, detail: String },

@@ -28,7 +28,7 @@ impl FsInventaire {
         Self
     }
 
-    fn canoniser_racine(racine: &str) -> Result<PathBuf, AppError> {
+    pub(crate) fn canoniser_racine(racine: &str) -> Result<PathBuf, AppError> {
         let chemin = Path::new(racine);
         let canonique = chemin.canonicalize().map_err(|e| AppError::EntreeSortie {
             chemin: racine.to_string(),
@@ -43,7 +43,7 @@ impl FsInventaire {
     }
 
     /// Vrai si `chemin` descend bien de `racine` une fois canonisé.
-    fn dans_racine(racine: &Path, chemin: &Path) -> bool {
+    pub(crate) fn dans_racine(racine: &Path, chemin: &Path) -> bool {
         match chemin.canonicalize() {
             Ok(canonique) => canonique.starts_with(racine),
             Err(_) => false,

@@ -27,6 +27,9 @@ pub struct FichierConfiguration {
     /// Section journal.
     #[serde(default)]
     pub journal: SectionJournal,
+    /// Section OpenTofu : ce qu'un module doit respecter pour être lancé.
+    #[serde(default)]
+    pub tofu: SectionTofu,
     /// Section GitHub : la passerelle d'approbation (ADR-008, ADR-012).
     ///
     /// **Absente par défaut** : sans elle, aucune passerelle n'est composée et
@@ -205,6 +208,20 @@ impl Default for SectionBacASable {
             registre_renouvellements: registre_renouvellements_par_defaut(),
         }
     }
+}
+
+/// Réglages d'OpenTofu (ADR-034, point 3).
+#[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SectionTofu {
+    /// Fournisseurs qu'un module a le droit de verrouiller, adresse complète
+    /// telle qu'elle figure dans `.terraform.lock.hcl`, par exemple
+    /// `registry.opentofu.org/terraform-provider-openstack/openstack`.
+    ///
+    /// **Vide par défaut, donc tout module est refusé.** Son contenu initial
+    /// est un point ouvert d'ADR-034, pas une valeur que le code choisit.
+    #[serde(default)]
+    pub fournisseurs_autorises: Vec<String>,
 }
 
 /// Réglages du journal d'audit.
