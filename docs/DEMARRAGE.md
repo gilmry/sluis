@@ -238,6 +238,61 @@ où redistribuer du BSL serait contradictoire. OpenTofu (MPL-2.0) lit les mêmes
 fichiers `.tf` et rend les mêmes résumés. Le binaire s'appelle `tofu`, et c'est
 sous ce nom que l'allowlist et `sluis_doctor` le connaissent.
 
+## Sur une cible à dépôt privé : le tireur d'étiquette signée
+
+Pour un dépôt privé, l'approbation est une étiquette `approuve/<empreinte
+courte>` signée par la clé du superviseur (ADR-013), et c'est le tireur de la
+**cible** qui la vérifie. Sluis en fournit le gabarit,
+`tools/tireur-etiquette-signee.sh.example`, à recopier sur la cible. Il se
+lance à la place de la commande de déploiement du cron, ou se `source` depuis
+le tireur existant (`etiquette_approuvee <commit>` avant tout déploiement).
+
+La seule pièce sensible est `allowed_signers`. Le tireur **refuse de
+démarrer** s'il est dans le dépôt (liens symboliques résolus), s'il est
+inscriptible par le compte qui déploie, par le groupe ou par les autres, si ce
+compte possède le fichier ou son répertoire, ou si le tireur tourne en root.
+
+```sh
+# Un compte dédié qui déploie, jamais root
+sudo useradd --system --create-home deployeur
+
+# allowed_signers hors du dépôt, à root, en lecture seule pour le déployeur,
+# ne contenant QUE la clé de signature du superviseur (ADR-013, étape 6)
+sudo install -d -o root -g root -m 755 /etc/tireur
+echo "superviseur@exemple.org ssh-ed25519 AAAA..." \
+  | sudo install -o root -g root -m 644 /dev/stdin /etc/tireur/allowed_signers
+
+# Registre des empreintes consommées et journal, au déployeur
+sudo install -d -o deployeur -m 750 /var/lib/tireur /var/log/tireur
+
+# Le gabarit, à root lui aussi
+sudo install -o root -g root -m 755 tools/tireur-etiquette-signee.sh.example \
+  /usr/local/bin/tireur-etiquette-signee
+```
+
+Le cron du déployeur, quand la branche suivie a avancé :
+
+```sh
+TIREUR_ENVIRONNEMENT=production \
+TIREUR_DEPOT=/srv/deploiement/depot \
+TIREUR_ALLOWED_SIGNERS=/etc/tireur/allowed_signers \
+TIREUR_REGISTRE=/var/lib/tireur/empreintes-consommees \
+TIREUR_JOURNAL=/var/log/tireur/tireur.log \
+TIREUR_DEPLOIEMENT=/usr/local/bin/deployer \
+  tireur-etiquette-signee "$(git -C /srv/deploiement/depot rev-parse origin/main)"
+```
+
+Codes de sortie : `0` déployé, `1` étiquette refusée, `2` configuration
+refusée, `3` déploiement en échec. Chaque refus écrit une ligne `ERREUR` avec
+son motif (`non_signee`, `cle_inconnue`, `perimee`, `deja_consommee`,
+`autre_commit`, `autre_environnement`, `message_mal_forme`…) : à brancher sur
+la supervision, un tireur qui refuse en silence n'existe pas. L'empreinte est
+consignée **avant** l'appel du déploiement : un déploiement en échec consomme
+l'étiquette, et le superviseur en signe une nouvelle.
+
+Les tests (`make test-tireur`, en conteneur) rejouent les quatre classes de la
+story 13.2, dont le témoin d'environnement du garde-fou 6.
+
 ## Ce que ce déploiement ne fait pas encore
 
 - **Pas de mutation de production, d'aucune sorte.** Le Tier 1 reste derrière
