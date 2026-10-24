@@ -440,3 +440,121 @@ workflow = "tier1-apply.yml"
         );
     }
 }
+
+// ── Story 13.1 (#24) : passerelle par étiquette signée choisie par configuration ──
+
+mod etiquette_signee {
+    use sluis::configuration::{Configuration, TypePasserelle};
+    use sluis::infrastructure::composition::{
+        outil_ouverture_derogation_si_configure, outils_mise_en_ligne_si_configures,
+        passerelle_github_si_configuree, EtatPasserelle,
+    };
+
+    const ETIQUETTE: &str = r#"
+[github]
+proprietaire = "gilmry"
+depot = "cible-privee"
+passerelle = "etiquette-signee"
+
+[github.gates]
+secrets = "Secrets"
+sbom = "SBOM"
+scan_conteneur = "Scan image"
+"#;
+
+    const JETON: &str = "github_pat_lecture-seule-d-essai";
+
+    fn charger(contenu: &str, nom: &str) -> Result<Configuration, sluis::domain::AppError> {
+        let chemin = std::env::temp_dir().join(format!("sluis-etiquette-{nom}.toml"));
+        std::fs::write(&chemin, contenu).expect("écriture");
+        let resultat = Configuration::charger_avec(Some(&chemin), |variable| {
+            (variable == "SLUIS_GITHUB_TOKEN").then(|| JETON.to_string())
+        });
+        let _ = std::fs::remove_file(&chemin);
+        resultat
+    }
+
+    #[test]
+    fn happy_le_reglage_compose_la_passerelle_par_etiquette() {
+        let configuration = charger(ETIQUETTE, "choisie").expect("chargement");
+        let etat = passerelle_github_si_configuree(&configuration);
+        assert!(
+            matches!(etat, EtatPasserelle::ComposeeEtiquette(_)),
+            "{etat:?}"
+        );
+        assert!(etat.diagnostic().contains("étiquette signée"));
+        assert!(!etat.diagnostic().contains(JETON));
+    }
+
+    #[test]
+    fn happy_sans_reglage_le_defaut_reste_l_environnement_protege() {
+        let defaut = ETIQUETTE.replace(
+            "passerelle = \"etiquette-signee\"",
+            "workflow = \"tier1-apply.yml\"",
+        );
+        let configuration = charger(&defaut, "defaut").expect("chargement");
+        let section = configuration.fichier.github.as_ref().expect("section");
+        assert_eq!(section.passerelle, TypePasserelle::EnvironnementProtege);
+        assert!(matches!(
+            passerelle_github_si_configuree(&configuration),
+            EtatPasserelle::Composee(_)
+        ));
+    }
+
+    #[test]
+    fn negative_le_defaut_sans_workflow_ne_se_charge_pas() {
+        let sans_workflow = ETIQUETTE.replace("passerelle = \"etiquette-signee\"\n", "");
+        assert!(charger(&sans_workflow, "sans-workflow").is_err());
+    }
+
+    #[test]
+    fn negative_une_passerelle_inconnue_ne_se_charge_pas() {
+        let inconnue = ETIQUETTE.replace("etiquette-signee", "etiquette");
+        assert!(charger(&inconnue, "inconnue").is_err());
+    }
+
+    #[test]
+    fn edge_la_mise_en_ligne_est_exposee_mais_pas_le_renouvellement() {
+        let configuration = charger(ETIQUETTE, "outils").expect("chargement");
+        let noms: Vec<&str> = outils_mise_en_ligne_si_configures(
+            &configuration,
+            passerelle_github_si_configuree(&configuration),
+            super::horloge(),
+        )
+        .iter()
+        .map(|o| o.nom())
+        .collect();
+        assert_eq!(noms, vec!["sluis_mise_en_ligne", "sluis_etat_approbation"]);
+    }
+
+    #[test]
+    fn edge_l_executant_n_ouvre_pas_de_derogation_sur_cette_passerelle() {
+        let executant = format!(
+            "[ovh]\nprojets_bac_a_sable = [\"bac\"]\n\n[bac_a_sable]\n\
+             depots_autorises = [\"/depots/cible/infrastructure\"]\n{ETIQUETTE}"
+        );
+        let configuration = charger(&executant, "executant").expect("chargement");
+        let ouverture = outil_ouverture_derogation_si_configure(
+            &configuration,
+            b"secret-de-signature",
+            passerelle_github_si_configuree(&configuration),
+            super::horloge(),
+        )
+        .expect("composition");
+        assert!(ouverture.is_none());
+    }
+
+    #[test]
+    fn security_aucune_cle_de_signature_ne_se_configure() {
+        for cle in ["cle_signature", "signing_key", "allowed_signers"] {
+            let avec_cle = ETIQUETTE.replace(
+                "passerelle = \"etiquette-signee\"",
+                &format!("passerelle = \"etiquette-signee\"\n{cle} = \"~/.ssh/signature_git\""),
+            );
+            assert!(
+                charger(&avec_cle, cle).is_err(),
+                "« {cle} » ne doit pas être une clé de configuration"
+            );
+        }
+    }
+}

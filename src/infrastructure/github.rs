@@ -209,6 +209,7 @@ impl PasserelleApprobation for PasserelleGithub {
                     "https://github.com/{}/{}/actions/workflows/{}",
                     self.proprietaire, self.depot, self.workflow
                 ),
+                commande: None,
             }),
             Err(ureq::Error::StatusCode(404)) => Err(self.erreur(format!(
                 "workflow « {} » introuvable, ou dépôt sans environnement protégé : \
@@ -259,6 +260,7 @@ impl PasserelleApprobation for PasserelleGithub {
                     .and_then(|u| u.as_str())
                     .unwrap_or_default()
                     .to_string(),
+                commande: None,
             });
         }
 

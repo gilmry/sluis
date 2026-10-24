@@ -12,7 +12,8 @@ CARGO ?= cargo
 
 .DEFAULT_GOAL := aide
 
-.PHONY: aide setup fmt fmt-check lint test doc ci secret-scan sbom purete
+.PHONY: aide setup fmt fmt-check lint test doc ci secret-scan sbom purete \
+	shellcheck test-tireur
 
 aide: ## Affiche cette aide
 	@grep -hE '^[a-z][a-zA-Z0-9_-]*:.*?## ' $(MAKEFILE_LIST) \
@@ -55,6 +56,31 @@ sbom: ## Produit la nomenclature CycloneDX (plancher)
 		echo "cargo-cyclonedx absent : gate non jouée en local, la CI la joue."; \
 		echo "Installation : cargo install cargo-cyclonedx"; \
 	fi
+
+# Les scripts shell livrés. shellcheck local s'il existe, sinon son image :
+# on ne saute pas la vérification faute d'outil.
+SCRIPTS_SH := tools/tireur-etiquette-signee.sh.example tests/tireur/tests.sh
+SHELLCHECK_IMAGE ?= koalaman/shellcheck:stable
+
+shellcheck: ## shellcheck des scripts du tireur (plancher)
+	@if command -v shellcheck >/dev/null 2>&1; then \
+		shellcheck --shell=bash $(SCRIPTS_SH); \
+	else \
+		docker run --rm -v "$(CURDIR):/mnt:ro" -w /mnt $(SHELLCHECK_IMAGE) \
+			--shell=bash $(SCRIPTS_SH); \
+	fi
+
+# Le harnais exige root et deux comptes (root possède allowed_signers, nobody
+# déploie) : il tourne donc dans un conteneur jetable, en local comme en CI,
+# et jamais en root sur la machine de travail.
+TIREUR_IMAGE ?= debian:stable-slim
+
+test-tireur: ## Tests du tireur d'étiquette signée (ADR-013), en conteneur
+	docker run --rm -v "$(CURDIR):/src:ro" -w /src $(TIREUR_IMAGE) bash -c '\
+		apt-get update -qq >/dev/null && \
+		DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+			git openssh-client >/dev/null && \
+		bash tests/tireur/tests.sh'
 
 ci: fmt-check lint test secret-scan sbom ## Chaîne complète, celle que la CI rejoue
 	@echo ""
