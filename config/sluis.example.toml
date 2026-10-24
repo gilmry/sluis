@@ -53,6 +53,12 @@ chemin = "sluis-audit.jsonl"
 # workflow = "tier1-apply.yml"
 # branche = "main"
 #
+# Sur un dépôt privé (ADR-013) : approbation par étiquette git signée par le
+# superviseur. Aucun workflow n'est déclenché, `workflow` est alors inutile, le
+# jeton doit être en LECTURE seule, et aucune clé de signature ne se configure
+# ici. Absent : environnement-protege (ADR-008).
+# passerelle = "etiquette-signee"
+#
 # Gates du plancher : nom du check-run qui porte chacune dans la CI du dépôt
 # cible. Les trois premières sont requises ; seul `completed` + `success` est
 # vert, une gate absente compte rouge. Sans cette sous-section, aucune mise en

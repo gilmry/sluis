@@ -47,9 +47,11 @@ pub struct ArgumentsEtatApprobation {
 const CONTRAT_MISE_EN_LIGNE: Contrat<ArgumentsMiseEnLigne> = Contrat::new(
     "sluis_mise_en_ligne",
     "Demande la mise en ligne d'une référence du projet configuré. Vérifie les \
-     gates du plancher puis soumet un plan de Tier 1 à approbation humaine dans \
-     un environnement GitHub protégé. Ne met rien en ligne par lui-même : rend \
-     l'empreinte du plan, à suivre avec sluis_etat_approbation.",
+     gates du plancher puis soumet un plan de Tier 1 à approbation humaine : \
+     environnement GitHub protégé, ou, sur un dépôt privé, étiquette git signée \
+     par le superviseur (la commande exacte est rendue). Ne met rien en ligne \
+     par lui-même : rend l'empreinte du plan, à suivre avec \
+     sluis_etat_approbation.",
 );
 
 /// `sluis_renouvellement_derogation` — aucun argument.
@@ -70,8 +72,9 @@ const CONTRAT_RENOUVELLEMENT: Contrat<ArgumentsRenouvellement> = Contrat::new(
 
 const CONTRAT_ETAT: Contrat<ArgumentsEtatApprobation> = Contrat::new(
     "sluis_etat_approbation",
-    "Rend l'état d'une demande soumise par sluis_mise_en_ligne : en attente, \
-     approuvée (avec l'approbateur rapporté par GitHub), refusée ou échouée.",
+    "Rend l'état d'une demande soumise par sluis_mise_en_ligne : en attente \
+     (avec, sur un dépôt privé, la commande de signature à exécuter), approuvée \
+     (avec l'approbateur rapporté par GitHub), refusée ou échouée.",
 );
 
 fn analyser<T: serde::de::DeserializeOwned>(
@@ -86,9 +89,16 @@ fn analyser<T: serde::de::DeserializeOwned>(
 
 fn etat_en_json(etat: &EtatApprobation) -> serde_json::Value {
     match etat {
-        EtatApprobation::EnAttente { run, url } => {
-            json!({ "etat": "en_attente", "run": run, "url": url })
-        }
+        EtatApprobation::EnAttente {
+            run,
+            url,
+            commande: None,
+        } => json!({ "etat": "en_attente", "run": run, "url": url }),
+        EtatApprobation::EnAttente {
+            run,
+            url,
+            commande: Some(commande),
+        } => json!({ "etat": "en_attente", "run": run, "url": url, "commande": commande }),
         EtatApprobation::Approuvee { approbateur, run } => {
             json!({ "etat": "approuvee", "approbateur": approbateur, "run": run })
         }

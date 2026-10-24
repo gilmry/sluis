@@ -48,8 +48,16 @@ pub struct SectionGithub {
     pub proprietaire: String,
     /// Dépôt cible, celui qui porte le workflow de Tier 1.
     pub depot: String,
+    /// Passerelle d'approbation : `environnement-protege` (ADR-008, le
+    /// défaut) ou `etiquette-signee` (ADR-013, pour un dépôt privé).
+    #[serde(default)]
+    pub passerelle: TypePasserelle,
     /// Fichier du workflow de Tier 1, par exemple `tier1-apply.yml`.
-    pub workflow: String,
+    ///
+    /// Requis par la passerelle `environnement-protege`, ignoré par
+    /// `etiquette-signee`, qui ne déclenche aucun workflow.
+    #[serde(default)]
+    pub workflow: Option<String>,
     /// Branche sur laquelle le workflow est déclenché.
     #[serde(default = "branche_par_defaut")]
     pub branche: String,
@@ -62,6 +70,19 @@ pub struct SectionGithub {
     /// ne peut être demandée.
     #[serde(default)]
     pub gates: Option<SectionGatesGithub>,
+}
+
+/// Les deux passerelles d'approbation de Tier 1.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum TypePasserelle {
+    /// Environnement GitHub protégé à relecteurs requis (ADR-008). Le défaut.
+    #[default]
+    EnvironnementProtege,
+    /// Étiquette git signée par le superviseur (ADR-013). Le jeton n'y sert
+    /// qu'à lire : aucun workflow déclenché, aucune étiquette poussée, aucune
+    /// clé de signature lue ni configurée dans Sluis.
+    EtiquetteSignee,
 }
 
 /// Correspondance entre les gates du plancher et les check-runs de la CI cible.
@@ -279,6 +300,20 @@ impl Configuration {
             }
             _ => FichierConfiguration::default(),
         };
+
+        if let Some(github) = &fichier.github {
+            if github.passerelle == TypePasserelle::EnvironnementProtege
+                && github
+                    .workflow
+                    .as_deref()
+                    .is_none_or(|w| w.trim().is_empty())
+            {
+                return Err(AppError::Configuration {
+                    detail: "[github] : la passerelle environnement-protege exige `workflow`"
+                        .to_string(),
+                });
+            }
+        }
 
         let autorisation = ListeAutorisation::new(
             fichier.ovh.projets_production.clone(),

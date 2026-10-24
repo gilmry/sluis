@@ -12,6 +12,7 @@ pub mod charge_declaree;
 pub mod convergence;
 pub mod diagnostic;
 pub mod error;
+pub mod etiquette_signee;
 pub mod inventaire;
 pub mod jeton_acces;
 pub mod module_tofu;
@@ -35,6 +36,10 @@ pub use charge_declaree::{CibleCapacite, DeclarationCharge, Verdict};
 pub use convergence::{etablir as etablir_convergence, PreuveConvergence};
 pub use diagnostic::{EtatBinaire, Identifiant, Moteur, RapportDiagnostic};
 pub use error::AppError;
+pub use etiquette_signee::{
+    commande_signature, nom_etiquette_approbation, MessageEtiquette, FORMAT_MESSAGE_ETIQUETTE,
+    PREFIXE_ETIQUETTE_APPROBATION,
+};
 pub use inventaire::{
     Cellule, Environnement, MatriceInfrastructure, ModuleTerraform, ProfilCluster, Topologie,
 };

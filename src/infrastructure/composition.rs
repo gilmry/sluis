@@ -11,11 +11,12 @@ use crate::application::campagne::Campagne;
 use crate::application::mise_en_ligne::MiseEnLigne;
 use crate::application::ouverture_derogation::OuvertureDerogation;
 use crate::application::ports::{GatePlancher, Horloge};
-use crate::configuration::Configuration;
+use crate::configuration::{Configuration, TypePasserelle};
 use crate::domain::{AppError, Duree, PlafondDepense};
 use crate::infrastructure::bac_a_sable::BacASableIac;
 use crate::infrastructure::charge::Wrk;
 use crate::infrastructure::derogation_depot::DepotDerogationFichier;
+use crate::infrastructure::etiquette_signee::PasserelleEtiquetteSignee;
 use crate::infrastructure::fs_charge::FsCharge;
 use crate::infrastructure::fs_module_tofu::FsModuleTofu;
 use crate::infrastructure::gates_github::VerificateurGatesGithub;
@@ -96,8 +97,13 @@ pub fn outil_campagne_si_configure(
 /// Ce que la composition a pu faire de la passerelle GitHub.
 #[derive(Debug)]
 pub enum EtatPasserelle {
-    /// La section et le jeton sont présents : la passerelle est composée.
+    /// La section et le jeton sont présents : la passerelle d'ADR-008 est
+    /// composée.
     Composee(PasserelleGithub),
+    /// La section demande `passerelle = "etiquette-signee"` et le jeton est
+    /// présent : la passerelle d'ADR-013 est composée. Elle ne porte que la
+    /// mise en ligne.
+    ComposeeEtiquette(PasserelleEtiquetteSignee),
     /// Pas de section `[github]` : le défaut sûr, ce n'est pas une panne.
     NonConfiguree,
     /// Une section `[github]` sans jeton : une intention de soumettre que le
@@ -110,6 +116,9 @@ impl EtatPasserelle {
     pub fn diagnostic(&self) -> String {
         match self {
             EtatPasserelle::Composee(passerelle) => format!("passerelle GitHub : {passerelle:?}"),
+            EtatPasserelle::ComposeeEtiquette(passerelle) => {
+                format!("passerelle GitHub par étiquette signée : {passerelle:?}")
+            }
             EtatPasserelle::NonConfiguree => "passerelle GitHub : non configurée".to_string(),
             EtatPasserelle::JetonManquant => {
                 "passerelle GitHub : section [github] présente mais SLUIS_GITHUB_TOKEN absent \
@@ -123,6 +132,9 @@ impl EtatPasserelle {
 /// Compose la passerelle d'approbation GitHub (ADR-008, ADR-012), **si et
 /// seulement si** la configuration porte une section `[github]` et que le
 /// jeton est présent.
+///
+/// `passerelle = "etiquette-signee"` choisit celle d'ADR-013 ; sans ce
+/// réglage, c'est celle d'ADR-008, inchangée.
 pub fn passerelle_github_si_configuree(configuration: &Configuration) -> EtatPasserelle {
     let Some(section) = configuration.fichier.github.as_ref() else {
         return EtatPasserelle::NonConfiguree;
@@ -130,10 +142,19 @@ pub fn passerelle_github_si_configuree(configuration: &Configuration) -> EtatPas
     let Some(jeton) = configuration.jeton_github.clone() else {
         return EtatPasserelle::JetonManquant;
     };
+    if section.passerelle == TypePasserelle::EtiquetteSignee {
+        return EtatPasserelle::ComposeeEtiquette(PasserelleEtiquetteSignee::new(
+            section.proprietaire.clone(),
+            section.depot.clone(),
+            jeton,
+            section.api.clone(),
+        ));
+    }
     EtatPasserelle::Composee(PasserelleGithub::new(
         section.proprietaire.clone(),
         section.depot.clone(),
-        section.workflow.clone(),
+        // Garanti au chargement pour cette passerelle.
+        section.workflow.clone().unwrap_or_default(),
         section.branche.clone(),
         jeton,
         section.api.clone(),
@@ -190,11 +211,16 @@ pub fn outils_mise_en_ligne_si_configures(
     {
         return Vec::new();
     }
-    let EtatPasserelle::Composee(passerelle) = passerelle else {
-        return Vec::new();
+    // Le renouvellement de la dérogation n'emprunte que la passerelle
+    // d'ADR-008 : l'exécutant en lit la preuve dans les approbations d'un run.
+    let (passerelle, renouvelable): (
+        Arc<dyn crate::application::ports::PasserelleApprobation>,
+        bool,
+    ) = match passerelle {
+        EtatPasserelle::Composee(passerelle) => (Arc::new(passerelle), true),
+        EtatPasserelle::ComposeeEtiquette(passerelle) => (Arc::new(passerelle), false),
+        EtatPasserelle::NonConfiguree | EtatPasserelle::JetonManquant => return Vec::new(),
     };
-    let passerelle: Arc<dyn crate::application::ports::PasserelleApprobation> =
-        Arc::new(passerelle);
 
     let mut outils: Vec<Box<dyn Outil>> = Vec::new();
     if let (Some(verificateur), Some(section)) = (
@@ -207,9 +233,11 @@ pub fn outils_mise_en_ligne_si_configures(
         )));
     }
     outils.push(Box::new(OutilEtatApprobation::new(passerelle.clone())));
-    outils.push(Box::new(OutilRenouvellementDerogation::new(
-        passerelle, horloge,
-    )));
+    if renouvelable {
+        outils.push(Box::new(OutilRenouvellementDerogation::new(
+            passerelle, horloge,
+        )));
+    }
     outils
 }
 
