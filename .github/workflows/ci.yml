@@ -63,6 +63,21 @@ jobs:
           path: "**/*.cdx.json"
           if-no-files-found: error
 
+  tireur:
+    name: Tireur d'étiquette signée (ADR-013)
+    runs-on: ubuntu-latest
+    # Pas de Rust ici : le tireur est un gabarit shell déposé sur la cible.
+    # Les tests tournent dans un conteneur, comme en local, parce qu'ils
+    # exigent root et deux comptes (make test-tireur).
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        run: make shellcheck
+
+      - name: Tests des quatre classes (happy, negative, edge, security)
+        run: make test-tireur
+
   vulnerabilites:
     name: Vulnérabilités des dépendances
     runs-on: ubuntu-latest

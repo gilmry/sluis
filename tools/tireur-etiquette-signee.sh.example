@@ -1,0 +1,366 @@
+#!/usr/bin/env bash
+# Gabarit à déposer sur la CIBLE, pas dans Sluis : le tireur GitOps d'ADR-013.
+#
+# Le cron de la cible lance déjà un tireur qui tire le dépôt et déploie. Pour un
+# dépôt privé, ce tireur ne doit déployer qu'un commit porteur d'une étiquette
+# `approuve/<empreinte courte>` signée par la clé du superviseur. La signature
+# se vérifie ICI, contre un `allowed_signers` conservé sur la cible, hors du
+# dépôt : un workflow, lui, vit dans le dépôt, et qui peut écrire dans le dépôt
+# pourrait le modifier pour sauter la vérification.
+#
+# Usage, depuis le cron, quand la branche suivie a avancé :
+#
+#   TIREUR_ENVIRONNEMENT=production \
+#   TIREUR_DEPOT=/srv/deploiement/depot \
+#   TIREUR_ALLOWED_SIGNERS=/etc/tireur/allowed_signers \
+#   TIREUR_REGISTRE=/var/lib/tireur/empreintes-consommees \
+#   TIREUR_JOURNAL=/var/log/tireur/tireur.log \
+#   TIREUR_DEPLOIEMENT=/usr/local/bin/deployer \
+#     tireur-etiquette-signee.sh <commit>
+#
+# Ou, depuis un tireur existant : `source` ce fichier, puis
+# `etiquette_approuvee <commit>` avant toute commande de déploiement. La
+# fonction rejoue elle-même la vérification de la configuration : on ne peut
+# pas l'appeler en sautant celle-ci.
+#
+# Codes de sortie : 0 déployé ; 1 étiquette refusée ; 2 configuration refusée,
+# le tireur n'a rien lu ; 3 déploiement appelé et en échec.
+#
+# Propriétés, celles qu'exige ADR-013 et que les tests de tests/tireur/
+# rejouent :
+#   - aucune commande de déploiement n'est atteinte avant la vérification ;
+#   - chaque refus est une ERREUR journalisée, avec un motif distinct, jamais
+#     un silence ;
+#   - l'empreinte est consignée AVANT l'appel du déploiement (usage unique) ;
+#   - le journal garde empreinte, commit, clé et horodatage de chaque
+#     déploiement : c'est la preuve datée qu'attend la conformité.
+set -euo pipefail
+
+# Le format du message signé, fixé par le superviseur le 2026-10-23 (ADR-013) :
+# `<environnement> <empreinte>` (l'empreinte complète), deux champs séparés
+# par UNE espace, l'environnement pris dans la liste connue (ADR-009),
+# l'empreinte en 64 caractères hexadécimaux minuscules, soit [0-9a-f]{64}.
+# Tout autre message est refusé, jamais deviné. Sluis construit ce format,
+# le tireur l'analyse : les deux doivent rester alignés.
+readonly TIREUR_ENVIRONNEMENTS_CONNUS='dev|integration|staging|production'
+readonly TIREUR_FORMAT_MESSAGE="^(${TIREUR_ENVIRONNEMENTS_CONNUS}) ([0-9a-f]{64})\$"
+
+# Fraîcheur : 72 h depuis la date de la signature, comme le renouvellement
+# d'ADR-012. La date signée est celle du signataire de l'étiquette (tagger),
+# qui fait partie du contenu signé : la modifier invalide la signature.
+readonly TIREUR_FRAICHEUR_S=$((72 * 3600))
+# Tolérance d'horloge pour une date de signature dans le futur.
+readonly TIREUR_DERIVE_HORLOGE_S=300
+
+# ── Journal ────────────────────────────────────────────────────────────────
+#
+# Une ligne par événement, dans le journal et sur la sortie d'erreur (que le
+# cron capture). Tant que la configuration n'est pas validée, le journal n'est
+# peut-être pas inscriptible : la sortie d'erreur reste alors le seul témoin,
+# et le code de sortie 2 le dit.
+
+_horodatage() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+_journal() {
+  local niveau="$1"; shift
+  local ligne
+  ligne="$(_horodatage) ${niveau} tireur environnement=${TIREUR_ENVIRONNEMENT:-?} $*"
+  printf '%s\n' "$ligne" >&2
+  if [ -n "${_TIREUR_JOURNAL_OK:-}" ]; then
+    printf '%s\n' "$ligne" >> "$TIREUR_JOURNAL"
+  fi
+}
+
+_erreur() { _journal ERREUR "$@"; }
+_info() { _journal INFO "$@"; }
+
+# ── Configuration ──────────────────────────────────────────────────────────
+
+# Journalise seulement : l'appelant rend lui-même le code, pour que `set -e`
+# ne coupe jamais le tireur entre l'erreur et son code de sortie.
+_refus_configuration() {
+  _erreur "refus_configuration motif=$1 ${2:-}"
+}
+
+# Le compte qui déploie ne doit pas pouvoir modifier allowed_signers : sinon
+# n'importe quel code qu'il exécute (une image compromise, une dépendance) se
+# donne le droit d'approuver. On refuse donc si le fichier ou son répertoire
+# lui sont inscriptibles, s'il en est propriétaire (il pourrait le chmod), ou
+# si le fichier est inscriptible par le groupe ou les autres.
+_allowed_signers_protege() {
+  local fichier="$1" repertoire uid_courant
+  repertoire="$(dirname "$fichier")"
+  uid_courant="$(id -u)"
+
+  if [ "$uid_courant" -eq 0 ]; then
+    # root peut tout modifier : un tireur lancé en root rend la règle « en
+    # lecture seule pour le compte qui déploie » impossible à tenir.
+    _refus_configuration compte_root "uid=0"
+    return 2
+  fi
+  if [ -w "$fichier" ] || [ "$(stat -c %u "$fichier")" -eq "$uid_courant" ]; then
+    _refus_configuration allowed_signers_modifiable "fichier=$fichier"
+    return 2
+  fi
+  if [ $((8#$(stat -c %a "$fichier") & 8#022)) -ne 0 ]; then
+    _refus_configuration allowed_signers_modifiable "fichier=$fichier droits=$(stat -c %a "$fichier")"
+    return 2
+  fi
+  if [ -w "$repertoire" ] || [ "$(stat -c %u "$repertoire")" -eq "$uid_courant" ]; then
+    _refus_configuration allowed_signers_modifiable "repertoire=$repertoire"
+    return 2
+  fi
+}
+
+verifier_configuration() {
+  _TIREUR_JOURNAL_OK=
+
+  local variable
+  for variable in TIREUR_ENVIRONNEMENT TIREUR_DEPOT TIREUR_ALLOWED_SIGNERS \
+                  TIREUR_REGISTRE TIREUR_JOURNAL TIREUR_DEPLOIEMENT; do
+    if [ -z "${!variable:-}" ]; then
+      _refus_configuration variable_absente "variable=$variable"
+      return 2
+    fi
+  done
+
+  # Le journal d'abord : un refus non traçable ne doit pas avoir lieu.
+  if ! touch "$TIREUR_JOURNAL" 2>/dev/null || [ ! -w "$TIREUR_JOURNAL" ]; then
+    _refus_configuration journal_inscriptible_requis "journal=$TIREUR_JOURNAL"
+    return 2
+  fi
+  _TIREUR_JOURNAL_OK=1
+
+  if ! [[ "$TIREUR_ENVIRONNEMENT" =~ ^(${TIREUR_ENVIRONNEMENTS_CONNUS})$ ]]; then
+    _refus_configuration environnement_inconnu "valeur=$TIREUR_ENVIRONNEMENT"
+    return 2
+  fi
+
+  local depot
+  if ! depot="$(git -C "$TIREUR_DEPOT" rev-parse --show-toplevel 2>/dev/null)"; then
+    _refus_configuration depot_illisible "depot=$TIREUR_DEPOT"
+    return 2
+  fi
+  depot="$(readlink -f "$depot")"
+
+  case "$TIREUR_ALLOWED_SIGNERS" in
+    /*) ;;
+    *) _refus_configuration allowed_signers_chemin_relatif "chemin=$TIREUR_ALLOWED_SIGNERS"
+       return 2 ;;
+  esac
+  local signataires
+  signataires="$(readlink -f "$TIREUR_ALLOWED_SIGNERS" 2>/dev/null || true)"
+  if [ -z "$signataires" ] || [ ! -f "$signataires" ] || [ ! -r "$signataires" ]; then
+    _refus_configuration allowed_signers_illisible "chemin=$TIREUR_ALLOWED_SIGNERS"
+    return 2
+  fi
+
+  # ADR-013, garde-fou 3 : allowed_signers n'est jamais lu depuis le dépôt.
+  # Le chemin est résolu (liens symboliques compris) avant la comparaison.
+  local git_dir
+  git_dir="$(readlink -f "$(git -C "$depot" rev-parse --absolute-git-dir)")"
+  case "$signataires/" in
+    "$depot"/*|"$git_dir"/*)
+      _refus_configuration allowed_signers_dans_depot "chemin=$signataires depot=$depot"
+      return 2 ;;
+  esac
+
+  _allowed_signers_protege "$signataires" || return 2
+
+  if [ ! -x "$TIREUR_DEPLOIEMENT" ]; then
+    _refus_configuration deploiement_non_executable "commande=$TIREUR_DEPLOIEMENT"
+    return 2
+  fi
+  if ! touch "$TIREUR_REGISTRE" 2>/dev/null || [ ! -w "$TIREUR_REGISTRE" ]; then
+    _refus_configuration registre_inscriptible_requis "registre=$TIREUR_REGISTRE"
+    return 2
+  fi
+
+  _TIREUR_DEPOT_RESOLU="$depot"
+  _TIREUR_SIGNATAIRES_RESOLU="$signataires"
+}
+
+# ── Vérification d'une étiquette ───────────────────────────────────────────
+
+_git() { git -C "$_TIREUR_DEPOT_RESOLU" "$@"; }
+
+_refus() {
+  # $1 motif, $2 étiquette, $3 commit, reste : détails
+  local motif="$1" etiquette="$2" commit="$3"; shift 3
+  _erreur "refus motif=$motif etiquette=$etiquette commit=$commit $*"
+}
+
+_deja_consommee() {
+  awk -v e="$1" '$1 == e { trouve = 1 } END { exit trouve ? 0 : 1 }' "$TIREUR_REGISTRE"
+}
+
+# Vérifie UNE étiquette pour UN commit. En cas de succès, renseigne
+# ETIQUETTE_NOM, ETIQUETTE_EMPREINTE, ETIQUETTE_CLE, ETIQUETTE_PRINCIPAL et
+# ETIQUETTE_DATE_SIGNATURE. L'ordre compte : rien de ce que porte l'étiquette
+# (message, date) n'est cru avant que la signature soit vérifiée.
+_verifier_etiquette() {
+  local etiquette="$1" commit="$2" ref="refs/tags/$1" objet sortie
+
+  if [ "$(_git cat-file -t "$ref")" != "tag" ]; then
+    _refus non_signee "$etiquette" "$commit" "detail=etiquette_legere"
+    return 1
+  fi
+  objet="$(_git cat-file tag "$ref")"
+  if ! grep -q -- '^-----BEGIN SSH SIGNATURE-----$' <<< "$objet"; then
+    if grep -q -- '^-----BEGIN PGP SIGNATURE-----$' <<< "$objet"; then
+      _refus signature_non_ssh "$etiquette" "$commit"
+    else
+      _refus non_signee "$etiquette" "$commit"
+    fi
+    return 1
+  fi
+
+  # La décision repose sur le code de sortie de git, pas sur sa sortie texte.
+  # minTrustLevel=fully est redondant pour SSH (une clé absente
+  # d'allowed_signers fait déjà échouer), et c'est voulu.
+  if ! sortie="$(_git -c gpg.format=ssh \
+                      -c gpg.ssh.program=ssh-keygen \
+                      -c gpg.ssh.allowedSignersFile="$_TIREUR_SIGNATAIRES_RESOLU" \
+                      -c gpg.minTrustLevel=fully \
+                      verify-tag --raw "$ref" 2>&1)"; then
+    _refus cle_inconnue "$etiquette" "$commit" \
+      "detail=$(tr '\n' ' ' <<< "$sortie" | tr -s ' ' | sed 's/ $//; s/ /_/g')"
+    return 1
+  fi
+
+  # Message : tout ce qui suit l'en-tête, signature retirée. Il doit tenir en
+  # une seule ligne au format exact.
+  local message
+  message="$(sed '1,/^$/d; /^-----BEGIN SSH SIGNATURE-----$/,$d' <<< "$objet")"
+  if [ "$(printf '%s\n' "$message" | wc -l)" -ne 1 ] \
+     || ! [[ "$message" =~ $TIREUR_FORMAT_MESSAGE ]]; then
+    _refus message_mal_forme "$etiquette" "$commit"
+    return 1
+  fi
+  local environnement="${BASH_REMATCH[1]}" empreinte="${BASH_REMATCH[2]}"
+
+  # Le nom `approuve/<court>` doit être un préfixe de l'empreinte signée : le
+  # nom n'est pas signé, le message l'est, et les deux ne doivent pas dire
+  # deux choses différentes.
+  local court="${etiquette#approuve/}"
+  if ! [[ "$court" =~ ^[0-9a-f]{7,64}$ ]] || [ "${empreinte:0:${#court}}" != "$court" ]; then
+    _refus nom_incoherent "$etiquette" "$commit" "empreinte=$empreinte"
+    return 1
+  fi
+
+  # ADR-013, amendement : une approbation donnée pour un environnement ne vaut
+  # pas pour un autre.
+  if [ "$environnement" != "$TIREUR_ENVIRONNEMENT" ]; then
+    _refus autre_environnement "$etiquette" "$commit" \
+      "empreinte=$empreinte environnement_signe=$environnement"
+    return 1
+  fi
+
+  local date_signature maintenant
+  date_signature="$(_git for-each-ref --format='%(taggerdate:unix)' "$ref")"
+  maintenant="$(date +%s)"
+  if ! [[ "$date_signature" =~ ^[0-9]+$ ]]; then
+    _refus message_mal_forme "$etiquette" "$commit" "detail=date_absente"
+    return 1
+  fi
+  if [ "$date_signature" -gt $((maintenant + TIREUR_DERIVE_HORLOGE_S)) ]; then
+    _refus date_future "$etiquette" "$commit" "empreinte=$empreinte date_signature=$date_signature"
+    return 1
+  fi
+  if [ $((maintenant - date_signature)) -gt "$TIREUR_FRAICHEUR_S" ]; then
+    _refus perimee "$etiquette" "$commit" "empreinte=$empreinte date_signature=$date_signature"
+    return 1
+  fi
+
+  if _deja_consommee "$empreinte"; then
+    _refus deja_consommee "$etiquette" "$commit" "empreinte=$empreinte"
+    return 1
+  fi
+
+  ETIQUETTE_NOM="$etiquette"
+  ETIQUETTE_EMPREINTE="$empreinte"
+  ETIQUETTE_DATE_SIGNATURE="$date_signature"
+  ETIQUETTE_CLE="$(sed -n 's/.* key \(SHA256:[A-Za-z0-9+/=]*\).*/\1/p' <<< "$sortie" | head -n1)"
+  ETIQUETTE_PRINCIPAL="$(sed -n 's/^Good "git" signature for \(.*\) with .*/\1/p' <<< "$sortie" | head -n1)"
+}
+
+# etiquette_approuvee <commit>
+#
+# Rend 0 si une étiquette approuve/* posée sur <commit> passe toutes les
+# vérifications ; 1 sinon, après avoir journalisé une ERREUR par refus ; 2 si
+# la configuration elle-même est refusée.
+etiquette_approuvee() {
+  verifier_configuration || return 2
+
+  local demande="${1:-}" commit
+  if [ -z "$demande" ] || ! commit="$(_git rev-parse --verify --quiet "${demande}^{commit}")"; then
+    _erreur "refus motif=commit_inconnu commit=${demande:-?}"
+    return 1
+  fi
+
+  local candidates etiquette
+  candidates="$(_git tag --points-at "$commit" --list 'approuve/*' --sort=-taggerdate)"
+
+  if [ -z "$candidates" ]; then
+    local ailleurs
+    ailleurs="$(_git tag --list 'approuve/*' --sort=-taggerdate | head -n1)"
+    if [ -n "$ailleurs" ]; then
+      _refus autre_commit "$ailleurs" "$commit" \
+        "commit_etiquete=$(_git rev-parse "refs/tags/${ailleurs}^{commit}")"
+    else
+      _erreur "refus motif=aucune_etiquette commit=$commit"
+    fi
+    return 1
+  fi
+
+  # Plusieurs étiquettes sur le même commit : la plus récente qui passe
+  # l'emporte ; chacune de celles qui échouent laisse son erreur.
+  while IFS= read -r etiquette; do
+    if _verifier_etiquette "$etiquette" "$commit"; then
+      ETIQUETTE_COMMIT="$commit"
+      return 0
+    fi
+  done <<< "$candidates"
+  return 1
+}
+
+# ── Point d'entrée ─────────────────────────────────────────────────────────
+
+tireur_principal() {
+  local code=0
+  etiquette_approuvee "${1:-}" || code=$?
+  [ "$code" -eq 0 ] || return "$code"
+
+  # Un seul tireur à la fois : deux crons qui se chevauchent consommeraient
+  # la même étiquette deux fois.
+  exec 9>>"${TIREUR_REGISTRE}.verrou"
+  if ! flock -n 9; then
+    _erreur "refus motif=tireur_deja_en_cours empreinte=$ETIQUETTE_EMPREINTE commit=$ETIQUETTE_COMMIT"
+    return 1
+  fi
+  # Revérifié sous verrou : un autre tireur a pu consommer entre-temps.
+  if _deja_consommee "$ETIQUETTE_EMPREINTE"; then
+    _refus deja_consommee "$ETIQUETTE_NOM" "$ETIQUETTE_COMMIT" "empreinte=$ETIQUETTE_EMPREINTE"
+    return 1
+  fi
+
+  # Usage unique : consigner AVANT de déployer. Un déploiement qui échoue
+  # laisse l'empreinte consommée ; le superviseur signe une nouvelle étiquette.
+  printf '%s %s %s %s\n' "$ETIQUETTE_EMPREINTE" "$ETIQUETTE_COMMIT" \
+    "$TIREUR_ENVIRONNEMENT" "$(_horodatage)" >> "$TIREUR_REGISTRE"
+  sync "$TIREUR_REGISTRE" 2>/dev/null || true
+  _info "consigne empreinte=$ETIQUETTE_EMPREINTE commit=$ETIQUETTE_COMMIT etiquette=$ETIQUETTE_NOM"
+
+  if ! "$TIREUR_DEPLOIEMENT" "$ETIQUETTE_COMMIT" "$ETIQUETTE_EMPREINTE" "$TIREUR_ENVIRONNEMENT"; then
+    _erreur "deploiement_en_echec empreinte=$ETIQUETTE_EMPREINTE commit=$ETIQUETTE_COMMIT"
+    return 3
+  fi
+
+  _info "deploiement empreinte=$ETIQUETTE_EMPREINTE commit=$ETIQUETTE_COMMIT" \
+        "cle=${ETIQUETTE_CLE:-?} principal=${ETIQUETTE_PRINCIPAL:-?}" \
+        "date_signature=$ETIQUETTE_DATE_SIGNATURE horodatage=$(_horodatage)"
+}
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  tireur_principal "$@"
+fi
