@@ -71,13 +71,22 @@ agent → plan empreinté → workflow_dispatch → job bloqué
 
 Conséquence : même compromis, Sluis ne peut pas muter la production. Il ne peut que demander.
 
+**Sur un dépôt privé** (ADR-013), GitHub n'offre pas de relecteurs requis hors offre Enterprise. L'approbation y devient une étiquette git `approuve/<empreinte courte>` signée par la clé du superviseur, sur son poste. Sluis vérifie les gates, résout la référence en commit et rend la commande exacte à signer :
+
+```
+git tag -s approuve/<court> <commit> -m "<environnement> <empreinte>"
+git push origin approuve/<court>
+```
+
+`sluis_etat_approbation` lit ensuite l'étiquette avec un jeton **en lecture seule** : en attente tant qu'elle n'est pas posée, refusée si elle désigne un autre commit, nomme un autre environnement, porte un message mal formé ou une signature que GitHub ne vérifie pas, approuvée sinon, avec pour approbateur l'identité signée (jamais celle du jeton). Sluis ne pousse aucune étiquette et ne détient aucune clé de signature ; la vérification qui fait foi est celle du tireur GitOps de la cible. Elle se choisit par `[github] passerelle = "etiquette-signee"` ; le défaut reste l'environnement protégé. Le renouvellement de la dérogation reste sur l'environnement protégé.
+
 ## Les trois niveaux d'autorisation
 
 | Niveau | Portée | Confirmation |
 |---|---|---|
 | Tier 2 lecture | inventaire, coûts, plans, statuts, diagnostics | aucune |
 | Tier 2 écriture bornée | infrastructure éphémère de test, à TTL et plafond | confirmation d'appel côté client MCP, **dans une fenêtre de dérogation ouverte** |
-| Tier 1 | toute mutation de production, mise en ligne, renouvellement de la dérogation | environnement GitHub protégé |
+| Tier 1 | toute mutation de production, mise en ligne, renouvellement de la dérogation | environnement GitHub protégé, ou étiquette signée sur un dépôt privé (ADR-013) |
 
 La dérogation du niveau intermédiaire est encadrée par **sept conditions cumulatives**, codées comme invariants de domaine et non comme vérifications de surface.
 

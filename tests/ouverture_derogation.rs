@@ -152,6 +152,7 @@ fn negative_une_demande_en_attente_ou_refusee_n_ouvre_rien() {
         EtatApprobation::EnAttente {
             run: "1".to_string(),
             url: String::new(),
+            commande: None,
         },
         EtatApprobation::Refusee {
             motif: "approbation rejetée par relecteur-a".to_string(),

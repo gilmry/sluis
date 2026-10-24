@@ -238,6 +238,46 @@ où redistribuer du BSL serait contradictoire. OpenTofu (MPL-2.0) lit les mêmes
 fichiers `.tf` et rend les mêmes résumés. Le binaire s'appelle `tofu`, et c'est
 sous ce nom que l'allowlist et `sluis_doctor` le connaissent.
 
+## Choisir la passerelle d'approbation : `[github] passerelle`
+
+La section `[github]` du fichier de configuration compose la passerelle de
+Tier 1. Deux valeurs, une seule active par déploiement :
+
+| `passerelle` | Pour | Ce que fait Sluis | Jeton `SLUIS_GITHUB_TOKEN` |
+|---|---|---|---|
+| `environnement-protege` (défaut, ADR-008) | dépôt public, ou offre GitHub à relecteurs requis | déclenche le workflow de `workflow`, bloqué par l'environnement protégé | déclenchement du workflow, lecture des runs et de l'environnement |
+| `etiquette-signee` (ADR-013) | dépôt privé | rend la commande `git tag -s approuve/<court> <commit> -m "<environnement> <empreinte>"`, puis lit l'étiquette | **lecture seule** : contenu (refs, objets git, commits) et checks |
+
+```toml
+[github]
+proprietaire = "gilmry"
+depot = "mon-depot-prive"
+passerelle = "etiquette-signee"   # absent : environnement-protege
+# workflow n'est requis que par environnement-protege
+
+[github.gates]
+secrets = "Secrets"
+sbom = "SBOM"
+scan_conteneur = "Scan image"
+```
+
+Ce qu'il faut savoir avec `etiquette-signee` :
+
+- **Aucune clé de signature ne se configure dans Sluis**, et la configuration
+  refuse toute clé inconnue. La clé vit sur le poste du superviseur (mode
+  opératoire dans ADR-013) ; le superviseur signe, puis pousse l'étiquette
+  lui-même (`git push origin approuve/<court>`).
+- **L'état rendu par `sluis_etat_approbation` est informatif.** Celui qui fait
+  foi est le tireur GitOps de la cible, qui vérifie la signature contre un
+  `allowed_signers` hors du dépôt.
+- **Les plans soumis sont retenus en mémoire.** Après un redémarrage du
+  serveur, `sluis_etat_approbation` répond « introuvable » : resoumettre la
+  mise en ligne (même référence, même environnement, même empreinte).
+- **Seule la mise en ligne passe par cette passerelle.**
+  `sluis_renouvellement_derogation` n'est pas exposé, et l'exécutant n'ouvre
+  pas de dérogation sur elle : le renouvellement reste sur
+  `environnement-protege`.
+
 ## Ce que ce déploiement ne fait pas encore
 
 - **Pas de mutation de production, d'aucune sorte.** Le Tier 1 reste derrière

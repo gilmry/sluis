@@ -284,6 +284,7 @@ impl PasserelleApprobation for PasserelleDouble {
         Ok(EtatApprobation::EnAttente {
             run: plan.empreinte().abregee().to_string(),
             url: "https://github.com/…".to_string(),
+            commande: None,
         })
     }
     fn interroger(&self, _empreinte: &Empreinte) -> Result<EtatApprobation, AppError> {

@@ -11,6 +11,9 @@ pub enum EtatApprobation {
         run: String,
         /// URL où l'humain approuve.
         url: String,
+        /// Commande exacte que l'humain exécute pour approuver, quand
+        /// l'approbation se donne hors de GitHub (étiquette signée, ADR-013).
+        commande: Option<String>,
     },
     /// Approuvée et exécutée.
     Approuvee {
