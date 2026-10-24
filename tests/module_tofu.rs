@@ -9,7 +9,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use sluis::application::ports::{Executeur, LecteurModule, MoteurIac, SortieProcessus};
+use sluis::application::ports::{
+    EnvironnementIsole, Executeur, LecteurModule, MoteurIac, SortieProcessus,
+};
 use sluis::domain::{
     verifier_module, Action, AppError, BailBacASable, Construction, DemandeBail, Duree,
     Environnement, FenetreDerogation, FichierModule, Horodatage, JetonChangement,
@@ -51,6 +53,16 @@ impl Executeur for &ExecuteurCompteur {
             sortie: "{}".to_string(),
             erreur: String::new(),
         })
+    }
+
+    fn executer_isole(
+        &self,
+        programme: &str,
+        arguments: &[String],
+        dossier: &str,
+        _environnement: &EnvironnementIsole,
+    ) -> Result<SortieProcessus, AppError> {
+        self.executer(programme, arguments, Some(dossier))
     }
 }
 
@@ -104,6 +116,7 @@ output "adresse" {
 fn module_conforme() -> ModuleSoumis {
     ModuleSoumis {
         chemin: RACINE.to_string(),
+        dossier: format!("/depot/{RACINE}"),
         fichiers: vec![
             verrou(&[AWS]),
             fichier(&format!("{RACINE}/main.tf"), MAIN_CONFORME),

@@ -60,6 +60,10 @@ registre_renouvellements = "/app/donnees/sluis-renouvellements.json"
 # d'ADR-034, à trancher par le superviseur.
 [tofu]
 fournisseurs_autorises = []
+# tofu est lancé avec un environnement vidé (ADR-034, point 4) : il ne reçoit
+# qu'un PATH fixe et les variables nommées ici. Vide, il ne reçoit que PATH ;
+# SLUIS_GITHUB_TOKEN ne lui parvient jamais.
+variables_transmises = []
 
 [journal]
 chemin = "/app/donnees/sluis-audit.jsonl"

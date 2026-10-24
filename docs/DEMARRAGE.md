@@ -277,6 +277,44 @@ contenu initial est un point ouvert d'ADR-034, à trancher par le superviseur,
 pas une valeur que le code choisit. Tant qu'elle est vide, `sluis_campagne`
 échoue avant tout appel à `tofu`.
 
+### Ce que `tofu` reçoit de l'environnement
+
+`tofu` ne voit **pas** l'environnement de Sluis (ADR-034, point 4). Il est
+lancé avec un environnement **vidé**, puis rempli de deux choses seulement :
+
+- un `PATH` fixe, `/usr/local/bin:/usr/bin:/bin`, qui ne vient pas de
+  l'environnement de Sluis ;
+- les variables nommées dans `[tofu] variables_transmises`, avec la valeur
+  qu'elles ont dans l'environnement de Sluis.
+
+```toml
+[tofu]
+variables_transmises = ["OVH_ENDPOINT", "OS_AUTH_URL"]
+```
+
+**La liste est vide par défaut** : `tofu` ne reçoit alors que `PATH`.
+`SLUIS_GITHUB_TOKEN`, et toute variable non listée, n'atteignent jamais le
+processus, donc jamais un fournisseur ni un module. Chaque identifiant dont
+un fournisseur a besoin se nomme ici, un par un ; `HOME` aussi, si un
+fournisseur en dépend. Une variable `PATH` listée est ignorée, le `PATH` fixe
+l'emporte.
+
+Une variable listée mais **absente** de l'environnement de Sluis n'est pas
+transmise. Sluis la nomme sur sa sortie d'erreur à chaque lancement, et dans
+l'erreur rendue si `tofu` échoue : une authentification refusée se lit alors
+avec sa cause.
+
+Les autres moteurs (`helm`, `kubectl`, `kustomize`, `argocd`, `wrk`,
+`ansible-playbook`) gardent l'environnement hérité.
+
+**Le chemin du module est canonisé** avant tout lancement : il doit, une fois
+les liens symboliques résolus, descendre d'un `[bac_a_sable] depots_autorises`
+lui-même canonisé (une racine déclarée par un lien est donc acceptée). Un
+module atteint par un lien qui sort de la racine est refusé, et l'erreur
+donne le chemin canonique refusé. Un chemin contenant `..` est refusé dès
+l'admission. `tofu` est lancé dans le chemin canonique, pas dans le chemin
+soumis.
+
 ## Choisir la passerelle d'approbation : `[github] passerelle`
 
 La section `[github]` du fichier de configuration compose la passerelle de

@@ -33,6 +33,10 @@ fenetre_derogation_jours = 90
 # module est alors refusé avant le moindre appel à `tofu`.
 # [tofu]
 # fournisseurs_autorises = ["registry.opentofu.org/terraform-provider-openstack/openstack"]
+# Variables de l'environnement de Sluis transmises à tofu, lancé avec un
+# environnement vidé (ADR-034, point 4). Vide par défaut : tofu ne reçoit
+# que PATH.
+# variables_transmises = ["OVH_ENDPOINT"]
 
 [journal]
 # Journal d'audit append-only. Sluis refuse d'exécuter un outil s'il ne peut
