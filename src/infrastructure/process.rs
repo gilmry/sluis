@@ -18,6 +18,12 @@
 //! d'un dépôt MIT ne peut pas le redistribuer. L'appeler `terraform` par
 //! commodité aurait masqué ce choix au lieu de le porter.
 //!
+//! **`tofu` ne voit pas l'environnement de Sluis** (ADR-034, point 4). Il est
+//! lancé par [`Executeur::executer_isole`] : environnement vidé, puis rempli
+//! d'un `PATH` fixe et des seules variables de `[tofu] variables_transmises`.
+//! Un fournisseur ou un module hostile ne peut donc pas lire
+//! `SLUIS_GITHUB_TOKEN`. Les autres moteurs gardent l'environnement hérité.
+//!
 //! **L'absence n'est pas une panne.** Un binaire manquant produit
 //! `AppError::EngineMissing` nommant le binaire, ce qui est l'état normal d'une
 //! machine de développement nue et doit se lire comme tel.
@@ -25,7 +31,8 @@
 use std::process::Command;
 
 use crate::application::ports::{
-    Executeur, LecteurModule, MoteurArgocd, MoteurHelm, MoteurIac, MoteurKustomize, SortieProcessus,
+    EnvironnementIsole, Executeur, LecteurModule, MoteurArgocd, MoteurHelm, MoteurIac,
+    MoteurKustomize, SortieProcessus,
 };
 use crate::domain::{
     verifier_module, AppError, BailBacASable, MutationTerraform, PlanTerraform, StatutArgocd,
@@ -43,30 +50,87 @@ pub const EXECUTABLES_AUTORISES: &[&str] = &[
     "wrk",
 ];
 
+/// `PATH` donné à `tofu`, fixe : il ne vient pas de l'environnement de
+/// Sluis, et une variable `PATH` listée dans `[tofu] variables_transmises`
+/// est ignorée.
+pub const PATH_TOFU: &str = "/usr/local/bin:/usr/bin:/bin";
+
+/// Construit l'environnement de `tofu` : `PATH` fixe, puis chaque variable
+/// de `variables_transmises` que `lire_env` connaît.
+///
+/// Rend aussi les variables listées mais **absentes** de l'environnement de
+/// Sluis : elles ne sont pas transmises, et le diagnostic doit les nommer
+/// plutôt que de laisser `tofu` échouer sur une authentification muette.
+/// Les noms vides, `PATH` et les doublons sont écartés.
+pub fn environnement_tofu(
+    variables_transmises: &[String],
+    lire_env: impl Fn(&str) -> Option<String>,
+) -> (EnvironnementIsole, Vec<String>) {
+    let mut variables = vec![("PATH".to_string(), PATH_TOFU.to_string())];
+    let mut absentes = Vec::new();
+    for nom in variables_transmises.iter().map(|n| n.trim()) {
+        if nom.is_empty()
+            || variables.iter().any(|(deja, _)| deja == nom)
+            || absentes.iter().any(|deja| deja == nom)
+        {
+            continue;
+        }
+        match lire_env(nom) {
+            Some(valeur) => variables.push((nom.to_string(), valeur)),
+            None => absentes.push(nom.to_string()),
+        }
+    }
+    (EnvironnementIsole { variables }, absentes)
+}
+
+/// Construit la commande, **sans la lancer** : c'est ce qui rend
+/// l'environnement vérifiable par un test (`get_envs()`, et le `Debug` de
+/// `Command`, qui signale l'effacement).
+///
+/// Avec `environnement`, l'environnement hérité est vidé (`env_clear`) avant
+/// d'y mettre les seules variables données. Sans, il est hérité tel quel.
+/// L'allowlist n'est pas jugée ici, mais par [`ExecuteurSysteme`].
+pub fn construire_commande(
+    programme: &str,
+    arguments: &[String],
+    dossier: Option<&str>,
+    environnement: Option<&EnvironnementIsole>,
+) -> Command {
+    let mut commande = Command::new(programme);
+    commande.args(arguments);
+    if let Some(dossier) = dossier {
+        commande.current_dir(dossier);
+    }
+    if let Some(environnement) = environnement {
+        commande.env_clear();
+        commande.envs(
+            environnement
+                .variables
+                .iter()
+                .map(|(nom, valeur)| (nom.as_str(), valeur.as_str())),
+        );
+    }
+    commande
+}
+
 /// Exécuteur réel, sur `std::process::Command`.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ExecuteurSysteme;
 
-impl Executeur for ExecuteurSysteme {
-    fn executer(
-        &self,
-        programme: &str,
-        arguments: &[String],
-        dossier: Option<&str>,
-    ) -> Result<SortieProcessus, AppError> {
-        if !EXECUTABLES_AUTORISES.contains(&programme) {
-            return Err(AppError::Configuration {
-                detail: format!(
-                    "exécutable « {programme} » hors allowlist : seuls {} sont autorisés",
-                    EXECUTABLES_AUTORISES.join(", ")
-                ),
-            });
+impl ExecuteurSysteme {
+    fn verifier_allowlist(programme: &str) -> Result<(), AppError> {
+        if EXECUTABLES_AUTORISES.contains(&programme) {
+            return Ok(());
         }
-        let mut commande = Command::new(programme);
-        commande.args(arguments);
-        if let Some(dossier) = dossier {
-            commande.current_dir(dossier);
-        }
+        Err(AppError::Configuration {
+            detail: format!(
+                "exécutable « {programme} » hors allowlist : seuls {} sont autorisés",
+                EXECUTABLES_AUTORISES.join(", ")
+            ),
+        })
+    }
+
+    fn lancer(programme: &str, mut commande: Command) -> Result<SortieProcessus, AppError> {
         match commande.output() {
             Ok(sortie) => Ok(SortieProcessus {
                 code: sortie.status.code().unwrap_or(-1),
@@ -84,16 +148,55 @@ impl Executeur for ExecuteurSysteme {
     }
 }
 
+impl Executeur for ExecuteurSysteme {
+    fn executer(
+        &self,
+        programme: &str,
+        arguments: &[String],
+        dossier: Option<&str>,
+    ) -> Result<SortieProcessus, AppError> {
+        Self::verifier_allowlist(programme)?;
+        Self::lancer(
+            programme,
+            construire_commande(programme, arguments, dossier, None),
+        )
+    }
+
+    fn executer_isole(
+        &self,
+        programme: &str,
+        arguments: &[String],
+        dossier: &str,
+        environnement: &EnvironnementIsole,
+    ) -> Result<SortieProcessus, AppError> {
+        Self::verifier_allowlist(programme)?;
+        Self::lancer(
+            programme,
+            construire_commande(programme, arguments, Some(dossier), Some(environnement)),
+        )
+    }
+}
+
 /// Pilote OpenTofu.
 ///
 /// **Aucune commande n'est lancée sur un module qui n'a pas été vérifié**
 /// (ADR-034, point 3). Les cinq opérations passent par [`Tofu::verifier`]
 /// avant d'atteindre l'exécuteur : un `.tf` est un programme, et un
 /// `data "external"` s'exécuterait dès le `plan`.
+///
+/// **`tofu` est lancé isolé** (ADR-034, point 4) : dans le dossier canonique
+/// que le lecteur a accepté, avec un environnement vidé puis rempli de
+/// [`PATH_TOFU`] et des seules [`Tofu::avec_variables_transmises`].
 pub struct Tofu<E: Executeur, L: LecteurModule> {
     executeur: E,
     lecteur: L,
     fournisseurs_autorises: Vec<String>,
+    variables_transmises: Vec<String>,
+    lire_env: fn(&str) -> Option<String>,
+}
+
+fn lire_env_systeme(nom: &str) -> Option<String> {
+    std::env::var(nom).ok()
 }
 
 impl<E: Executeur, L: LecteurModule> Tofu<E, L> {
@@ -106,7 +209,23 @@ impl<E: Executeur, L: LecteurModule> Tofu<E, L> {
             executeur,
             lecteur,
             fournisseurs_autorises,
+            variables_transmises: Vec::new(),
+            lire_env: lire_env_systeme,
         }
+    }
+
+    /// Variables de l'environnement de Sluis transmises à `tofu`, de
+    /// `[tofu] variables_transmises`. Aucune par défaut : `tofu` ne reçoit
+    /// alors que `PATH`.
+    pub fn avec_variables_transmises(mut self, variables: Vec<String>) -> Self {
+        self.variables_transmises = variables;
+        self
+    }
+
+    /// Remplace la lecture de l'environnement de Sluis, pour les tests.
+    pub fn avec_lecture_environnement(mut self, lire_env: fn(&str) -> Option<String>) -> Self {
+        self.lire_env = lire_env;
+        self
     }
 
     /// Lit le module et le juge. Une seule violation suffit à refuser.
@@ -114,11 +233,21 @@ impl<E: Executeur, L: LecteurModule> Tofu<E, L> {
     /// Appelée en tête de chaque opération, jamais après : c'est ce que le
     /// test `@security` de la story 34.1 vérifie, en comptant zéro appel à
     /// l'exécuteur pour un module non conforme.
-    fn verifier(&self, module: &ValeurSure) -> Result<(), AppError> {
+    ///
+    /// Rend le dossier canonique du module, là où `tofu` sera lancé.
+    fn verifier(&self, module: &ValeurSure) -> Result<String, AppError> {
         let soumis = self.lecteur.lire(module)?;
+        if soumis.dossier.is_empty() {
+            return Err(AppError::Configuration {
+                detail: format!(
+                    "module « {} » : le lecteur n'a rendu aucun dossier canonique",
+                    module.valeur()
+                ),
+            });
+        }
         let violations = verifier_module(&soumis, &self.fournisseurs_autorises);
         if violations.is_empty() {
-            return Ok(());
+            return Ok(soumis.dossier);
         }
         Err(AppError::ModuleRefuse {
             module: module.valeur().to_string(),
@@ -135,14 +264,26 @@ impl<E: Executeur, L: LecteurModule> Tofu<E, L> {
     /// Un seul endroit fait cette traduction : disséminée, elle finirait par
     /// diverger, et une commande finirait par avaler son propre échec.
     fn executer_tofu(&self, module: &ValeurSure, arguments: &[String]) -> Result<String, AppError> {
-        self.verifier(module)?;
+        let dossier = self.verifier(module)?;
+        let (environnement, absentes) =
+            environnement_tofu(&self.variables_transmises, self.lire_env);
+        let note = if absentes.is_empty() {
+            String::new()
+        } else {
+            let note = format!(
+                "[tofu] variables_transmises : {} absente(s) de l'environnement de Sluis, non transmise(s)",
+                absentes.join(", ")
+            );
+            eprintln!("sluis : {note}");
+            format!(" ({note})")
+        };
         let sortie = self
             .executeur
-            .executer("tofu", arguments, Some(module.valeur()))?;
+            .executer_isole("tofu", arguments, &dossier, &environnement)?;
         if !sortie.reussi() {
             return Err(AppError::ServiceTiers {
                 service: "tofu".to_string(),
-                detail: format!("code {} : {}", sortie.code, sortie.erreur.trim()),
+                detail: format!("code {} : {}{note}", sortie.code, sortie.erreur.trim()),
             });
         }
         Ok(sortie.sortie)

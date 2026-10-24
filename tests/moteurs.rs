@@ -7,7 +7,8 @@
 use std::sync::Mutex;
 
 use sluis::application::ports::{
-    Executeur, LecteurModule, MoteurArgocd, MoteurHelm, MoteurIac, MoteurKustomize, SortieProcessus,
+    EnvironnementIsole, Executeur, LecteurModule, MoteurArgocd, MoteurHelm, MoteurIac,
+    MoteurKustomize, SortieProcessus,
 };
 use sluis::domain::{AppError, FichierModule, ModuleSoumis, ValeurSure};
 use sluis::infrastructure::process::{
@@ -71,6 +72,16 @@ impl Executeur for ExecuteurDouble {
             }),
         }
     }
+
+    fn executer_isole(
+        &self,
+        programme: &str,
+        arguments: &[String],
+        dossier: &str,
+        _environnement: &EnvironnementIsole,
+    ) -> Result<SortieProcessus, AppError> {
+        self.executer(programme, arguments, Some(dossier))
+    }
 }
 
 /// Lecteur doublé qui rend toujours un module conforme : ces tests portent
@@ -81,6 +92,7 @@ impl LecteurModule for LecteurConforme {
     fn lire(&self, module: &ValeurSure) -> Result<ModuleSoumis, AppError> {
         Ok(ModuleSoumis {
             chemin: module.valeur().to_string(),
+            dossier: format!("/{}", module.valeur()),
             fichiers: vec![FichierModule {
                 chemin: format!("{}/.terraform.lock.hcl", module.valeur()),
                 contenu: "provider \"registry.opentofu.org/hashicorp/null\" {}\n".to_string(),
@@ -319,6 +331,16 @@ impl Executeur for &ExecuteurDouble {
         dossier: Option<&str>,
     ) -> Result<SortieProcessus, AppError> {
         (*self).executer(programme, arguments, dossier)
+    }
+
+    fn executer_isole(
+        &self,
+        programme: &str,
+        arguments: &[String],
+        dossier: &str,
+        environnement: &EnvironnementIsole,
+    ) -> Result<SortieProcessus, AppError> {
+        (*self).executer_isole(programme, arguments, dossier, environnement)
     }
 }
 

@@ -201,6 +201,16 @@ pub struct SectionTofu {
     /// est un point ouvert d'ADR-034, pas une valeur que le code choisit.
     #[serde(default)]
     pub fournisseurs_autorises: Vec<String>,
+
+    /// Variables de l'environnement de Sluis transmises à `tofu` (ADR-034,
+    /// point 4), par exemple `OVH_ENDPOINT`.
+    ///
+    /// `tofu` est lancé avec un environnement **vidé**, puis rempli d'un
+    /// `PATH` fixe et des seules variables listées ici. **Vide par défaut** :
+    /// aucun secret de Sluis, `SLUIS_GITHUB_TOKEN` compris, n'atteint un
+    /// fournisseur sans avoir été nommé.
+    #[serde(default)]
+    pub variables_transmises: Vec<String>,
 }
 
 /// Réglages du journal d'audit.

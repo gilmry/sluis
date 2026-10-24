@@ -23,7 +23,8 @@ pub use gates::{EtatGate, GatePlancher, VerificateurGates};
 pub use horloge::{Horloge, HorlogeFigee};
 pub use inventaire::DepotInventaire;
 pub use moteurs::{
-    Executeur, LecteurModule, MoteurArgocd, MoteurHelm, MoteurIac, MoteurKustomize, SortieProcessus,
+    EnvironnementIsole, Executeur, LecteurModule, MoteurArgocd, MoteurHelm, MoteurIac,
+    MoteurKustomize, SortieProcessus,
 };
 pub use oauth::DepotOAuth;
 pub use ovh::FournisseurOvh;

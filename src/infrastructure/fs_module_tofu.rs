@@ -9,7 +9,9 @@
 //! **Sécurité du parcours**, comme pour l'inventaire : le module doit, une fois
 //! canonisé, descendre d'une racine autorisée, et un fichier dont le chemin
 //! canonique sort de cette racine (lien symbolique) fait refuser le module
-//! entier plutôt que d'être ignoré, puisque `tofu`, lui, le suivrait.
+//! entier plutôt que d'être ignoré, puisque `tofu`, lui, le suivrait. Le
+//! chemin canonique accepté est rendu au pilote, qui lance `tofu` là et pas
+//! dans le chemin soumis (ADR-034, point 4).
 
 use std::collections::BTreeMap;
 use std::path::{Component, Path, PathBuf};
@@ -135,10 +137,12 @@ impl LecteurModule for FsModuleTofu {
                     chemin: module.valeur().to_string(),
                     detail: e.to_string(),
                 })?;
+        // L'erreur donne le chemin canonique : c'est lui qui est refusé, et
+        // c'est lui qui révèle où un lien symbolique menait.
         let racine =
             self.racine_du_module(&canonique)
                 .ok_or_else(|| AppError::CheminHorsRacine {
-                    chemin: module.valeur().to_string(),
+                    chemin: canonique.display().to_string(),
                 })?;
 
         let mut fichiers = BTreeMap::new();
@@ -152,6 +156,7 @@ impl LecteurModule for FsModuleTofu {
 
         Ok(ModuleSoumis {
             chemin: relatif(&racine, &canonique),
+            dossier: canonique.display().to_string(),
             fichiers: fichiers
                 .into_iter()
                 .map(|(chemin, contenu)| FichierModule { chemin, contenu })

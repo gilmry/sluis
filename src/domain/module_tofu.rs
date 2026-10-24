@@ -67,6 +67,11 @@ pub struct ModuleSoumis {
     /// racine elle-même). C'est là que `tofu` est lancé, donc là que le
     /// fichier de verrouillage est exigé.
     pub chemin: String,
+    /// Chemin absolu **canonique** du module, tel que le lecteur l'a résolu
+    /// et accepté. C'est le dossier où `tofu` est lancé : pas le chemin
+    /// soumis, qui peut passer par un lien symbolique (ADR-034, point 4).
+    /// Vide, rien n'est lancé.
+    pub dossier: String,
     /// Les fichiers à juger : ceux du module racine, et ceux des modules
     /// partagés qu'il peut appeler.
     pub fichiers: Vec<FichierModule>,

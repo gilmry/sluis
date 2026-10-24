@@ -23,6 +23,32 @@ impl SortieProcessus {
     }
 }
 
+/// Environnement d'un processus lancé isolé : l'environnement hérité est
+/// **vidé**, puis rempli de ces seules variables (ADR-034, point 4).
+///
+/// Le `Debug` ne montre que les noms : les valeurs sont souvent des secrets
+/// de fournisseur, et un journal de diagnostic ne doit pas les porter.
+#[derive(Clone, Default, PartialEq, Eq)]
+pub struct EnvironnementIsole {
+    /// Variables transmises, dans l'ordre : nom, valeur.
+    pub variables: Vec<(String, String)>,
+}
+
+impl EnvironnementIsole {
+    /// Noms des variables transmises, dans l'ordre.
+    pub fn noms(&self) -> Vec<&str> {
+        self.variables.iter().map(|(nom, _)| nom.as_str()).collect()
+    }
+}
+
+impl std::fmt::Debug for EnvironnementIsole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EnvironnementIsole")
+            .field("variables", &self.noms())
+            .finish()
+    }
+}
+
 /// Exécute un programme externe.
 ///
 /// **Ne prend jamais une ligne de commande, toujours un programme et un
@@ -39,6 +65,21 @@ pub trait Executeur: Send + Sync {
         arguments: &[String],
         dossier: Option<&str>,
     ) -> Result<SortieProcessus, AppError>;
+
+    /// Lance `programme` dans `dossier`, avec un environnement **vidé** puis
+    /// rempli des seules variables de `environnement`.
+    ///
+    /// Pas d'implémentation par défaut, et c'est délibéré : un défaut qui
+    /// retomberait sur [`Executeur::executer`] ferait hériter tout
+    /// l'environnement de Sluis, jetons compris, à un exécuteur qui l'aurait
+    /// oublié.
+    fn executer_isole(
+        &self,
+        programme: &str,
+        arguments: &[String],
+        dossier: &str,
+        environnement: &EnvironnementIsole,
+    ) -> Result<SortieProcessus, AppError>;
 }
 
 /// Lit un module OpenTofu pour qu'il soit vérifié avant d'être lancé.
@@ -51,7 +92,10 @@ pub trait LecteurModule: Send + Sync {
     /// appeler, chemins relatifs à la racine du dépôt.
     ///
     /// Refuse (`AppError::CheminHorsRacine`) un module qui ne descend d'aucune
-    /// racine autorisée.
+    /// racine autorisée une fois canonisé ; l'erreur donne alors le chemin
+    /// canonique refusé. Le dossier canonique accepté est rendu dans
+    /// [`ModuleSoumis::dossier`], et c'est là, pas ailleurs, que `tofu` est
+    /// lancé.
     fn lire(&self, module: &ValeurSure) -> Result<ModuleSoumis, AppError>;
 }
 
