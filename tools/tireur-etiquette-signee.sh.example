@@ -37,11 +37,11 @@
 set -euo pipefail
 
 # Le format du message signé, fixé par le superviseur le 2026-10-23 (ADR-013) :
-# `<environnement> <empreinte complète>`, deux champs séparés par UNE espace,
-# l'environnement pris dans la liste connue (ADR-009), l'empreinte en 64
-# caractères hexadécimaux minuscules. Tout autre message est refusé, jamais
-# deviné. Sluis construit ce format, le tireur l'analyse : les deux doivent
-# rester alignés.
+# `<environnement> <empreinte>` (l'empreinte complète), deux champs séparés
+# par UNE espace, l'environnement pris dans la liste connue (ADR-009),
+# l'empreinte en 64 caractères hexadécimaux minuscules, soit [0-9a-f]{64}.
+# Tout autre message est refusé, jamais deviné. Sluis construit ce format,
+# le tireur l'analyse : les deux doivent rester alignés.
 readonly TIREUR_ENVIRONNEMENTS_CONNUS='dev|integration|staging|production'
 readonly TIREUR_FORMAT_MESSAGE="^(${TIREUR_ENVIRONNEMENTS_CONNUS}) ([0-9a-f]{64})\$"
 
