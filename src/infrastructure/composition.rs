@@ -17,6 +17,7 @@ use crate::infrastructure::bac_a_sable::BacASableIac;
 use crate::infrastructure::charge::Wrk;
 use crate::infrastructure::derogation_depot::DepotDerogationFichier;
 use crate::infrastructure::fs_charge::FsCharge;
+use crate::infrastructure::fs_module_tofu::FsModuleTofu;
 use crate::infrastructure::gates_github::VerificateurGatesGithub;
 use crate::infrastructure::github::PasserelleGithub;
 use crate::infrastructure::mcp::outil_campagne::{OutilCampagne, ReglagesCampagne};
@@ -62,7 +63,13 @@ pub fn outil_campagne_si_configure(
     }
 
     let projet = configuration.autorisation.projet_bac_a_sable(&nom_projet)?;
-    let bac = Arc::new(BacASableIac::new(Tofu::new(ExecuteurSysteme)));
+    // Le lecteur de modules ne connaît que les dépôts autorisés : un module
+    // qui n'en descend pas est refusé avant d'être lu.
+    let bac = Arc::new(BacASableIac::new(Tofu::new(
+        ExecuteurSysteme,
+        FsModuleTofu::new(configuration.fichier.bac_a_sable.depots_autorises.clone()),
+        configuration.fichier.tofu.fournisseurs_autorises.clone(),
+    )));
 
     Ok(Some(Box::new(OutilCampagne::new(
         Arc::new(Campagne::new(Arc::new(Wrk::new(ExecuteurSysteme)))),

@@ -11,6 +11,7 @@ pub mod derogation_depot;
 pub mod diagnostic;
 pub mod fs_charge;
 pub mod fs_inventaire;
+pub mod fs_module_tofu;
 pub mod gates_github;
 pub mod github;
 pub mod mcp;

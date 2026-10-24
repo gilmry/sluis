@@ -238,6 +238,45 @@ où redistribuer du BSL serait contradictoire. OpenTofu (MPL-2.0) lit les mêmes
 fichiers `.tf` et rend les mêmes résumés. Le binaire s'appelle `tofu`, et c'est
 sous ce nom que l'allowlist et `sluis_doctor` le connaissent.
 
+### Les modules OpenTofu que l'exécutant accepte de lancer
+
+Un fichier `.tf` est un programme : un `provisioner "local-exec"` ou un
+`data "external"` exécute une commande sur la machine qui lance `tofu`, avec
+ses secrets, et `data "external"` le fait dès le `plan`. **Avant chaque
+`init`, `plan`, `apply`, `destroy` et `output`**, Sluis lit le module et le
+refuse, sans rien lancer, s'il sort du contrat d'ADR-034 :
+
+- `provisioner "local-exec"`, `provisioner "remote-exec"` et `data "external"`
+  sont interdits, quelle que soit leur mise en forme. Une construction écrite
+  **en commentaire** est refusée aussi : faux positif assumé ;
+- les fichiers `.tf.json` et `.tofu.json` sont refusés ;
+- le module porte un `.terraform.lock.hcl`, et chaque fournisseur qu'il
+  verrouille figure dans `[tofu] fournisseurs_autorises`. `tofu init` est
+  lancé avec `-lockfile=readonly` : le verrou vérifié est celui qui sert ;
+- **un module appelé est copié dans le dépôt**, sous
+  `_shared/terraform/modules/<nom>/`, et appelé par un chemin local
+  (`source = "../../../_shared/terraform/modules/<nom>"`). Toute autre
+  `source` est refusée : `git::`, `https://`, registre, chemin absolu, ou
+  chemin local qui sort de la racine du dépôt ou vise ailleurs. Les modules
+  partagés sont lus et vérifiés avec le module qui les appelle.
+
+L'erreur nomme le fichier, la ligne et la construction refusée.
+
+La liste blanche des fournisseurs se déclare dans `sluis.executant.toml`,
+par leur adresse complète, telle qu'elle figure dans le verrou :
+
+```toml
+[tofu]
+fournisseurs_autorises = [
+  "registry.opentofu.org/terraform-provider-openstack/openstack",
+]
+```
+
+**Elle est vide par défaut, et une liste vide refuse tout module** : son
+contenu initial est un point ouvert d'ADR-034, à trancher par le superviseur,
+pas une valeur que le code choisit. Tant qu'elle est vide, `sluis_campagne`
+échoue avant tout appel à `tofu`.
+
 ## Ce que ce déploiement ne fait pas encore
 
 - **Pas de mutation de production, d'aucune sorte.** Le Tier 1 reste derrière

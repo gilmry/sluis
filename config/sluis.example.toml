@@ -28,6 +28,12 @@ plafond_depense = 20.0
 # aucun bail ne peut alors être loué (septième condition d'ADR-007).
 fenetre_derogation_jours = 90
 
+# Fournisseurs OpenTofu qu'un module a le droit de verrouiller (ADR-034,
+# point 3), adresse complète du `.terraform.lock.hcl`. Vide par défaut : tout
+# module est alors refusé avant le moindre appel à `tofu`.
+# [tofu]
+# fournisseurs_autorises = ["registry.opentofu.org/terraform-provider-openstack/openstack"]
+
 [journal]
 # Journal d'audit append-only. Sluis refuse d'exécuter un outil s'il ne peut
 # pas écrire ici : un appel non traçable ne doit pas avoir lieu.

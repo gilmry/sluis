@@ -25,10 +25,11 @@
 use std::process::Command;
 
 use crate::application::ports::{
-    Executeur, MoteurArgocd, MoteurHelm, MoteurIac, MoteurKustomize, SortieProcessus,
+    Executeur, LecteurModule, MoteurArgocd, MoteurHelm, MoteurIac, MoteurKustomize, SortieProcessus,
 };
 use crate::domain::{
-    AppError, BailBacASable, MutationTerraform, PlanTerraform, StatutArgocd, StatutHelm, ValeurSure,
+    verifier_module, AppError, BailBacASable, MutationTerraform, PlanTerraform, StatutArgocd,
+    StatutHelm, ValeurSure,
 };
 
 /// Les seuls exécutables que Sluis a le droit de lancer.
@@ -84,21 +85,57 @@ impl Executeur for ExecuteurSysteme {
 }
 
 /// Pilote OpenTofu.
-pub struct Tofu<E: Executeur> {
+///
+/// **Aucune commande n'est lancée sur un module qui n'a pas été vérifié**
+/// (ADR-034, point 3). Les cinq opérations passent par [`Tofu::verifier`]
+/// avant d'atteindre l'exécuteur : un `.tf` est un programme, et un
+/// `data "external"` s'exécuterait dès le `plan`.
+pub struct Tofu<E: Executeur, L: LecteurModule> {
     executeur: E,
+    lecteur: L,
+    fournisseurs_autorises: Vec<String>,
 }
 
-impl<E: Executeur> Tofu<E> {
+impl<E: Executeur, L: LecteurModule> Tofu<E, L> {
     /// Construit le pilote.
-    pub fn new(executeur: E) -> Self {
-        Self { executeur }
+    ///
+    /// `fournisseurs_autorises` vient de `[tofu] fournisseurs_autorises` ;
+    /// vide, tout module est refusé.
+    pub fn new(executeur: E, lecteur: L, fournisseurs_autorises: Vec<String>) -> Self {
+        Self {
+            executeur,
+            lecteur,
+            fournisseurs_autorises,
+        }
     }
 
-    /// Lance tofu dans le module et traduit un code non nul en erreur.
+    /// Lit le module et le juge. Une seule violation suffit à refuser.
+    ///
+    /// Appelée en tête de chaque opération, jamais après : c'est ce que le
+    /// test `@security` de la story 34.1 vérifie, en comptant zéro appel à
+    /// l'exécuteur pour un module non conforme.
+    fn verifier(&self, module: &ValeurSure) -> Result<(), AppError> {
+        let soumis = self.lecteur.lire(module)?;
+        let violations = verifier_module(&soumis, &self.fournisseurs_autorises);
+        if violations.is_empty() {
+            return Ok(());
+        }
+        Err(AppError::ModuleRefuse {
+            module: module.valeur().to_string(),
+            motifs: violations
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(" ; "),
+        })
+    }
+
+    /// Vérifie le module, puis lance tofu et traduit un code non nul en erreur.
     ///
     /// Un seul endroit fait cette traduction : disséminée, elle finirait par
     /// diverger, et une commande finirait par avaler son propre échec.
     fn executer_tofu(&self, module: &ValeurSure, arguments: &[String]) -> Result<String, AppError> {
+        self.verifier(module)?;
         let sortie = self
             .executeur
             .executer("tofu", arguments, Some(module.valeur()))?;
@@ -188,28 +225,21 @@ pub fn analyser_resume_mutation(sortie: &str) -> MutationTerraform {
     }
 }
 
-impl<E: Executeur> MoteurIac for Tofu<E> {
+impl<E: Executeur, L: LecteurModule> MoteurIac for Tofu<E, L> {
     fn plan(&self, module: &ValeurSure) -> Result<PlanTerraform, AppError> {
         // `-detailed-exitcode` est délibérément absent : il rend 2 quand des
         // changements existent, ce qui se lirait comme un échec alors que c'est
         // le résultat normal d'un plan.
-        let sortie = self.executeur.executer(
-            "tofu",
+        let sortie = self.executer_tofu(
+            module,
             &[
                 "plan".to_string(),
                 "-no-color".to_string(),
                 "-input=false".to_string(),
                 "-lock=false".to_string(),
             ],
-            Some(module.valeur()),
         )?;
-        if !sortie.reussi() {
-            return Err(AppError::ServiceTiers {
-                service: "tofu".to_string(),
-                detail: format!("code {} : {}", sortie.code, sortie.erreur.trim()),
-            });
-        }
-        Ok(analyser_resume_plan(&sortie.sortie))
+        Ok(analyser_resume_plan(&sortie))
     }
 
     fn initialiser(&self, module: &ValeurSure) -> Result<(), AppError> {
@@ -219,6 +249,10 @@ impl<E: Executeur> MoteurIac for Tofu<E> {
                 "init".to_string(),
                 "-no-color".to_string(),
                 "-input=false".to_string(),
+                // Le verrou vérifié est celui qui sert : sans ce drapeau,
+                // `init` le complèterait d'un fournisseur que la liste
+                // blanche n'a jamais vu.
+                "-lockfile=readonly".to_string(),
             ],
         )
         .map(|_| ())
