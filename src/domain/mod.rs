@@ -20,6 +20,7 @@ pub mod module_tofu;
 pub mod oauth;
 pub mod ovh;
 pub mod redacted;
+pub mod section_empreinte;
 pub mod temps;
 pub mod valeur_sure;
 
