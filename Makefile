@@ -12,7 +12,7 @@ CARGO ?= cargo
 
 .DEFAULT_GOAL := aide
 
-.PHONY: aide setup fmt fmt-check lint test doc ci secret-scan sbom purete \
+.PHONY: aide setup fmt fmt-check lint test doc ci secret-scan sbom purete contrat \
 	shellcheck test-tireur
 
 aide: ## Affiche cette aide
@@ -37,6 +37,10 @@ test: ## Joue tous les tests, dont la gate de pureté du domaine
 
 purete: ## Rejoue seule la gate de pureté du domaine
 	$(CARGO) test --test purete_domaine
+
+contrat: ## Régénère contrat/depot-cible.v1.json depuis le code (ADR-034)
+	@mkdir -p contrat
+	$(CARGO) run --quiet --bin sluis -- contract > contrat/depot-cible.v1.json
 
 doc: ## Construit la documentation
 	$(CARGO) doc --no-deps

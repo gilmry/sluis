@@ -315,6 +315,23 @@ donne le chemin canonique refusé. Un chemin contenant `..` est refusé dès
 l'admission. `tofu` est lancé dans le chemin canonique, pas dans le chemin
 soumis.
 
+### Le contrat du dépôt cible, publié
+
+Ce que Sluis lit dans un dépôt cible (arborescence `infrastructure/`, clés de
+`charge.yaml` et des profils, sous-ensemble YAML, règles des `.tf`, workflow de
+Tier 1, places réservées) est publié en JSON dans
+`contrat/depot-cible.v1.json` (ADR-034). Ce fichier est **produit par le
+code**, jamais écrit à la main :
+
+```bash
+make contrat CARGO=~/bin/kcargo     # régénère le fichier
+sluis contract                      # l'imprime depuis le binaire
+```
+
+`tests/contrat_depot.rs` échoue si le fichier dérive du code, ou si un lecteur
+exige une clé que le schéma n'annonce pas (et l'inverse). Une skill Foyer lit
+ce fichier, à une version étiquetée de Sluis ; elle ne le recopie pas.
+
 ## Choisir la passerelle d'approbation : `[github] passerelle`
 
 La section `[github]` du fichier de configuration compose la passerelle de

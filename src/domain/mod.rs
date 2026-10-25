@@ -9,6 +9,7 @@ pub mod autorisation;
 pub mod bac_a_sable;
 pub mod capacite;
 pub mod charge_declaree;
+pub mod contrat_depot;
 pub mod convergence;
 pub mod diagnostic;
 pub mod error;
@@ -33,6 +34,7 @@ pub use capacite::{
     Recalage,
 };
 pub use charge_declaree::{CibleCapacite, DeclarationCharge, Verdict};
+pub use contrat_depot::{ContratDepot, VERSION_CONTRAT_DEPOT};
 pub use convergence::{etablir as etablir_convergence, PreuveConvergence};
 pub use diagnostic::{EtatBinaire, Identifiant, Moteur, RapportDiagnostic};
 pub use error::AppError;

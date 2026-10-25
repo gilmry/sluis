@@ -20,6 +20,7 @@ fn main() -> ExitCode {
         "doctor" => doctor(),
         "inventory" => inventaire(arguments.get(1).map(String::as_str)),
         "profiles" => profils(arguments.get(1).map(String::as_str)),
+        "contract" => contrat(),
         "aide" | "--help" | "-h" => {
             aide();
             Ok(())
@@ -46,10 +47,25 @@ fn aide() {
          Commandes :\n  \
            doctor              état des moteurs et des identifiants\n  \
            inventory <racine>  matrice topologies × environnements\n  \
-           profiles <racine>   profils de cluster\n\n\
+           profiles <racine>   profils de cluster\n  \
+           contract            schéma du contrat du dépôt cible (ADR-034), en JSON\n\n\
          Configuration : SLUIS_CONFIG (défaut : sluis.toml)",
         env!("CARGO_PKG_VERSION")
     );
+}
+
+/// Imprime le schéma du contrat du dépôt cible. C'est cette sortie, et elle
+/// seule, qui produit `contrat/depot-cible.v1.json` (`make contrat`).
+fn contrat() -> Result<(), sluis::domain::AppError> {
+    let schema =
+        serde_json::to_string_pretty(&sluis::domain::ContratDepot::courant()).map_err(|e| {
+            sluis::domain::AppError::Analyse {
+                quoi: "contrat du dépôt cible".to_string(),
+                detail: e.to_string(),
+            }
+        })?;
+    println!("{schema}");
+    Ok(())
 }
 
 fn doctor() -> Result<(), sluis::domain::AppError> {
