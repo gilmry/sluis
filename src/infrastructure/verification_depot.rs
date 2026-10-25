@@ -5,16 +5,26 @@
 //! Un verdict qui réimplémenterait les règles pourrait dire conforme un dépôt
 //! que Sluis refusera.
 //!
-//! Les modules OpenTofu ne sont pas encore jugés ici (story 34.6b).
+//! Les modules OpenTofu passent par `FsModuleTofu` et `verifier_module`, le
+//! lecteur et le juge qui précèdent `tofu init` (ADR-034, point 3).
 
 use std::path::Path;
 
-use crate::application::ports::{DepotCharge, DepotInventaire};
+use crate::application::ports::{DepotCharge, DepotInventaire, LecteurModule};
 use crate::domain::contrat_depot::{RACINE_INFRASTRUCTURE, WORKFLOW_TIER1};
+use crate::domain::module_tofu::{
+    EXTENSIONS_JSON_REFUSEES, EXTENSIONS_PROGRAMME, MODULES_PARTAGES,
+};
 use crate::domain::section_empreinte::{verifier_section, GABARIT_TIER1};
-use crate::domain::{AppError, Ecart, VerdictDepot};
+use crate::domain::{verifier_module, AppError, Construction, Ecart, ValeurSure, VerdictDepot};
 use crate::infrastructure::fs_charge::FsCharge;
 use crate::infrastructure::fs_inventaire::FsInventaire;
+use crate::infrastructure::fs_module_tofu::FsModuleTofu;
+
+/// Profondeur maximale de la recherche des modules racines sous
+/// `infrastructure/` : `<regroupement>/<topologie>/<environnement>/<sous-dossier>`
+/// en demande quatre, la marge couvre les conventions voisines.
+const PROFONDEUR_MODULES: usize = 6;
 
 /// Taille maximale du workflow lu.
 const TAILLE_MAXIMALE_WORKFLOW: u64 = 1024 * 1024;
@@ -23,7 +33,14 @@ const TAILLE_MAXIMALE_WORKFLOW: u64 = 1024 * 1024;
 ///
 /// Rend une erreur seulement si la racine elle-même est illisible ; tout le
 /// reste est un écart du verdict.
-pub fn verifier_depot(racine: &str) -> Result<VerdictDepot, AppError> {
+///
+/// `fournisseurs_autorises` est la liste blanche du Sluis interrogé. Vide, les
+/// fournisseurs ne sont pas jugés et une remarque le dit : un écart « liste
+/// blanche vide » par module ne dirait rien du dépôt.
+pub fn verifier_depot(
+    racine: &str,
+    fournisseurs_autorises: &[String],
+) -> Result<VerdictDepot, AppError> {
     let racine = FsInventaire::canoniser_racine(racine)?;
     let mut ecarts = Vec::new();
     let mut remarques = Vec::new();
@@ -73,7 +90,114 @@ pub fn verifier_depot(racine: &str) -> Result<VerdictDepot, AppError> {
         }),
     }
 
+    verifier_modules(
+        &racine,
+        &infrastructure,
+        fournisseurs_autorises,
+        &mut ecarts,
+        &mut remarques,
+    );
+
     Ok(VerdictDepot::new(ecarts, remarques))
+}
+
+/// Juge chaque module racine avec le lecteur et le juge d'exécution.
+fn verifier_modules(
+    racine: &Path,
+    infrastructure: &Path,
+    fournisseurs_autorises: &[String],
+    ecarts: &mut Vec<Ecart>,
+    remarques: &mut Vec<String>,
+) {
+    let liste_vide = fournisseurs_autorises.is_empty();
+    if liste_vide {
+        remarques.push(
+            "fournisseurs OpenTofu non jugés : [tofu] fournisseurs_autorises est vide sur ce \
+             Sluis ; l'exécutant refusera tout module tant qu'elle l'est"
+                .to_string(),
+        );
+    }
+    let lecteur = FsModuleTofu::new(vec![infrastructure.to_string_lossy().to_string()]);
+    let mut modules = Vec::new();
+    chercher_modules(infrastructure, infrastructure, 0, &mut modules);
+    for module in modules {
+        let relatif = module
+            .strip_prefix(racine)
+            .unwrap_or(&module)
+            .display()
+            .to_string();
+        let ecart = |detail: String| Ecart {
+            regle: "tofu",
+            chemin: relatif.clone(),
+            detail,
+        };
+        let soumis = ValeurSure::new(module.to_string_lossy().to_string())
+            .and_then(|valeur| lecteur.lire(&valeur));
+        let soumis = match soumis {
+            Ok(soumis) => soumis,
+            Err(erreur) => {
+                ecarts.push(ecart(erreur.to_string()));
+                continue;
+            }
+        };
+        for violation in verifier_module(&soumis, fournisseurs_autorises) {
+            let sur_les_fournisseurs = matches!(
+                violation.construction,
+                Construction::ListeBlancheVide | Construction::FournisseurHorsListe(_)
+            );
+            if liste_vide && sur_les_fournisseurs {
+                continue;
+            }
+            ecarts.push(ecart(violation.to_string()));
+        }
+    }
+}
+
+/// Les dossiers sous `infrastructure/` qui contiennent directement un fichier
+/// OpenTofu, hors `_shared/` (les modules partagés ne sont pas lancés seuls)
+/// et hors dossiers cachés. Un lien qui sort du dépôt n'est pas suivi.
+fn chercher_modules(
+    infrastructure: &Path,
+    dossier: &Path,
+    profondeur: usize,
+    modules: &mut Vec<std::path::PathBuf>,
+) {
+    if profondeur > PROFONDEUR_MODULES {
+        return;
+    }
+    let Ok(entrees) = std::fs::read_dir(dossier) else {
+        return;
+    };
+    let mut est_module = false;
+    let mut sous_dossiers = Vec::new();
+    for entree in entrees.flatten() {
+        let chemin = entree.path();
+        let Some(nom) = chemin.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if chemin.is_dir() {
+            let partage = profondeur == 0 && nom == MODULES_PARTAGES[0];
+            if !nom.starts_with('.')
+                && !partage
+                && FsInventaire::dans_racine(infrastructure, &chemin)
+            {
+                sous_dossiers.push(chemin);
+            }
+        } else if EXTENSIONS_PROGRAMME
+            .iter()
+            .chain(EXTENSIONS_JSON_REFUSEES)
+            .any(|e| nom.ends_with(e))
+        {
+            est_module = true;
+        }
+    }
+    if est_module {
+        modules.push(dossier.to_path_buf());
+    }
+    sous_dossiers.sort();
+    for sous_dossier in sous_dossiers {
+        chercher_modules(infrastructure, &sous_dossier, profondeur + 1, modules);
+    }
 }
 
 fn verifier_workflow(racine: &Path, ecarts: &mut Vec<Ecart>) {

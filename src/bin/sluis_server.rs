@@ -122,7 +122,9 @@ fn executer() -> Result<(), sluis::domain::AppError> {
     registre.enregistrer(Box::new(OutilDoctor::new(diagnostic)))?;
     registre.enregistrer(Box::new(OutilInventaire::new(depot_inventaire.clone())))?;
     registre.enregistrer(Box::new(OutilProfils::new(depot_inventaire)))?;
-    registre.enregistrer(Box::new(OutilVerifierDepot))?;
+    registre.enregistrer(Box::new(OutilVerifierDepot::new(
+        configuration.fichier.tofu.fournisseurs_autorises.clone(),
+    )))?;
 
     // N'apparaît que si la configuration déclare un module de bac à sable et
     // un projet dédié. Un déploiement de lecture n'expose donc rien qui mute,

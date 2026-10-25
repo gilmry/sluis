@@ -192,7 +192,19 @@ pub struct ArgumentsVerifierDepot {
 
 /// Rend le verdict de conformité d'un dépôt au contrat (ADR-034, point 7).
 #[derive(Debug, Default)]
-pub struct OutilVerifierDepot;
+pub struct OutilVerifierDepot {
+    fournisseurs_autorises: Vec<String>,
+}
+
+impl OutilVerifierDepot {
+    /// Construit l'outil avec la liste blanche de ce Sluis
+    /// (`[tofu] fournisseurs_autorises`).
+    pub fn new(fournisseurs_autorises: Vec<String>) -> Self {
+        Self {
+            fournisseurs_autorises,
+        }
+    }
+}
 
 impl ContratOutil for OutilVerifierDepot {
     fn nom(&self) -> &'static str {
@@ -224,7 +236,10 @@ impl Outil for OutilVerifierDepot {
                 quoi: "arguments de sluis_verifier_depot".to_string(),
                 detail: e.to_string(),
             })?;
-        let verdict = crate::infrastructure::verification_depot::verifier_depot(&args.racine)?;
+        let verdict = crate::infrastructure::verification_depot::verifier_depot(
+            &args.racine,
+            &self.fournisseurs_autorises,
+        )?;
         serde_json::to_value(verdict).map_err(|e| AppError::Analyse {
             quoi: "verdict".to_string(),
             detail: e.to_string(),

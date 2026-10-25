@@ -68,7 +68,9 @@ fn executer() -> Result<(), sluis::domain::AppError> {
     registre.enregistrer(Box::new(OutilDoctor::new(diagnostic)))?;
     registre.enregistrer(Box::new(OutilInventaire::new(depot.clone())))?;
     registre.enregistrer(Box::new(OutilProfils::new(depot)))?;
-    registre.enregistrer(Box::new(OutilVerifierDepot))?;
+    registre.enregistrer(Box::new(OutilVerifierDepot::new(
+        configuration.fichier.tofu.fournisseurs_autorises.clone(),
+    )))?;
 
     // En stdio comme en HTTP, la campagne n'apparaît que si le bac à sable est
     // configuré et si un secret de signature existe pour sceller la fenêtre de
