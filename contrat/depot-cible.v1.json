@@ -77,6 +77,7 @@
   },
   "workflow_tier1": ".github/workflows/tier1-apply.yml",
   "check_runs": {
+    "correspondance": "nom exact, ou « <nom> / <job appelé> » pour un workflow réutilisable ; tous doivent être terminés en succès, un check sauté compte rouge",
     "communs": [
       "sluis/secrets",
       "sluis/sbom",

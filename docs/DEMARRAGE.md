@@ -362,7 +362,10 @@ archetype = "stateless"   # ou "stateful" : ajoute sluis/retour-migration
 
 Les noms des check-runs ne se configurent pas : le contrat du dépôt cible les
 fige (`sluis/secrets`, `sluis/sbom`, `sluis/scan-conteneur`,
-`sluis/retour-migration`). La CI de la cible doit nommer ses jobs ainsi.
+`sluis/retour-migration`). La CI de la cible doit nommer ses jobs ainsi ; un
+job qui appelle un workflow réutilisable produit `sluis/secrets / <job appelé>`,
+ce qui satisfait la gate. Tous les check-runs d'une gate doivent réussir, un
+check sauté compte rouge.
 L'ancienne forme (`secrets = "Secrets"`…) est refusée au chargement.
 
 Avec `environnement-protege`, **avant chaque dispatch**, Sluis lit le

@@ -201,9 +201,15 @@ pub struct ReglesTofu {
     pub fournisseurs: &'static str,
 }
 
+/// Comment un check-run est rattaché à sa gate.
+pub const CORRESPONDANCE_CHECK_RUNS: &str = "nom exact, ou « <nom> / <job appelé> » pour un \
+     workflow réutilisable ; tous doivent être terminés en succès, un check sauté compte rouge";
+
 /// Les check-runs des gates, tels que publiés.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct CheckRuns {
+    /// Règle de rattachement d'un check-run à sa gate.
+    pub correspondance: &'static str,
     /// Gates communes à tout archétype.
     pub communs: Vec<&'static str>,
     /// Gate ajoutée par l'archétype stateful.
@@ -265,6 +271,7 @@ impl ContratDepot {
             },
             workflow_tier1: WORKFLOW_TIER1,
             check_runs: CheckRuns {
+                correspondance: CORRESPONDANCE_CHECK_RUNS,
                 communs: vec![
                     check_runs::SECRETS,
                     check_runs::SBOM,
