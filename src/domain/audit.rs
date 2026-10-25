@@ -7,6 +7,7 @@
 
 use crate::domain::Redacted;
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 
 /// Niveau d'autorisation d'une action.
 ///
@@ -37,6 +38,41 @@ pub struct AuditEntry {
     issue: Issue,
     #[serde(skip_serializing_if = "Option::is_none")]
     secret: Option<Redacted<String>>,
+    /// Fichiers du dépôt cible lus pendant l'appel (ADR-034, point 5). Omis
+    /// quand l'appel n'a rien lu : les entrées d'avant gardent leur forme.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    lectures: Vec<Lecture>,
+}
+
+/// Un fichier lu pendant un appel, et l'empreinte de ce qui a été lu.
+///
+/// L'empreinte prouve sur quoi Sluis a décidé, même si le fichier a changé
+/// depuis : c'est le contenu lu qui est haché, pas celui du disque au moment
+/// de l'audit.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Lecture {
+    chemin: String,
+    sha256: String,
+}
+
+impl Lecture {
+    /// Consigne la lecture de `contenu` au `chemin` donné.
+    pub fn new(chemin: String, contenu: &[u8]) -> Self {
+        Self {
+            chemin,
+            sha256: format!("{:x}", Sha256::digest(contenu)),
+        }
+    }
+
+    /// Chemin du fichier lu.
+    pub fn chemin(&self) -> &str {
+        &self.chemin
+    }
+
+    /// SHA-256 du contenu lu, en hexadécimal minuscule.
+    pub fn sha256(&self) -> &str {
+        &self.sha256
+    }
 }
 
 /// Issue d'un appel. Le succès comme l'échec laissent une trace : un journal
@@ -69,7 +105,19 @@ impl AuditEntry {
                 Err(detail) => Issue::Echec { detail },
             },
             secret: None,
+            lectures: Vec::new(),
         }
+    }
+
+    /// Attache les fichiers lus pendant l'appel.
+    pub fn avec_lectures(mut self, lectures: Vec<Lecture>) -> Self {
+        self.lectures = lectures;
+        self
+    }
+
+    /// Fichiers lus pendant l'appel.
+    pub fn lectures(&self) -> &[Lecture] {
+        &self.lectures
     }
 
     /// Attache un secret à l'entrée, pour le diagnostic.

@@ -69,6 +69,7 @@ impl DepotCharge for FsCharge {
             chemin: chemin.display().to_string(),
             detail: e.to_string(),
         })?;
+        crate::infrastructure::lectures::consigner(&chemin, &contenu);
         let cles = crate::infrastructure::yaml_plat::aplatir(&contenu).map_err(|detail| {
             AppError::Analyse {
                 quoi: chemin.display().to_string(),

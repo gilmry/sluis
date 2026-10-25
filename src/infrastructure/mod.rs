@@ -15,6 +15,7 @@ pub mod fs_inventaire;
 pub mod fs_module_tofu;
 pub mod gates_github;
 pub mod github;
+pub mod lectures;
 pub mod mcp;
 pub mod oauth_depot;
 pub mod ovh;

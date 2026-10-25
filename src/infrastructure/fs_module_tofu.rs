@@ -93,6 +93,7 @@ fn lire_fichier(
         });
     }
     let contenu = std::fs::read_to_string(chemin).map_err(erreur)?;
+    crate::infrastructure::lectures::consigner(chemin, &contenu);
     fichiers.insert(relatif(racine, chemin), contenu);
     Ok(())
 }
