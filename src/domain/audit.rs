@@ -53,6 +53,9 @@ pub struct AuditEntry {
 pub struct Lecture {
     chemin: String,
     sha256: String,
+    /// Commit du dépôt d'où vient le fichier, omis quand il est inconnu.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    commit: Option<String>,
 }
 
 impl Lecture {
@@ -61,7 +64,19 @@ impl Lecture {
         Self {
             chemin,
             sha256: format!("{:x}", Sha256::digest(contenu)),
+            commit: None,
         }
+    }
+
+    /// Attache le commit du dépôt d'où vient le fichier.
+    pub fn avec_commit(mut self, commit: Option<String>) -> Self {
+        self.commit = commit;
+        self
+    }
+
+    /// Commit du dépôt d'où vient le fichier, s'il est connu.
+    pub fn commit(&self) -> Option<&str> {
+        self.commit.as_deref()
     }
 
     /// Chemin du fichier lu.

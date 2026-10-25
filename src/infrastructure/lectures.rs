@@ -23,7 +23,8 @@ thread_local! {
 
 /// Consigne la lecture de `contenu` depuis `chemin`.
 pub fn consigner(chemin: &Path, contenu: &str) {
-    let lecture = Lecture::new(chemin.display().to_string(), contenu.as_bytes());
+    let lecture = Lecture::new(chemin.display().to_string(), contenu.as_bytes())
+        .avec_commit(crate::infrastructure::depot_git::commit_courant(chemin));
     LECTURES.with(|lectures| lectures.borrow_mut().push(lecture));
 }
 

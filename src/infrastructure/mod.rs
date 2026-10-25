@@ -7,6 +7,7 @@ pub mod audit;
 pub mod bac_a_sable;
 pub mod charge;
 pub mod composition;
+pub mod depot_git;
 pub mod derogation_depot;
 pub mod diagnostic;
 pub mod etiquette_signee;
