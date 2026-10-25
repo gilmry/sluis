@@ -11,7 +11,8 @@ use crate::application::campagne::Campagne;
 use crate::application::mise_en_ligne::MiseEnLigne;
 use crate::application::ouverture_derogation::OuvertureDerogation;
 use crate::application::ports::{GatePlancher, Horloge};
-use crate::configuration::{Configuration, TypePasserelle};
+use crate::configuration::{ArchetypeGates, Configuration, TypePasserelle};
+use crate::domain::contrat_depot::check_runs;
 use crate::domain::{AppError, Duree, PlafondDepense};
 use crate::infrastructure::bac_a_sable::BacASableIac;
 use crate::infrastructure::charge::Wrk;
@@ -171,13 +172,20 @@ pub fn verificateur_gates_si_configure(
     let gates = section.gates.as_ref()?;
     let jeton = configuration.jeton_github.clone()?;
 
+    // Les noms viennent du contrat du dépôt cible, jamais de la configuration.
     let mut correspondance = vec![
-        (GatePlancher::Secrets, gates.secrets.clone()),
-        (GatePlancher::Sbom, gates.sbom.clone()),
-        (GatePlancher::ScanConteneur, gates.scan_conteneur.clone()),
+        (GatePlancher::Secrets, check_runs::SECRETS.to_string()),
+        (GatePlancher::Sbom, check_runs::SBOM.to_string()),
+        (
+            GatePlancher::ScanConteneur,
+            check_runs::SCAN_CONTENEUR.to_string(),
+        ),
     ];
-    if let Some(nom) = &gates.retour_migration {
-        correspondance.push((GatePlancher::RetourMigration, nom.clone()));
+    if gates.archetype == ArchetypeGates::Stateful {
+        correspondance.push((
+            GatePlancher::RetourMigration,
+            check_runs::RETOUR_MIGRATION.to_string(),
+        ));
     }
 
     Some(VerificateurGatesGithub::new(

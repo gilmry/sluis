@@ -85,23 +85,63 @@ pub enum TypePasserelle {
     EtiquetteSignee,
 }
 
-/// Correspondance entre les gates du plancher et les check-runs de la CI cible.
+/// Les gates du plancher qu'exige ce déploiement.
 ///
-/// Les trois gates communes à tout archétype sont **requises** : une section
-/// qui en omettrait une ne se charge pas, plutôt que de laisser passer une
-/// mise en ligne sur un plancher incomplet.
+/// Les **noms** des check-runs ne se configurent pas : ils sont figés par le
+/// contrat du dépôt cible (ADR-034, `contrat_depot::check_runs`). Seul
+/// l'archétype se déclare, et il est **requis** : un oubli ne doit pas choisir
+/// à la place du superviseur l'absence de la gate de retour de migration.
+///
+/// L'ancienne forme, qui nommait chaque check-run (`secrets = "Secrets"`), est
+/// refusée au chargement plutôt que silencieusement ignorée.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SectionGatesGithub {
-    /// Check-run de la gate « secrets ».
-    pub secrets: String,
-    /// Check-run de la gate « sbom ».
-    pub sbom: String,
-    /// Check-run de la gate « scan-conteneur ».
-    pub scan_conteneur: String,
-    /// Check-run de la gate « retour-migration », archétype stateful seulement.
-    #[serde(default)]
-    pub retour_migration: Option<String>,
+    /// `stateless` : les trois gates communes. `stateful` : plus le retour de
+    /// migration.
+    pub archetype: ArchetypeGates,
+}
+
+/// L'archétype du dépôt cible, qui fixe les gates exigées.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ArchetypeGates {
+    /// Sans état : secrets, sbom, scan-conteneur.
+    Stateless,
+    /// Avec état : les trois, plus retour-migration.
+    Stateful,
+}
+
+/// Les clés de l'ancienne forme de `[github.gates]`, qui nommait les check-runs.
+const ANCIENNES_CLES_GATES: &[&str] = &["secrets", "sbom", "scan_conteneur", "retour_migration"];
+
+/// Refuse l'ancienne forme de `[github.gates]` avec un message qui dit quoi
+/// faire, plutôt que l'erreur générique d'un champ inconnu. Un fichier qui ne
+/// se lit pas comme du TOML est laissé à l'analyse typée, qui le dira.
+fn refuser_noms_de_check_runs(contenu: &str) -> Result<(), AppError> {
+    let Ok(table) = contenu.parse::<toml::Table>() else {
+        return Ok(());
+    };
+    let gates = table
+        .get("github")
+        .and_then(|github| github.get("gates"))
+        .and_then(toml::Value::as_table);
+    let Some(gates) = gates else {
+        return Ok(());
+    };
+    if let Some(cle) = ANCIENNES_CLES_GATES
+        .iter()
+        .find(|c| gates.contains_key(**c))
+    {
+        return Err(AppError::Configuration {
+            detail: format!(
+                "[github.gates] : « {cle} » ne se configure plus, les noms des check-runs sont \
+                 figés par le contrat du dépôt cible (ADR-034, contrat/depot-cible.v1.json) ; \
+                 déclarer seulement archetype = \"stateless\" ou \"stateful\""
+            ),
+        });
+    }
+    Ok(())
 }
 
 fn branche_par_defaut() -> String {
@@ -293,6 +333,7 @@ impl Configuration {
                         chemin: chemin.display().to_string(),
                         detail: e.to_string(),
                     })?;
+                refuser_noms_de_check_runs(&contenu)?;
                 toml::from_str(&contenu).map_err(|e| AppError::Analyse {
                     quoi: chemin.display().to_string(),
                     detail: e.to_string(),

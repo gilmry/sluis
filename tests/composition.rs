@@ -239,10 +239,7 @@ depot = "koprogo"
 workflow = "tier1-apply.yml"
 
 [github.gates]
-secrets = "Secrets"
-sbom = "SBOM"
-scan_conteneur = "Scan image"
-retour_migration = "Migrations"
+archetype = "stateful"
 "#;
 
     #[test]
@@ -268,11 +265,55 @@ retour_migration = "Migrations"
     }
 
     #[test]
-    fn security_une_gate_commune_omise_empeche_le_chargement() {
-        let incomplete = AVEC_GATES.replace("scan_conteneur = \"Scan image\"\n", "");
+    fn happy_les_noms_des_check_runs_viennent_du_contrat() {
+        let configuration = charger(AVEC_GATES, "contrat", Some("jeton")).expect("chargement");
+        let vue = format!(
+            "{:?}",
+            verificateur_gates_si_configure(&configuration).expect("composé")
+        );
+        for nom in [
+            "sluis/secrets",
+            "sluis/sbom",
+            "sluis/scan-conteneur",
+            "sluis/retour-migration",
+        ] {
+            assert!(vue.contains(nom), "{nom} absent : {vue}");
+        }
+    }
+
+    #[test]
+    fn happy_un_archetype_stateless_n_exige_pas_le_retour_de_migration() {
+        let stateless = AVEC_GATES.replace("\"stateful\"", "\"stateless\"");
+        let configuration = charger(&stateless, "stateless", Some("jeton")).expect("chargement");
+        let vue = format!(
+            "{:?}",
+            verificateur_gates_si_configure(&configuration).expect("composé")
+        );
+        assert!(vue.contains("sluis/scan-conteneur"), "{vue}");
+        assert!(!vue.contains("RetourMigration"), "{vue}");
+    }
+
+    #[test]
+    fn negative_l_ancienne_forme_qui_nommait_les_check_runs_est_refusee() {
+        let ancienne = AVEC_GATES.replace(
+            "archetype = \"stateful\"\n",
+            "secrets = \"Secrets\"\nsbom = \"SBOM\"\nscan_conteneur = \"Scan image\"\n",
+        );
+        let Err(erreur) = charger(&ancienne, "ancienne", Some("jeton")) else {
+            panic!("l'ancienne forme doit être refusée");
+        };
         assert!(
-            charger(&incomplete, "incomplete", Some("jeton")).is_err(),
-            "un plancher sans scan de conteneur ne doit pas se charger"
+            erreur.to_string().contains("contrat du dépôt cible"),
+            "l'erreur doit renvoyer au contrat : {erreur}"
+        );
+    }
+
+    #[test]
+    fn edge_une_section_gates_sans_archetype_ne_se_charge_pas() {
+        let sans = AVEC_GATES.replace("archetype = \"stateful\"\n", "");
+        assert!(
+            charger(&sans, "sans-archetype", Some("jeton")).is_err(),
+            "un oubli ne doit pas choisir l'archétype à la place du superviseur"
         );
     }
 }
@@ -292,9 +333,7 @@ depot = "koprogo"
 workflow = "tier1-apply.yml"
 
 [github.gates]
-secrets = "Secrets"
-sbom = "SBOM"
-scan_conteneur = "Scan image"
+archetype = "stateless"
 "#;
 
     fn noms(contenu: &str, nom: &str, jeton: Option<&'static str>) -> Vec<&'static str> {
@@ -457,9 +496,7 @@ depot = "cible-privee"
 passerelle = "etiquette-signee"
 
 [github.gates]
-secrets = "Secrets"
-sbom = "SBOM"
-scan_conteneur = "Scan image"
+archetype = "stateless"
 "#;
 
     const JETON: &str = "github_pat_lecture-seule-d-essai";

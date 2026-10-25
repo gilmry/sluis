@@ -350,10 +350,13 @@ passerelle = "etiquette-signee"   # absent : environnement-protege
 # workflow n'est requis que par environnement-protege
 
 [github.gates]
-secrets = "Secrets"
-sbom = "SBOM"
-scan_conteneur = "Scan image"
+archetype = "stateless"   # ou "stateful" : ajoute sluis/retour-migration
 ```
+
+Les noms des check-runs ne se configurent pas : le contrat du dépôt cible les
+fige (`sluis/secrets`, `sluis/sbom`, `sluis/scan-conteneur`,
+`sluis/retour-migration`). La CI de la cible doit nommer ses jobs ainsi.
+L'ancienne forme (`secrets = "Secrets"`…) est refusée au chargement.
 
 Ce qu'il faut savoir avec `etiquette-signee` :
 

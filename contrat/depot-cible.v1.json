@@ -76,6 +76,16 @@
     "fournisseurs": "liste blanche du déploiement, vide par défaut"
   },
   "workflow_tier1": ".github/workflows/tier1-apply.yml",
+  "check_runs": {
+    "communs": [
+      "sluis/secrets",
+      "sluis/sbom",
+      "sluis/scan-conteneur"
+    ],
+    "stateful": [
+      "sluis/retour-migration"
+    ]
+  },
   "places_reservees": [
     {
       "chemin": ".sops.yaml",

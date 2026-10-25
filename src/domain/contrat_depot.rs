@@ -42,6 +42,20 @@ pub const REGROUPEMENTS: &[&str] = &["monosite", "multisite"];
 /// Le workflow de Tier 1, copié du gabarit de Sluis (ADR-012, ADR-013).
 pub const WORKFLOW_TIER1: &str = ".github/workflows/tier1-apply.yml";
 
+/// Les noms des check-runs qui portent les gates du plancher dans la CI du
+/// dépôt cible. Figés par le contrat (décision du superviseur du 2026-10-25) :
+/// Sluis ne lit que ces noms, aucun déploiement ne les reconfigure.
+pub mod check_runs {
+    /// Gate « secrets ».
+    pub const SECRETS: &str = "sluis/secrets";
+    /// Gate « sbom ».
+    pub const SBOM: &str = "sluis/sbom";
+    /// Gate « scan-conteneur ».
+    pub const SCAN_CONTENEUR: &str = "sluis/scan-conteneur";
+    /// Gate « retour-migration », archétype stateful seulement.
+    pub const RETOUR_MIGRATION: &str = "sluis/retour-migration";
+}
+
 /// Les clés de `charge.yaml`, toutes requises.
 pub mod cles_charge {
     /// Topologie mesurée.
@@ -187,6 +201,15 @@ pub struct ReglesTofu {
     pub fournisseurs: &'static str,
 }
 
+/// Les check-runs des gates, tels que publiés.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CheckRuns {
+    /// Gates communes à tout archétype.
+    pub communs: Vec<&'static str>,
+    /// Gate ajoutée par l'archétype stateful.
+    pub stateful: Vec<&'static str>,
+}
+
 /// Le contrat du dépôt cible, tel que publié.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ContratDepot {
@@ -204,6 +227,8 @@ pub struct ContratDepot {
     pub tofu: ReglesTofu,
     /// Workflow de Tier 1, copié du gabarit.
     pub workflow_tier1: &'static str,
+    /// Noms des check-runs des gates.
+    pub check_runs: CheckRuns,
     /// Places réservées, format à définir.
     pub places_reservees: Vec<PlaceReservee>,
 }
@@ -239,6 +264,14 @@ impl ContratDepot {
                 fournisseurs: "liste blanche du déploiement, vide par défaut",
             },
             workflow_tier1: WORKFLOW_TIER1,
+            check_runs: CheckRuns {
+                communs: vec![
+                    check_runs::SECRETS,
+                    check_runs::SBOM,
+                    check_runs::SCAN_CONTENEUR,
+                ],
+                stateful: vec![check_runs::RETOUR_MIGRATION],
+            },
             places_reservees: PLACES_RESERVEES.to_vec(),
         }
     }
