@@ -54,7 +54,16 @@ impl DepotCharge for FsCharge {
             })?;
         let chemin = FICHIER_CHARGE
             .iter()
-            .fold(racine, |chemin, segment| chemin.join(segment));
+            .fold(racine.clone(), |chemin, segment| chemin.join(segment));
+        // Un lien symbolique qui sort du dépôt ferait lire, et citer dans les
+        // erreurs d'analyse, un fichier quelconque de la machine.
+        if chemin.exists()
+            && !crate::infrastructure::fs_inventaire::FsInventaire::dans_racine(&racine, &chemin)
+        {
+            return Err(AppError::CheminHorsRacine {
+                chemin: chemin.display().to_string(),
+            });
+        }
         if !chemin.is_file() {
             return Err(AppError::Configuration {
                 detail: format!(

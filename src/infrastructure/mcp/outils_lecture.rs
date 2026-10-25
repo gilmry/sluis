@@ -180,3 +180,54 @@ impl Outil for OutilProfils {
         })
     }
 }
+
+/// `sluis_verifier_depot` — la racine d'un dépôt cible.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ArgumentsVerifierDepot {
+    /// Racine du dépôt cible (celle qui contient `infrastructure/` et
+    /// `.github/`).
+    pub racine: String,
+}
+
+/// Rend le verdict de conformité d'un dépôt au contrat (ADR-034, point 7).
+#[derive(Debug, Default)]
+pub struct OutilVerifierDepot;
+
+impl ContratOutil for OutilVerifierDepot {
+    fn nom(&self) -> &'static str {
+        "sluis_verifier_depot"
+    }
+    fn description(&self) -> &'static str {
+        "Rend le verdict de conformité d'un dépôt cible au contrat de Sluis \
+         (contrat/depot-cible.v1.json) : conforme, écarts bloquants, remarques. \
+         Les règles sont celles que Sluis applique à l'exécution. Ne modifie rien."
+    }
+    fn schema(&self) -> serde_json::Value {
+        serde_json::to_value(schemars::schema_for!(ArgumentsVerifierDepot))
+            .unwrap_or_else(|_| serde_json::json!({"type": "object"}))
+    }
+    fn desérialiser(&self, arguments: &serde_json::Value) -> Result<(), String> {
+        serde_json::from_value::<ArgumentsVerifierDepot>(arguments.clone())
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    }
+}
+
+impl Outil for OutilVerifierDepot {
+    fn tier(&self) -> Tier {
+        Tier::Two
+    }
+    fn appeler(&self, arguments: &serde_json::Value) -> Result<serde_json::Value, AppError> {
+        let args: ArgumentsVerifierDepot =
+            serde_json::from_value(arguments.clone()).map_err(|e| AppError::Analyse {
+                quoi: "arguments de sluis_verifier_depot".to_string(),
+                detail: e.to_string(),
+            })?;
+        let verdict = crate::infrastructure::verification_depot::verifier_depot(&args.racine)?;
+        serde_json::to_value(verdict).map_err(|e| AppError::Analyse {
+            quoi: "verdict".to_string(),
+            detail: e.to_string(),
+        })
+    }
+}

@@ -23,7 +23,9 @@ use sluis::infrastructure::composition::{
 };
 use sluis::infrastructure::diagnostic::DiagnosticSysteme;
 use sluis::infrastructure::fs_inventaire::FsInventaire;
-use sluis::infrastructure::mcp::outils_lecture::{OutilDoctor, OutilInventaire, OutilProfils};
+use sluis::infrastructure::mcp::outils_lecture::{
+    OutilDoctor, OutilInventaire, OutilProfils, OutilVerifierDepot,
+};
 use sluis::infrastructure::mcp::{RegistreOutils, ServeurMcp};
 
 /// Horloge système.
@@ -66,6 +68,7 @@ fn executer() -> Result<(), sluis::domain::AppError> {
     registre.enregistrer(Box::new(OutilDoctor::new(diagnostic)))?;
     registre.enregistrer(Box::new(OutilInventaire::new(depot.clone())))?;
     registre.enregistrer(Box::new(OutilProfils::new(depot)))?;
+    registre.enregistrer(Box::new(OutilVerifierDepot))?;
 
     // En stdio comme en HTTP, la campagne n'apparaît que si le bac à sable est
     // configuré et si un secret de signature existe pour sceller la fenêtre de

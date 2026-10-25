@@ -332,6 +332,12 @@ sluis contract                      # l'imprime depuis le binaire
 exige une clé que le schéma n'annonce pas (et l'inverse). Une skill Foyer lit
 ce fichier, à une version étiquetée de Sluis ; elle ne le recopie pas.
 
+L'outil MCP de lecture **`sluis_verifier_depot`** (argument `racine`, la
+racine du dépôt) rend le verdict d'un dépôt : `conforme`, `ecarts` bloquants
+(`arborescence`, `charge`, `profils`, `cellules`, `workflow-tier1`) et
+`remarques`. Il passe par les lecteurs que Sluis utilise à l'exécution. Les
+modules OpenTofu n'y sont pas encore jugés.
+
 ## Choisir la passerelle d'approbation : `[github] passerelle`
 
 La section `[github]` du fichier de configuration compose la passerelle de

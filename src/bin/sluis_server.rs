@@ -23,7 +23,9 @@ use sluis::infrastructure::composition::{
 };
 use sluis::infrastructure::diagnostic::DiagnosticSysteme;
 use sluis::infrastructure::fs_inventaire::FsInventaire;
-use sluis::infrastructure::mcp::outils_lecture::{OutilDoctor, OutilInventaire, OutilProfils};
+use sluis::infrastructure::mcp::outils_lecture::{
+    OutilDoctor, OutilInventaire, OutilProfils, OutilVerifierDepot,
+};
 use sluis::infrastructure::mcp::{RegistreOutils, ServeurMcp};
 use sluis::infrastructure::oauth_depot::DepotOAuthFichier;
 use sluis::infrastructure::serveur_http::{
@@ -120,6 +122,7 @@ fn executer() -> Result<(), sluis::domain::AppError> {
     registre.enregistrer(Box::new(OutilDoctor::new(diagnostic)))?;
     registre.enregistrer(Box::new(OutilInventaire::new(depot_inventaire.clone())))?;
     registre.enregistrer(Box::new(OutilProfils::new(depot_inventaire)))?;
+    registre.enregistrer(Box::new(OutilVerifierDepot))?;
 
     // N'apparaît que si la configuration déclare un module de bac à sable et
     // un projet dédié. Un déploiement de lecture n'expose donc rien qui mute,
