@@ -23,6 +23,7 @@ pub mod redacted;
 pub mod section_empreinte;
 pub mod temps;
 pub mod valeur_sure;
+pub mod verdict_depot;
 
 pub use audit::{AuditEntry, Lecture, Tier};
 pub use autorisation::{Action, Empreinte, JetonChangement, JetonConsomme, PlanChangement};
@@ -59,3 +60,4 @@ pub use ovh::{
 pub use redacted::Redacted;
 pub use temps::{Duree, Horodatage};
 pub use valeur_sure::{MutationTerraform, PlanTerraform, StatutArgocd, StatutHelm, ValeurSure};
+pub use verdict_depot::{Ecart, VerdictDepot};

@@ -18,6 +18,10 @@
 //! **Limite assumée** (ADR-034) : prouver que ce bloc est intact ne prouve pas
 //! que le reste du workflow est sain.
 
+/// Le gabarit du workflow de Tier 1, tel que Sluis le distribue. Sa section
+/// est la référence de chaque dispatch et de chaque verdict de conformité.
+pub const GABARIT_TIER1: &str = include_str!("../../.github/workflows/tier1-apply.yml.example");
+
 /// Marqueur d'ouverture de la section.
 pub const DEBUT_SECTION: &str = "# >>> verification-empreinte";
 

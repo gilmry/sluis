@@ -20,12 +20,8 @@
 use std::time::Duration;
 
 use crate::application::ports::{EtatApprobation, PasserelleApprobation};
-use crate::domain::section_empreinte::verifier_section;
+use crate::domain::section_empreinte::{verifier_section, GABARIT_TIER1};
 use crate::domain::{AppError, Empreinte, PlanChangement, Redacted};
-
-/// Le gabarit du workflow de Tier 1, tel que Sluis le distribue. Sa section
-/// `verification-empreinte` est la référence de chaque dispatch.
-const GABARIT_TIER1: &str = include_str!("../../.github/workflows/tier1-apply.yml.example");
 
 /// Passerelle GitHub Actions.
 pub struct PasserelleGithub {
