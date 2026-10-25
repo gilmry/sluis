@@ -70,6 +70,15 @@ pub enum AppError {
         raison: String,
     },
 
+    /// Le workflow de Tier 1 du dépôt cible n'a pas, ou plus, la section
+    /// `verification-empreinte` du gabarit (ADR-034, point 6).
+    ///
+    /// Le refus a lieu **avant le dispatch** : un workflow qui ne recalcule
+    /// plus l'empreinte exécuterait, sur une approbation donnée, des entrées
+    /// qui ne sont pas celles du plan approuvé.
+    #[error("dispatch Tier 1 refusé : le workflow « {workflow} » {raison}")]
+    WorkflowNonConforme { workflow: String, raison: String },
+
     /// Un module OpenTofu sort du contrat d'ADR-034 (point 3).
     ///
     /// Le refus a lieu **avant toute commande `tofu`** : un module qui y

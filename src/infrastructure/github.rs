@@ -20,7 +20,12 @@
 use std::time::Duration;
 
 use crate::application::ports::{EtatApprobation, PasserelleApprobation};
+use crate::domain::section_empreinte::verifier_section;
 use crate::domain::{AppError, Empreinte, PlanChangement, Redacted};
+
+/// Le gabarit du workflow de Tier 1, tel que Sluis le distribue. Sa section
+/// `verification-empreinte` est la référence de chaque dispatch.
+const GABARIT_TIER1: &str = include_str!("../../.github/workflows/tier1-apply.yml.example");
 
 /// Passerelle GitHub Actions.
 pub struct PasserelleGithub {
@@ -142,6 +147,51 @@ impl PasserelleGithub {
         Ok(())
     }
 
+    /// Vérifie, avant tout dispatch, que le workflow du dépôt cible porte la
+    /// section `verification-empreinte` du gabarit, intacte (ADR-034, point 6).
+    ///
+    /// Lu sur la branche où le dispatch sera déclenché : c'est cette version
+    /// du fichier que GitHub exécutera. Toute erreur de lecture refuse.
+    fn verifier_workflow(&self) -> Result<(), AppError> {
+        let refus = |raison: String| AppError::WorkflowNonConforme {
+            workflow: self.workflow.clone(),
+            raison,
+        };
+
+        let reponse = self
+            .agent
+            .get(self.url(&format!(
+                "/contents/.github/workflows/{}?ref={}",
+                self.workflow, self.reference
+            )))
+            .header("Authorization", &format!("Bearer {}", self.jeton.exposer()))
+            .header("Accept", "application/vnd.github.raw+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .call();
+
+        let contenu = match reponse {
+            Ok(mut r) => r
+                .body_mut()
+                .read_to_string()
+                .map_err(|e| refus(format!("est illisible : {e}")))?,
+            Err(ureq::Error::StatusCode(401)) | Err(ureq::Error::StatusCode(403)) => {
+                return Err(AppError::Authentification {
+                    secret: Redacted::new("jeton GitHub".to_string()),
+                })
+            }
+            Err(ureq::Error::StatusCode(404)) => {
+                return Err(refus(format!(
+                    "est introuvable sur la branche « {} »",
+                    self.reference
+                )))
+            }
+            Err(e) => return Err(refus(format!("n'a pas pu être lu : {e}"))),
+        };
+
+        verifier_section(GABARIT_TIER1, &contenu)
+            .map_err(|raison| refus(format!("n'est pas conforme au gabarit : {raison}")))
+    }
+
     /// Lecture JSON authentifiée.
     fn lire(&self, url: &str) -> Result<serde_json::Value, AppError> {
         let mut reponse = self
@@ -176,6 +226,7 @@ impl PasserelleGithub {
 impl PasserelleApprobation for PasserelleGithub {
     fn soumettre(&self, plan: &PlanChangement) -> Result<EtatApprobation, AppError> {
         self.verifier_environnement(plan.environnement().nom())?;
+        self.verifier_workflow()?;
 
         // L'empreinte voyage en entrée du workflow avec **tout ce qui la
         // compose** : le job la recalcule avant toute mutation et s'arrête si

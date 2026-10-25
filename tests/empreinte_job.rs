@@ -70,6 +70,9 @@ fn entrees_envoyees(plan: &PlanChangement) -> serde_json::Map<String, serde_json
             let (code, reponse) = if ligne.starts_with("POST ") {
                 let _ = emetteur.send(String::from_utf8_lossy(&recu).to_string());
                 (204, String::new())
+            } else if ligne.contains("/contents/") {
+                // Le workflow de la cible est le gabarit lui-même (ADR-034, point 6).
+                (200, GABARIT.to_string())
             } else {
                 (
                     200,

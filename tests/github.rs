@@ -4,6 +4,9 @@
 //! Issue #3 — retrouver le run par l'empreinte et inscrire le relecteur réel,
 //! lu dans les approbations du run, jamais `triggering_actor` (H-a, H-b, S3).
 //!
+//! Story 34.4 (#69) — refuser le dispatch quand la section
+//! `verification-empreinte` du workflow cible n'est pas celle du gabarit.
+//!
 //! **Aucun appel réseau réel** (NFR-07). Le serveur d'essai répond à la lecture
 //! de l'environnement selon le scénario, accepte tout dispatch, et rend compte
 //! des requêtes reçues : c'est ce qui permet de prouver qu'un refus a lieu
@@ -40,8 +43,24 @@ type Routeur = Arc<dyn Fn(&str, &str) -> (u16, String) + Send + Sync>;
 
 /// `environnement` : `None` → 404 (environnement absent) ; `Some(json)` → 200.
 fn lancer_serveur(environnement: Option<&'static str>) -> ServeurEssai {
+    lancer_avec_workflow(environnement, Some(GABARIT.to_string()))
+}
+
+/// Le gabarit que Sluis distribue : une cible qui le copie est conforme.
+const GABARIT: &str = include_str!("../.github/workflows/tier1-apply.yml.example");
+
+/// `workflow` : `None` → 404 sur le contenu ; `Some(texte)` → 200, brut.
+fn lancer_avec_workflow(
+    environnement: Option<&'static str>,
+    workflow: Option<String>,
+) -> ServeurEssai {
     lancer(Arc::new(move |methode, chemin| {
-        if methode == "POST" && chemin.ends_with("/dispatches") {
+        if methode == "GET" && chemin.contains("/contents/.github/workflows/") {
+            match &workflow {
+                Some(texte) => (200, texte.clone()),
+                None => (404, String::new()),
+            }
+        } else if methode == "POST" && chemin.ends_with("/dispatches") {
             (204, String::new())
         } else if chemin.contains("/environments/") {
             match environnement {
@@ -197,6 +216,87 @@ fn security_l_auto_approbation_permise_refuse_le_dispatch() {
     let serveur = lancer_serveur(Some(AUTO_APPROBATION));
     let message = refus_attendu(passerelle(&serveur.adresse).soumettre(&plan_production()));
     assert!(message.contains("prevent_self_review"), "{message}");
+    assert!(!serveur.a_dispatche());
+}
+
+// ═════════════════════════════════════════════════════════════
+// Story 34.4 — la section verification-empreinte, identique au gabarit
+// ═════════════════════════════════════════════════════════════
+
+fn refus_workflow(resultat: Result<EtatApprobation, AppError>) -> String {
+    match resultat {
+        Err(e @ AppError::WorkflowNonConforme { .. }) => e.to_string(),
+        autre => panic!("refus WorkflowNonConforme attendu, obtenu {autre:?}"),
+    }
+}
+
+#[test]
+fn happy_un_workflow_copie_du_gabarit_est_lu_sur_la_branche_puis_dispatche() {
+    let serveur = lancer_serveur(Some(PROTEGE));
+    passerelle(&serveur.adresse)
+        .soumettre(&plan_production())
+        .expect("soumission");
+    let recues = serveur.recues();
+    let lecture = recues
+        .iter()
+        .position(|r| r == "GET /repos/gilmry/cible/contents/.github/workflows/tier1.yml?ref=main")
+        .expect("le workflow doit être lu sur la branche du dispatch");
+    let dispatch = recues
+        .iter()
+        .position(|r| r.ends_with("/dispatches"))
+        .expect("dispatch");
+    assert!(lecture < dispatch, "lecture avant dispatch : {recues:?}");
+}
+
+#[test]
+fn negative_un_caractere_change_dans_la_section_bloque_le_dispatch() {
+    let affaibli = GABARIT.replace(
+        "if [ \"$calculee\" != \"$EMPREINTE\" ]",
+        "if [ \"$calculee\" = \"$EMPREINTE\" ]",
+    );
+    assert_ne!(affaibli, GABARIT, "la mutation doit porter");
+    let serveur = lancer_avec_workflow(Some(PROTEGE), Some(affaibli));
+
+    let message = refus_workflow(passerelle(&serveur.adresse).soumettre(&plan_production()));
+
+    assert!(message.contains("tier1.yml"), "{message}");
+    assert!(message.contains("ligne"), "{message}");
+    assert!(!serveur.a_dispatche(), "aucun dispatch ne doit partir");
+}
+
+#[test]
+fn edge_une_seconde_section_intacte_ne_masque_pas_la_premiere() {
+    let debut = GABARIT.find("# >>> verification-empreinte").expect("début");
+    let fin = GABARIT.find("# <<< verification-empreinte").expect("fin");
+    let section = &GABARIT[debut..fin + "# <<< verification-empreinte".len()];
+    let double = format!("{GABARIT}\n# {section}\n");
+    let serveur = lancer_avec_workflow(Some(PROTEGE), Some(double));
+
+    let message = refus_workflow(passerelle(&serveur.adresse).soumettre(&plan_production()));
+
+    assert!(message.contains("une seule section"), "{message}");
+    assert!(!serveur.a_dispatche());
+}
+
+#[test]
+fn edge_une_indentation_differente_est_acceptee() {
+    let reindente = GABARIT.replace(
+        "          # >>> verification",
+        "            # >>> verification",
+    );
+    assert_ne!(reindente, GABARIT, "la mutation doit porter");
+    let serveur = lancer_avec_workflow(Some(PROTEGE), Some(reindente));
+    passerelle(&serveur.adresse)
+        .soumettre(&plan_production())
+        .expect("seule la structure YAML change, pas le script");
+    assert!(serveur.a_dispatche());
+}
+
+#[test]
+fn security_un_workflow_introuvable_bloque_le_dispatch() {
+    let serveur = lancer_avec_workflow(Some(PROTEGE), None);
+    let message = refus_workflow(passerelle(&serveur.adresse).soumettre(&plan_production()));
+    assert!(message.contains("introuvable"), "{message}");
     assert!(!serveur.a_dispatche());
 }
 

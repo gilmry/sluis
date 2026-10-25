@@ -339,7 +339,7 @@ Tier 1. Deux valeurs, une seule active par déploiement :
 
 | `passerelle` | Pour | Ce que fait Sluis | Jeton `SLUIS_GITHUB_TOKEN` |
 |---|---|---|---|
-| `environnement-protege` (défaut, ADR-008) | dépôt public, ou offre GitHub à relecteurs requis | déclenche le workflow de `workflow`, bloqué par l'environnement protégé | déclenchement du workflow, lecture des runs et de l'environnement |
+| `environnement-protege` (défaut, ADR-008) | dépôt public, ou offre GitHub à relecteurs requis | déclenche le workflow de `workflow`, bloqué par l'environnement protégé | déclenchement du workflow, lecture des runs et de l'environnement, **lecture du contenu** (le workflow, voir plus bas) |
 | `etiquette-signee` (ADR-013) | dépôt privé | rend la commande `git tag -s approuve/<court> <commit> -m "<environnement> <empreinte>"`, puis lit l'étiquette | **lecture seule** : contenu (refs, objets git, commits) et checks |
 
 ```toml
@@ -357,6 +357,14 @@ Les noms des check-runs ne se configurent pas : le contrat du dépôt cible les
 fige (`sluis/secrets`, `sluis/sbom`, `sluis/scan-conteneur`,
 `sluis/retour-migration`). La CI de la cible doit nommer ses jobs ainsi.
 L'ancienne forme (`secrets = "Secrets"`…) est refusée au chargement.
+
+Avec `environnement-protege`, **avant chaque dispatch**, Sluis lit le
+workflow de la cible sur la branche configurée et compare sa section
+`verification-empreinte` à celle du gabarit
+(`.github/workflows/tier1-apply.yml.example`). Un caractère de différence,
+un marqueur absent ou en double, un workflow introuvable : le dispatch ne part
+pas (ADR-034, point 6). Seule l'indentation de tête est libre. Copier la
+section du gabarit telle quelle.
 
 Ce qu'il faut savoir avec `etiquette-signee` :
 
