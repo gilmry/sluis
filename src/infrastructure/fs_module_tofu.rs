@@ -17,7 +17,9 @@ use std::collections::BTreeMap;
 use std::path::{Component, Path, PathBuf};
 
 use crate::application::ports::LecteurModule;
-use crate::domain::module_tofu::{FICHIER_VERROU, MODULES_PARTAGES};
+use crate::domain::module_tofu::{
+    EXTENSIONS_JSON_REFUSEES, EXTENSIONS_PROGRAMME, FICHIER_VERROU, MODULES_PARTAGES,
+};
 use crate::domain::{AppError, FichierModule, ModuleSoumis, ValeurSure};
 use crate::infrastructure::fs_inventaire::FsInventaire;
 
@@ -49,10 +51,10 @@ impl FsModuleTofu {
 /// Vrai si ce nom de fichier intéresse la vérification.
 fn a_lire(nom: &str) -> bool {
     nom == FICHIER_VERROU
-        || nom.ends_with(".tf")
-        || nom.ends_with(".tofu")
-        || nom.ends_with(".tf.json")
-        || nom.ends_with(".tofu.json")
+        || EXTENSIONS_PROGRAMME
+            .iter()
+            .chain(EXTENSIONS_JSON_REFUSEES)
+            .any(|e| nom.ends_with(e))
 }
 
 /// Chemin relatif à la racine, séparé par `/`.

@@ -7,6 +7,7 @@
 use std::path::Path;
 
 use crate::application::ports::DepotCharge;
+use crate::domain::contrat_depot::{cles_charge as cle, FICHIER_CHARGE};
 use crate::domain::{AppError, CibleCapacite, DeclarationCharge, Duree, PlafondDepense};
 
 /// Adaptateur de système de fichiers.
@@ -51,7 +52,9 @@ impl DepotCharge for FsCharge {
                 chemin: racine.to_string(),
                 detail: e.to_string(),
             })?;
-        let chemin = racine.join("_shared").join("charge.yaml");
+        let chemin = FICHIER_CHARGE
+            .iter()
+            .fold(racine, |chemin, segment| chemin.join(segment));
         if !chemin.is_file() {
             return Err(AppError::Configuration {
                 detail: format!(
@@ -74,16 +77,16 @@ impl DepotCharge for FsCharge {
         })?;
 
         DeclarationCharge::new(
-            requise(&cles, "topologie")?,
-            requise(&cles, "module")?,
-            requise(&cles, "sortie_adresse")?,
-            requise(&cles, "chemin")?,
+            requise(&cles, cle::TOPOLOGIE)?,
+            requise(&cles, cle::MODULE)?,
+            requise(&cles, cle::SORTIE_ADRESSE)?,
+            requise(&cles, cle::CHEMIN)?,
             CibleCapacite::new(
-                nombre(&cles, "cible.requetes_par_seconde")?,
-                nombre(&cles, "cible.p99_millisecondes")?,
+                nombre(&cles, cle::CIBLE_RPS)?,
+                nombre(&cles, cle::CIBLE_P99)?,
             )?,
-            Duree::secondes(nombre(&cles, "bornes.ttl_secondes")? as i64)?,
-            PlafondDepense::new(nombre(&cles, "bornes.plafond_depense")?)?,
+            Duree::secondes(nombre(&cles, cle::BORNE_TTL)? as i64)?,
+            PlafondDepense::new(nombre(&cles, cle::BORNE_PLAFOND)?)?,
         )
     }
 }

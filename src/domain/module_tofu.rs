@@ -33,6 +33,12 @@ pub const FICHIER_VERROU: &str = ".terraform.lock.hcl";
 /// superviseur du 2026-10-23, un module est copié dans le dépôt.
 pub const MODULES_PARTAGES: &[&str] = &["_shared", "terraform", "modules"];
 
+/// Extensions des programmes OpenTofu que le vérificateur lit.
+pub const EXTENSIONS_PROGRAMME: &[&str] = &[".tf", ".tofu"];
+
+/// Extensions de la syntaxe JSON, refusées : le vérificateur ne les lit pas.
+pub const EXTENSIONS_JSON_REFUSEES: &[&str] = &[".tf.json", ".tofu.json"];
+
 /// Les constructions qui exécutent une commande chez l'exécutant.
 ///
 /// **C'est la liste que le témoin de la story 34.1 ampute** : en retirer une
@@ -50,6 +56,16 @@ const INTERDITS: &[(&str, &str, Construction)] = &[
     ),
     ("data", "external", Construction::DataExternal),
 ];
+
+/// Les constructions interdites, écrites comme dans un fichier `.tf`, par
+/// exemple `provisioner "local-exec"`. C'est ce que publie le contrat du
+/// dépôt cible (ADR-034) : la même liste que celle qui est vérifiée.
+pub fn constructions_interdites() -> Vec<String> {
+    INTERDITS
+        .iter()
+        .map(|(bloc, etiquette, _)| format!("{bloc} \"{etiquette}\""))
+        .collect()
+}
 
 /// Un fichier du module soumis, tel que l'adaptateur l'a lu.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -206,13 +222,13 @@ pub fn verifier_module(module: &ModuleSoumis, fournisseurs_autorises: &[String])
         if fichier.chemin == chemin_verrou {
             verrou_vu = true;
             verifier_verrou(fichier, fournisseurs_autorises, &mut violations);
-        } else if nom.ends_with(".tf.json") || nom.ends_with(".tofu.json") {
+        } else if EXTENSIONS_JSON_REFUSEES.iter().any(|e| nom.ends_with(e)) {
             violations.push(Violation {
                 fichier: fichier.chemin.clone(),
                 ligne: None,
                 construction: Construction::FichierJson,
             });
-        } else if nom.ends_with(".tf") || nom.ends_with(".tofu") {
+        } else if EXTENSIONS_PROGRAMME.iter().any(|e| nom.ends_with(e)) {
             verifier_programme(fichier, &mut violations);
         }
     }

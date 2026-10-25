@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "arborescence": {
+    "racine": "infrastructure",
+    "charge": "_shared/charge.yaml",
+    "profils": "_shared/cluster-profiles/*",
+    "extensions_profil": [
+      "yaml",
+      "yml"
+    ],
+    "modules_partages": "_shared/terraform/modules/<nom>/",
+    "cellules": "<regroupement>/<topologie>/<environnement>/",
+    "regroupements": [
+      "monosite",
+      "multisite"
+    ],
+    "topologies": [
+      "vps",
+      "k3s",
+      "k8s"
+    ],
+    "environnements": [
+      "dev",
+      "integration",
+      "staging",
+      "production"
+    ]
+  },
+  "cles_charge": [
+    "topologie",
+    "module",
+    "sortie_adresse",
+    "chemin",
+    "cible.requetes_par_seconde",
+    "cible.p99_millisecondes",
+    "bornes.ttl_secondes",
+    "bornes.plafond_depense"
+  ],
+  "cles_profil": [
+    "global.storageClassName",
+    "global.ingressClassName",
+    "global.secretsBackend",
+    "global.tls.enabled",
+    "resources.preset"
+  ],
+  "yaml": {
+    "admis": [
+      "clés imbriquées par indentation d'espaces",
+      "valeurs scalaires, nues ou entre guillemets simples ou doubles",
+      "commentaires introduits par # précédé d'un blanc"
+    ],
+    "hors_sous_ensemble": [
+      "indentation par tabulation (refusée)",
+      "listes",
+      "ancres et références",
+      "documents multiples",
+      "blocs littéraux | et >"
+    ]
+  },
+  "tofu": {
+    "verrou_obligatoire": ".terraform.lock.hcl",
+    "extensions_programme": [
+      ".tf",
+      ".tofu"
+    ],
+    "extensions_refusees": [
+      ".tf.json",
+      ".tofu.json"
+    ],
+    "constructions_interdites": [
+      "provisioner \"local-exec\"",
+      "provisioner \"remote-exec\"",
+      "data \"external\""
+    ],
+    "source_module": "_shared/terraform/modules/<nom>/",
+    "fournisseurs": "liste blanche du déploiement, vide par défaut"
+  },
+  "workflow_tier1": ".github/workflows/tier1-apply.yml",
+  "places_reservees": [
+    {
+      "chemin": ".sops.yaml",
+      "adr": "ADR-016"
+    },
+    {
+      "chemin": "infrastructure/_shared/ansible/",
+      "adr": "ADR-032"
+    },
+    {
+      "chemin": "infrastructure/_shared/flux/",
+      "adr": "ADR-029"
+    },
+    {
+      "chemin": "infrastructure/_shared/cloudnativepg/",
+      "adr": "ADR-026"
+    }
+  ]
+}

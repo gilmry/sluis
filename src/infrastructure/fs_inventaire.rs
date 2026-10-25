@@ -13,6 +13,8 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use crate::application::ports::DepotInventaire;
+use crate::domain::contrat_depot::{cles_profil as cle, DOSSIER_PROFILS, EXTENSIONS_PROFIL};
+use crate::domain::module_tofu::MODULES_PARTAGES;
 use crate::domain::{
     AppError, Cellule, Environnement, MatriceInfrastructure, ModuleTerraform, ProfilCluster,
     Topologie,
@@ -133,7 +135,9 @@ impl DepotInventaire for FsInventaire {
 
     fn lire_profils(&self, racine: &str) -> Result<Vec<ProfilCluster>, AppError> {
         let racine = Self::canoniser_racine(racine)?;
-        let dossier = racine.join("_shared").join("cluster-profiles");
+        let dossier = DOSSIER_PROFILS
+            .iter()
+            .fold(racine.clone(), |chemin, segment| chemin.join(segment));
         if !dossier.is_dir() {
             return Ok(Vec::new());
         }
@@ -146,7 +150,7 @@ impl DepotInventaire for FsInventaire {
         for entree in entrees.flatten() {
             let chemin = entree.path();
             let extension = chemin.extension().and_then(|e| e.to_str()).unwrap_or("");
-            if !matches!(extension, "yaml" | "yml") || !Self::dans_racine(&racine, &chemin) {
+            if !EXTENSIONS_PROFIL.contains(&extension) || !Self::dans_racine(&racine, &chemin) {
                 continue;
             }
             let nom = chemin
@@ -166,12 +170,11 @@ impl DepotInventaire for FsInventaire {
             })?;
             profils.push(ProfilCluster::new(
                 nom,
-                cles.get("global.storageClassName").cloned(),
-                cles.get("global.ingressClassName").cloned(),
-                cles.get("global.secretsBackend").cloned(),
-                cles.get("global.tls.enabled")
-                    .map(|v| v.eq_ignore_ascii_case("true")),
-                cles.get("resources.preset").cloned(),
+                cles.get(cle::STOCKAGE).cloned(),
+                cles.get(cle::INGRESS).cloned(),
+                cles.get(cle::SECRETS).cloned(),
+                cles.get(cle::TLS).map(|v| v.eq_ignore_ascii_case("true")),
+                cles.get(cle::RESSOURCES).cloned(),
             )?);
         }
         profils.sort_by(|a, b| a.nom().cmp(b.nom()));
@@ -180,7 +183,9 @@ impl DepotInventaire for FsInventaire {
 }
 
 fn lire_modules(racine: &Path) -> Vec<ModuleTerraform> {
-    let dossier = racine.join("_shared").join("terraform").join("modules");
+    let dossier = MODULES_PARTAGES
+        .iter()
+        .fold(racine.to_path_buf(), |chemin, segment| chemin.join(segment));
     let mut modules: Vec<ModuleTerraform> = FsInventaire::sous_dossiers(racine, &dossier)
         .into_iter()
         .filter_map(|(nom, _)| ModuleTerraform::new(nom).ok())
