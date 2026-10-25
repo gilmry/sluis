@@ -59,12 +59,11 @@ chemin = "sluis-audit.jsonl"
 # ici. Absent : environnement-protege (ADR-008).
 # passerelle = "etiquette-signee"
 #
-# Gates du plancher : nom du check-run qui porte chacune dans la CI du dépôt
-# cible. Les trois premières sont requises ; seul `completed` + `success` est
+# Gates du plancher. Les noms des check-runs sont figés par le contrat du dépôt
+# cible (contrat/depot-cible.v1.json) : sluis/secrets, sluis/sbom,
+# sluis/scan-conteneur, plus sluis/retour-migration pour l'archétype stateful.
+# Seul l'archétype se déclare, il est requis. Seul `completed` + `success` est
 # vert, une gate absente compte rouge. Sans cette sous-section, aucune mise en
 # ligne ne peut être demandée.
 # [github.gates]
-# secrets = "Secrets"
-# sbom = "SBOM"
-# scan_conteneur = "Scan image"
-# retour_migration = "Migrations"   # archétype stateful seulement
+# archetype = "stateless"   # ou "stateful"
