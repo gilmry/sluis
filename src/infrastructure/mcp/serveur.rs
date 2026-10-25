@@ -23,6 +23,7 @@ use serde_json::{json, Value};
 
 use crate::application::ports::{AuditLog, Horloge};
 use crate::domain::{AppError, AuditEntry, Empreinte, Redacted, Tier};
+use crate::infrastructure::lectures;
 use crate::infrastructure::mcp::RegistreOutils;
 
 /// Version du protocole MCP annoncée.
@@ -211,7 +212,11 @@ impl ServeurMcp {
         }
 
         let empreinte = Empreinte::calculer(&format!("{nom}|{arguments}"));
+        // Vidé avant l'appel : une lecture restée d'un appel précédent sur ce
+        // fil ne doit pas être attribuée à celui-ci.
+        let _ = lectures::recueillir();
         let resultat = outil.appeler(&arguments);
+        let lues = lectures::recueillir();
 
         let entree = AuditEntry::new(
             self.horloge.maintenant().to_string(),
@@ -222,7 +227,8 @@ impl ServeurMcp {
                 .as_ref()
                 .map(|_| ())
                 .map_err(|e| self.filtrer_texte(&e.to_string())),
-        );
+        )
+        .avec_lectures(lues);
         // Un appel non traçable ne doit pas être rendu comme réussi.
         if let Err(erreur) = self.journal.append(&entree) {
             return Err((

@@ -24,7 +24,7 @@ pub mod section_empreinte;
 pub mod temps;
 pub mod valeur_sure;
 
-pub use audit::{AuditEntry, Tier};
+pub use audit::{AuditEntry, Lecture, Tier};
 pub use autorisation::{Action, Empreinte, JetonChangement, JetonConsomme, PlanChangement};
 pub use bac_a_sable::{
     plan_renouvellement, BailBacASable, CibleEphemere, DemandeBail, DerogationValide,
