@@ -154,8 +154,49 @@ RUN ldd /usr/local/bin/wrk | awk '/=> \//{print $3}' \
       done \
  && echo "wrk : $(ls /sortie/lib | grep -c '\.so' || true) bibliothèque(s) hors base emportée(s)"
 
+# ── OpenSSL du socle, quand la distroless retarde sur Debian ───────────────
+#
+# La distroless n'est reconstruite qu'avec retard sur les correctifs de
+# sécurité de Debian. Le 2026-10-28, elle portait encore libssl3
+# 3.0.20-1~deb12u2 (CVE-2026-84782, HIGH) alors que bookworm-security
+# distribuait 3.0.22-1~deb12u2, et le scan bloquait toutes les images.
+# ADR-011 écarte un `.trivyignore` : on remplace donc le paquet, pas le
+# verdict.
+#
+# Le remplacement suit le paquet Debian à la lettre : les fichiers que la
+# distroless embarque, tirés du `.deb` officiel, et son entrée `status.d`
+# réécrite depuis le contrôle de ce même `.deb`. Le scan lit cette entrée ;
+# on vérifie donc que la bibliothèque copiée est bien la version qu'elle
+# déclare, sinon le scan serait vert sur un mensonge.
+#
+# L'étage se retire seul : si la distroless porte une version égale ou plus
+# récente, rien n'est copié, et on ne régresse jamais sa bibliothèque.
+FROM debian:bookworm-slim AS openssl
+COPY --from=gcr.io/distroless/cc-debian12:nonroot /var/lib/dpkg/status.d/libssl3 /socle/libssl3
+RUN set -eu; mkdir -p /sortie; cd /tmp \
+ && apt-get update && apt-get download libssl3 && rm -rf /var/lib/apt/lists/* \
+ && deb="$(ls libssl3_*.deb)" \
+ && neuf="$(dpkg-deb -f "$deb" Version)" \
+ && socle="$(sed -n 's/^Version: //p' /socle/libssl3)" \
+ && if dpkg --compare-versions "$neuf" le "$socle"; then \
+      echo "libssl3 : socle $socle à jour (Debian $neuf), rien à remplacer"; exit 0; \
+    fi \
+ && dpkg-deb -x "$deb" x && dpkg-deb -e "$deb" ctl \
+ && lib="$(dirname "$(find x -name libssl.so.3)")" && lib="${lib#x/}" \
+ && for f in libssl.so.3 libcrypto.so.3 ossl-modules/legacy.so; do \
+      install -D -m 0644 "x/$lib/$f" "/sortie/$lib/$f"; \
+    done \
+ && mkdir -p /sortie/usr/share/doc && cp -r x/usr/share/doc/libssl3 /sortie/usr/share/doc/ \
+ && mkdir -p /sortie/var/lib/dpkg/status.d \
+ && dpkg-deb -f "$deb" > /sortie/var/lib/dpkg/status.d/libssl3 \
+ && cp ctl/md5sums /sortie/var/lib/dpkg/status.d/libssl3.md5sums \
+ && grep -aq "OpenSSL ${neuf%%-*} " "/sortie/$lib/libcrypto.so.3" \
+ && echo "libssl3 : socle $socle remplacé par $neuf"
+
 # ── Socle commun aux deux Sluis ────────────────────────────────────────────
 FROM gcr.io/distroless/cc-debian12:nonroot AS socle
+# Vide quand la distroless est à jour ; voir l'étage `openssl`.
+COPY --from=openssl /sortie/ /
 WORKDIR /app
 COPY --from=constructeur /src/target/release/sluis-server /usr/local/bin/sluis-server
 COPY --from=constructeur /src/target/release/sluis-mcp /usr/local/bin/sluis-mcp
