@@ -4,7 +4,7 @@
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-23 par ADR-040** (contresigné le 2026-10-23) : le destinataire humain des secrets SOPS est la sous-clé de chiffrement GPG du superviseur, et non une identité `age-plugin-yubikey`.
 - **Irréversible** : non pour l'outil, oui pour les secrets eux-mêmes : un secret poussé une fois en clair dans un dépôt est compromis pour toujours, quoi qu'on réécrive ensuite.
-- **S'articule avec** : ADR-008 (les secrets de mutation vivent hors de Sluis), ADR-015 (destinataires age et GPG sur YubiKey), ADR-017 (les clés applicatives, elles, vivent dans OpenBao), ADR-029 et ADR-032 (Coolify, Flux et Ansible les consomment).
+- **S'articule avec** : ADR-008 (les secrets de mutation vivent hors de Sluis), ADR-015 (destinataires age et GPG sur YubiKey), ADR-017 (les clés applicatives, elles, vivent dans OpenBao), ADR-029 et ADR-032 (Flux et Ansible les consomment).
 - **Sert la vision (ADR-000)** : principe n°1, parce qu'un secret versionné ne dépend plus de la mémoire de qui l'a posé sur le serveur ; principe n°2, parce qu'un déchiffrement qui échoue fait échouer le déploiement au lieu de démarrer une pile aux secrets vides ; principe n°5, parce que l'historique Git date chaque changement de secret.
 
 ## Contexte
@@ -33,13 +33,13 @@ Il faut distinguer deux familles de secrets :
    `.sops.yaml` qui peut le lire : l'identité du superviseur sur YubiKey (ADR-015)
    et l'identité age de la machine qui déploie. Aucune machine ne lit les secrets
    d'une autre zone.
-3. **Trois consommateurs, un seul format.**
+3. **Deux consommateurs, un seul format.**
    - **Ansible** déchiffre au moment de l'application par la collection
      `community.sops` (ADR-032) ;
-   - **Flux** déchiffre dans le cluster par son intégration SOPS native (recette
-     K3s, ADR-029), avec une clé age détenue par le seul contrôleur ;
-   - **Coolify** (recette VPS) reçoit ses variables depuis un playbook Ansible qui
-     les déchiffre, jamais par saisie manuelle dans l'interface.
+   - **Flux** déchiffre dans le cluster par son intégration SOPS native
+     (ADR-029, à un nœud comme à trois), avec une clé age détenue par le seul
+     contrôleur. (Amendé le 2026-10-28, sluis#6 : Coolify, troisième
+     consommateur de la première version, est abandonné.)
 4. **Au repos dans K3s, `secrets-encryption` est activé.** Les objets `Secret`
    sont chiffrés dans la base du cluster, pour qu'une copie de cette base ne
    livre pas les secrets en clair.

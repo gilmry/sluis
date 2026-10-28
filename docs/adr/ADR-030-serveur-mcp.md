@@ -27,7 +27,7 @@ retour arrière).
      L'exécution appartient à la passerelle (ADR-031) et à ce qu'elle déclenche.
 2. **Le serveur MCP ne détient aucun secret de production** : ni clé
    d'infrastructure, ni secret de déploiement (ADR-016), ni clé applicative
-   (ADR-017), ni accès à Coolify (ADR-029), ni clé de signature (ADR-013).
+   (ADR-017), ni accès au cluster ni à Flux (ADR-029), ni clé de signature (ADR-013).
 3. **Précision sur ADR-012.** Le Sluis public détient un jeton GitHub limité au
    déclenchement et à la lecture des runs, et un jeton en lecture des étiquettes
    pour les dépôts privés. Ces jetons **ne sont pas des secrets de production au

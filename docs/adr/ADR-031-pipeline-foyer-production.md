@@ -4,8 +4,9 @@
 - **Amendé le 2026-10-21** (revue des ADR, décision 5) : la barrière est rejouée entre l'approbation et l'exécution. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 6) : l'étape de staging devient la répétition sur la seconde production éphémère ; tests de charge et recette sur un environnement à part. Amendement proposé, non contresigné.
 - **Amendé le 2026-10-21** (revue des ADR, décision 3) : l'étiquette d'approbation nomme son environnement cible. Amendement proposé, non contresigné.
+- **Amendé le 2026-10-28** (sluis#6) : Flux est le seul réconciliateur, Coolify est abandonné (ADR-029). Amendement proposé, non contresigné.
 - **Irréversible** : oui : la mise en production est le point irréversible par excellence (`foyer/skills/convergence-iac.md`).
-- **S'articule avec** : **amende ADR-008** sans le remplacer (ADR-008 reste la passerelle des dépôts publics) ; ADR-012 (la demande passe par un outil MCP) ; **ADR-013** (étiquette signée, passerelle des dépôts privés) ; ADR-020 (seconde production éphémère) ; ADR-021 (barrière) ; ADR-022 (preuves) ; ADR-029 (Coolify et Flux) ; ADR-030 (le MCP demande, n'exécute pas).
+- **S'articule avec** : **amende ADR-008** sans le remplacer (ADR-008 reste la passerelle des dépôts publics) ; ADR-012 (la demande passe par un outil MCP) ; **ADR-013** (étiquette signée, passerelle des dépôts privés) ; ADR-020 (seconde production éphémère) ; ADR-021 (barrière) ; ADR-022 (preuves) ; ADR-029 (Flux, d'un nœud à trois) ; ADR-030 (le MCP demande, n'exécute pas).
 - **Sert la vision (ADR-000)** : le seul geste humain de la chaîne est la validation de l'irréversible ; principe 5, l'approbation est elle-même la preuve datée, produite par l'outil.
 
 ## Contexte
@@ -33,7 +34,7 @@ visibilité du dépôt, menant au même résultat.
 | **privé** | étiquette `approuve/<empreinte>` signée par la clé SSH de signature du superviseur (ADR-013), dont le message porte l'empreinte complète du plan **et l'environnement cible** | son poste, `git tag -s` | la signature, vérifiée par le tireur de la cible contre un `allowed_signers` hors dépôt ; chaque tireur refuse, et journalise en erreur, une étiquette qui ne nomme pas son propre environnement |
 
 6. **Barrière rejouée** (ADR-021, point 6) : juste avant l'exécution, les mêmes contrôles sont relancés. Si l'un d'eux a changé depuis l'approbation, le déploiement s'arrête, l'approbation est annulée, et le superviseur reçoit une alerte qui dit quel contrôle a changé et pourquoi. Il réapprouve ; rien n'est retenté automatiquement.
-7. **Exécution** : l'approbation déclenche le réconciliateur de la recette, **Coolify** sur VPS ou **Flux** sur K3s (ADR-029). Ni Sluis ni l'agent ne déclenchent ce réconciliateur autrement que par la passerelle.
+7. **Exécution** : l'approbation laisse passer la cible vers **Flux**, seul réconciliateur, à un nœud comme à trois (ADR-029). Ni Sluis ni l'agent ne font avancer ce que Flux applique autrement que par la passerelle.
 8. **Preuve** : l'approbation (qui, quand, quelle empreinte, quel commit) entre dans le rapport daté du déploiement (ADR-022), stocké hors du serveur.
 
 **Pourquoi deux et pas une.** La passerelle GitHub est câblée et testée
@@ -47,7 +48,7 @@ pas approuver.
 - **GitHub seul**, avec un dépôt de déploiement public séparé pour chaque SaaS privé : deux dépôts à tenir et des journaux de runs publics.
 - **GitHub Enterprise** : coût récurrent pour des projets sans revenu.
 - **L'étiquette signée pour tous** : plus simple, mais abandonne ADR-008, câblé et testé.
-- **Approbation dans Coolify** : l'interface de Coolify deviendrait la passerelle ; elle détient déjà les secrets de déploiement, et réunir l'approbation et l'exécution dans la même brique contredit « aucune brique ne détient tout ».
+- **Approbation dans le réconciliateur** : Flux (ou, dans la première version d'ADR-029, Coolify) deviendrait la passerelle ; il détient déjà les secrets de déploiement, et réunir l'approbation et l'exécution dans la même brique contredit « aucune brique ne détient tout ».
 
 ## Conséquences
 
@@ -66,6 +67,5 @@ Mapping dans `foyer/skills/conformite.md`.
 
 ## Points ouverts
 
-- **Flux et les signatures** : Flux sait vérifier des signatures de commits et d'étiquettes, ce qui permettrait de faire de lui le tireur d'ADR-013 en recette K3s. Vérifier quels formats sa version retenue prend en charge (GPG à coup sûr ; SSH à confirmer), sans quoi la recette K3s garde un tireur dédié.
-- **Coolify** : vérifier le mode de déclenchement le plus étroit depuis la passerelle (ADR-029).
+- **Flux et les signatures** : Flux sait vérifier des signatures de commits et d'étiquettes, ce qui permettrait de faire de lui le tireur d'ADR-013. Vérifier quels formats sa version retenue prend en charge (GPG à coup sûr ; SSH à confirmer), sans quoi le cluster garde un tireur dédié.
 - Le seuil de charge qui fait échouer l'étape 2 se fixe par SaaS, à partir des mesures de Sluis.
