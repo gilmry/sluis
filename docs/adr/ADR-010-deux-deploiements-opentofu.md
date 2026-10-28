@@ -2,6 +2,7 @@
 
 - **Statut** : contresigné le 2026-10-18.
 - **Sorti de l'index le 2026-10-21** (revue des ADR, décision 7) : texte déplacé depuis `README.md` sans modification de fond.
+- **Amendé le 2026-10-28** (sluis#8) : k6 remplace wrk comme moteur de charge de l'image exécutante. Amendement proposé, non contresigné.
 
 **Amendée le 2026-10-21** (revue des ADR, décision 2) : le Sluis exécutant
 tourne sur un VPS séparé, hors de la machine de confiance. Amendement proposé,
@@ -62,3 +63,27 @@ cohabite pas avec le gardien de la clé maîtresse. « Ce qui détient n'est pas
 exposé » reste vrai : le VPS de l'exécutant n'a pas d'entrée depuis Internet.
 **Conséquence** : un VPS de plus à louer, tenir et superviser (ADR-014,
 ADR-033 étape 2). Proposé, non contresigné.
+
+**Amendement du 2026-10-28 : k6 remplace wrk** (sluis#8, décision du
+superviseur). Le moteur de charge de l'image exécutante devient **k6**, embarqué
+comme `tofu` : binaire de release téléchargé à une version épinglée, **vérifié
+par empreinte** dans le Dockerfile, et nommé `k6` dans l'allowlist, le
+diagnostic et l'adaptateur. La compilation de `wrk` depuis ses sources
+disparaît, et avec elle les bibliothèques copiées sans `dpkg` (ADR-011).
+
+*Licence.* k6 est sous **AGPL-3.0**. L'image d'un dépôt MIT peut le
+redistribuer **sans modification**, comme un programme distinct agrégé à côté
+des binaires de Sluis : Sluis ne le lie pas, il le lance comme processus. Deux
+conditions, vérifiées par le Dockerfile : le texte de la licence d'AGPL est
+copié dans l'image à côté du binaire, et un fichier y indique la version et
+l'adresse de ses sources. Modifier k6 ou le lier à Sluis ferait tomber cette
+lecture ; ni l'un ni l'autre n'est prévu.
+
+*Gains.* Un résumé JSON (`--summary-export`, avec `summaryTrendStats` pour le
+p99) remplace l'analyse du texte de `wrk --latency`. *Coût.* Le corpus de charge
+de KoproGo, écrit en wrk et Lua, est à réécrire en scénarios k6 : l'hypothèse
+H5 du PRD (« corpus réutilisable tel quel ») tombe.
+
+*Calendrier.* Le remplacement dans le code vient après la gate review du jalon
+zéro : il dépasse la taille XS. D'ici là, `wrk` reste dans l'image.
+Proposé, non contresigné.

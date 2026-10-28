@@ -2,6 +2,7 @@
 
 - **Statut** : contresigné le 2026-10-18.
 - **Sorti de l'index le 2026-10-21** (revue des ADR, décision 7) : texte déplacé depuis `README.md` sans modification de fond.
+- **Amendé le 2026-10-28** (sluis#8) : le binaire `k6` rejoint `tofu` dans l'exception du gate bloquant. Amendement proposé, non contresigné.
 
 **Contexte, mesuré le 2026-09-02.** Le gate du plancher scanne chaque image en
 `CRITICAL,HIGH` avec `ignore-unfixed`, et refuse de pousser si quoi que ce soit
@@ -47,3 +48,17 @@ jour à chaque reconstruction, ce qui limite la portée du trou sans l'annuler.
 Cet ADR n'est pas irréversible : rétablir le gate plein est une ligne de
 configuration. Il a été contresigné le 2026-10-18, parce qu'il relâche un garde-fou du
 plancher.
+
+**Amendement du 2026-10-28 : k6 rejoint l'exception** (sluis#8, ADR-010).
+Quand `wrk` est remplacé par k6, le binaire `k6` est traité **exactement comme
+`tofu`** : binaire Go tiers dont le `go.mod` portera vraisemblablement des CVE
+hors de notre ressort, il est écarté du gate bloquant par `skip-files`, et de
+lui seul. Les deux garde-fous s'appliquent tels quels : le scan complet non
+bloquant laisse ses CVE lisibles dans chaque build, et sa version est épinglée
+dans le Dockerfile et se remonte.
+
+Le gate bloquant de l'image exécutante porte alors sur les paquets système, et
+sur eux seuls. **Le trou décrit plus haut disparaît** : il n'y a plus de
+bibliothèques copiées sans enregistrement `dpkg`, puisque k6 est un binaire
+statique. Jusqu'au remplacement, la décision d'origine reste en vigueur.
+Proposé, non contresigné.
