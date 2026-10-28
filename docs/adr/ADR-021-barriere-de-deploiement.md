@@ -1,8 +1,8 @@
 # ADR-021 : Barrière de déploiement, des contrôles déterministes qui bloquent
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 5) : la barrière est rejouée juste avant l'exécution, après l'approbation humaine ; un contrôle qui a changé arrête le déploiement et annule l'approbation. Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 5) : la barrière est rejouée juste avant l'exécution, après l'approbation humaine ; un contrôle qui a changé arrête le déploiement et annule l'approbation. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : non. Une gate s'ajoute ou se retire par configuration ; mais retirer une gate de la barrière relâche un garde-fou et se trace en ADR.
 - **S'articule avec** : FR-024 et les gates du plancher déjà câblées (lecture des check-runs GitHub, sluis#16, story 4.2 de #4) ; Epic 9 stories 9.2 (gates de conformité) et 9.5 (dérive) ; ADR-022 (chaque contrôle produit sa preuve) ; ADR-023 (supervision vivante) ; ADR-031 (la barrière précède toute demande d'approbation) ; `foyer/skills/gates.md`.
 - **Sert la vision (ADR-000)** : principe n°3, chaque contrôle croise une seconde source au lieu de croire un voyant ; principe n°5, chaque contrôle produit un verdict machine ; principe n°2, une barrière qui ne peut pas s'évaluer bloque au lieu de laisser passer.

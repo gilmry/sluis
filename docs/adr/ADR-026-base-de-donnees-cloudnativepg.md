@@ -1,7 +1,7 @@
 # ADR-026 : Les bases des SaaS tournent sous CloudNativePG, archivées en continu hors région
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : **oui**. Le choix de l'opérateur fixe le format des sauvegardes, des archives WAL et des procédures de restauration de toutes les bases ; en sortir est une migration de données.
 - **S'articule avec** : ADR-006 et son amendement (**inchangés** : ils portent sur la persistance interne de Sluis, un fichier JSON, pas sur les bases des SaaS orchestrés), ADR-019 (base de clés séparée), ADR-020 (le staging restaure depuis l'archive), ADR-023 (circuit d'alerte), ADR-029 (recette K3s), `foyer/skills/convergence-iac.md` (archétype stateful, migrations irréversibles).
 - **Sert la vision (ADR-000)** : principe 1, la bascule et l'archivage sont automatiques ; principe 2, chaque mécanisme a son alerte ; principe 4, pas de multi-maître tant qu'il ne sert pas.

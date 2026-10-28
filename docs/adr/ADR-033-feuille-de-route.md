@@ -1,11 +1,11 @@
 # ADR-033 : Feuille de route, huit étapes utilisables seules
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 6) : l'étape 6 devient la seconde production éphémère restaurée chaque nuit. Amendement proposé, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 2) : l'étape 2 compte un VPS de plus pour le Sluis exécutant. Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 6) : l'étape 6 devient la seconde production éphémère restaurée chaque nuit. Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 2) : l'étape 2 compte un VPS de plus pour le Sluis exécutant. Amendement proposé, contresigné le 2026-10-28.
 - **Décision du superviseur du 2026-10-23** : le miroir des dépôts publics (3a) passe avant l'étape 3 ; les dépôts privés vont vers un Forgejo auto-hébergé (ADR-039).
 - **Amendé le 2026-10-22** (lettre de mission du 2026-10-22, chantier 2) : quatre étapes ajoutées après les trois premières, sans renuméroter les existantes (3a à 3d) ; l'étape 1 compte trois YubiKeys ADR-040 étant retenu. Amendement contresigné le 2026-10-23.
-- **Amendé le 2026-10-28** (sluis#6) : l'étape 3 installe K3s à un nœud et Flux au lieu de Coolify ; l'étape 8 porte ce même cluster à trois nœuds, sans changer de pile. Amendement proposé, non contresigné.
+- **Amendé le 2026-10-28** (sluis#6) : l'étape 3 installe K3s à un nœud et Flux au lieu de Coolify ; l'étape 8 porte ce même cluster à trois nœuds, sans changer de pile. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : non pour l'ordre, qui se révise en gate review. Chaque étape porte ses propres points irréversibles, décidés dans son ADR.
 - **S'articule avec** : ADR-000 à ADR-032 ; l'Epic 9 de Sluis, conformité de plateforme (sluis#10, `docs/bmad/04-epics-stories.md`) ; la gouvernance du jalon zéro du porteur ; la future production chez OVH.
 - **Sert la vision (ADR-000)** : principe 4, aucune étape n'est construite avant d'être utile ; principe 1, chaque étape automatise d'abord ce que l'étape précédente laissait à la main.

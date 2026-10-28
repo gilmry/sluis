@@ -1,7 +1,7 @@
 # ADR-030 : Le serveur MCP lit ou demande, il n'exécute jamais
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : oui : c'est le contrat entre la skill Foyer et la plateforme (ADR-005), et la frontière de sécurité qui rend acceptable un service exposé à Internet.
 - **S'articule avec** : ADR-005 (contrat MCP matérialisé), ADR-008 et ADR-012 (« Sluis ne peut que demander »), **prolongés sans être contredits** ; ADR-010 (public et exécutant) ; ADR-013 et ADR-031 (passerelles) ; ADR-024 (agent IA) ; `foyer/skills/enforcement.md`.
 - **Sert la vision (ADR-000)** : la règle « aucune brique ne détient tout » appliquée à la porte d'entrée de l'agent ; principe 1, l'agent fait tout ce qui est récurrent par les outils de lecture, l'humain ne voit que les demandes.

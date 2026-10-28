@@ -1,8 +1,8 @@
 # ADR-020 : Une seconde production éphémère, restaurée chaque nuit depuis la sauvegarde hors site
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 4) : un échantillon est déchiffré chaque nuit dans la copie éphémère pour prouver que les clés se restaurent. Amendement proposé, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 6) : le staging pseudonymisé devient une seconde production éphémère, restaurée avec sa base de clés, protégée comme la production et détruite après usage ; la pseudonymisation est abandonnée ; tests de charge et recette fonctionnelle partent sur un environnement à part. Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 4) : un échantillon est déchiffré chaque nuit dans la copie éphémère pour prouver que les clés se restaurent. Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 6) : le staging pseudonymisé devient une seconde production éphémère, restaurée avec sa base de clés, protégée comme la production et détruite après usage ; la pseudonymisation est abandonnée ; tests de charge et recette fonctionnelle partent sur un environnement à part. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : non pour le mécanisme ; **oui** pour la décision de restaurer des données réelles, avec les clés qui les ouvrent, dans un second environnement : elle engage la responsabilité RGPD du porteur.
 - **S'articule avec** : ADR-007 (**inchangé** : il continue de régir les bacs à sable éphémères, sans aucune donnée de production ; la seconde production n'en relève pas), ADR-017 (règle OpenBao dédiée), ADR-019 (la base de clés est restaurée avec les données, et ce que cela implique pour l'effacement), ADR-026 (sauvegardes WAL), ADR-027 (bucket propre à la copie éphémère), ADR-031 (répétition des releases et des migrations), Epic 9 story 9.4 (restauration éprouvée).
 - **Sert la vision (ADR-000)** : principe n°3, une sauvegarde déclarée réussie ne prouve rien, sa restauration nocturne si ; principe n°1, la restauration, geste rare et facile à oublier, devient quotidienne ; principe n°5, la durée mesurée est la preuve.

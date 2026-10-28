@@ -1,10 +1,10 @@
 # ADR-031 : Du staging à la production, par l'une des deux passerelles d'approbation
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 5) : la barrière est rejouée entre l'approbation et l'exécution. Amendement proposé, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 6) : l'étape de staging devient la répétition sur la seconde production éphémère ; tests de charge et recette sur un environnement à part. Amendement proposé, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 3) : l'étiquette d'approbation nomme son environnement cible. Amendement proposé, non contresigné.
-- **Amendé le 2026-10-28** (sluis#6) : Flux est le seul réconciliateur, Coolify est abandonné (ADR-029). Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 5) : la barrière est rejouée entre l'approbation et l'exécution. Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 6) : l'étape de staging devient la répétition sur la seconde production éphémère ; tests de charge et recette sur un environnement à part. Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 3) : l'étiquette d'approbation nomme son environnement cible. Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-28** (sluis#6) : Flux est le seul réconciliateur, Coolify est abandonné (ADR-029). Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : oui : la mise en production est le point irréversible par excellence (`foyer/skills/convergence-iac.md`).
 - **S'articule avec** : **amende ADR-008** sans le remplacer (ADR-008 reste la passerelle des dépôts publics) ; ADR-012 (la demande passe par un outil MCP) ; **ADR-013** (étiquette signée, passerelle des dépôts privés) ; ADR-020 (seconde production éphémère) ; ADR-021 (barrière) ; ADR-022 (preuves) ; ADR-029 (Flux, d'un nœud à trois) ; ADR-030 (le MCP demande, n'exécute pas).
 - **Sert la vision (ADR-000)** : le seul geste humain de la chaîne est la validation de l'irréversible ; principe 5, l'approbation est elle-même la preuve datée, produite par l'outil.
