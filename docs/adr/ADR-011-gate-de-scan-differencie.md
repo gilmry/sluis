@@ -2,7 +2,7 @@
 
 - **Statut** : contresigné le 2026-10-18.
 - **Sorti de l'index le 2026-10-21** (revue des ADR, décision 7) : texte déplacé depuis `README.md` sans modification de fond.
-- **Amendé le 2026-10-28** (sluis#8) : le binaire `k6` rejoint `tofu` dans l'exception du gate bloquant. Amendement proposé, non contresigné.
+- **Amendé le 2026-10-28** (sluis#8) : le binaire `k6` rejoint `tofu` dans l'exception du gate bloquant. Amendement proposé, contresigné le 2026-10-28.
 
 **Contexte, mesuré le 2026-09-02.** Le gate du plancher scanne chaque image en
 `CRITICAL,HIGH` avec `ignore-unfixed`, et refuse de pousser si quoi que ce soit
@@ -61,4 +61,4 @@ Le gate bloquant de l'image exécutante porte alors sur les paquets système, et
 sur eux seuls. **Le trou décrit plus haut disparaît** : il n'y a plus de
 bibliothèques copiées sans enregistrement `dpkg`, puisque k6 est un binaire
 statique. Jusqu'au remplacement, la décision d'origine reste en vigueur.
-Proposé, non contresigné.
+Proposé, contresigné le 2026-10-28.

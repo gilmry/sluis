@@ -1,6 +1,6 @@
 # ADR-028 : Le front-end est un site statique sur un stockage objet européen
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
 - **Irréversible** : non. Le site statique se redéploie ailleurs en une commande ; seule la bascule DNS du domaine public est un point à valider.
 - **S'articule avec** : ADR-020 (staging), ADR-021 (barrière de déploiement), ADR-031 (même artefact promu du staging à la production), `foyer/skills/convergence-iac.md` (archétype full-stack : pages Astro statiques + backend conteneurisé), `foyer/KITS.md` (frontend îlots-first, client d'API généré).
 - **Sert la vision (ADR-000)** : principe 4, un site statique est la brique la plus simple qui suffit ; principe 3, l'artefact testé en staging est exactement celui qui part en production.

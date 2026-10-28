@@ -1,7 +1,7 @@
 # ADR-027 : Les fichiers vivent dans un fork communautaire de MinIO, chiffrés avant envoi
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 6) : le bucket de staging à fichiers factices devient le bucket de la seconde production éphémère, protégé comme la production ; les fichiers factices vont à l'environnement de charge et de recette. Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 6) : le bucket de staging à fichiers factices devient le bucket de la seconde production éphémère, protégé comme la production ; les fichiers factices vont à l'environnement de charge et de recette. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : **oui** pour le format des données stockées et pour toute migration d'un volume existant vers une nouvelle version ; le choix de l'image reste réversible tant qu'aucun volume de production n'en dépend.
 - **S'articule avec** : ADR-018 (chiffrement applicatif, s'applique aussi aux fichiers), ADR-020 (bucket propre à la seconde production éphémère), ADR-021 (images épinglées et signées), ADR-025 (montées de version), `foyer/KITS.md` (adaptateur de stockage enfichable).
 - **Sert la vision (ADR-000)** : principe 4, une brique S3 déjà maîtrisée plutôt qu'une nouvelle ; principe 3, la réplication hors région est vérifiée par une seconde source, la restauration ; règle « aucune brique ne détient tout », le stockage ne voit que du chiffré.

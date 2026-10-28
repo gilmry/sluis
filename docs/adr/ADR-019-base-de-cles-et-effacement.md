@@ -1,9 +1,9 @@
 # ADR-019 : Base de clés séparée et effacement cryptographique
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 4) : la restauration de la base de clés est testée chaque nuit par le déchiffrement d'un échantillon (ADR-020). Amendement proposé, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 6) : la base de clés est restaurée chaque nuit avec la seconde production éphémère (ADR-020), ce qui remplace la règle « la base de clés ne vient jamais en staging ». Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 4) : la restauration de la base de clés est testée chaque nuit par le déchiffrement d'un échantillon (ADR-020). Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 6) : la base de clés est restaurée chaque nuit avec la seconde production éphémère (ADR-020), ce qui remplace la règle « la base de clés ne vient jamais en staging ». Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : oui. Une fois des données chiffrées sous ce schéma, en sortir exige de tout rechiffrer ; et une clé effacée l'est pour de bon, c'est le but.
 - **S'articule avec** : ADR-017 (OpenBao hors cluster, détient la clé maîtresse), ADR-018 (enveloppe applicative, une clé par personne), ADR-020 (la seconde production éphémère restaure la base de clés), ADR-026 (sauvegardes des données par archivage WAL).
 - **Sert la vision (ADR-000)** : principe n°1, l'effacement d'une personne devient un geste unique et automatisable au lieu d'une chasse dans toutes les sauvegardes ; principe n°5, la preuve d'effacement est l'absence de la clé, constatable par un outil.

@@ -1,8 +1,8 @@
 # ADR-017 : OpenBao hors du cluster, gardien de la seule clé maîtresse
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 1) : déverrouillage automatique par le KMS d'OVHcloud, parts de secours hors ligne. Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 1) : déverrouillage automatique par le KMS d'OVHcloud, parts de secours hors ligne. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : oui. La clé maîtresse chiffre toutes les clés de données (ADR-018) ; sa perte rend les données illisibles, et la migrer vers un autre gardien est une opération sur chaque enveloppe.
 - **S'articule avec** : ADR-014 (zone de confiance, parts de secours en zone 3), ADR-025 (redémarrages automatiques), ADR-015 (accès par certificat step-ca et YubiKey), ADR-016 (les secrets de déploiement n'y vivent pas), ADR-018 (le backend lui demande d'envelopper et de désenvelopper), ADR-019 (la base de clés est séparée), ADR-023 (audit et alerte sur déchiffrements anormaux).
 - **Sert la vision (ADR-000)** : règle « aucune brique ne détient tout », parce que la production détient les données chiffrées et la zone de confiance la clé qui les ouvre, jamais les deux ensemble ; principe n°3, parce que l'audit part hors machine et se croise avec les journaux applicatifs ; principe n°1, parce que la rotation est planifiée (ADR-025).

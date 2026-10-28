@@ -1,8 +1,8 @@
 # ADR-014 : Trois zones, la production, la confiance, le hors-ligne
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 2) : le Sluis exécutant quitte la machine de confiance pour un VPS séparé. Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 2) : le Sluis exécutant quitte la machine de confiance pour un VPS séparé. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : oui. Le découpage fixe où vivent les clés, les journaux et les sauvegardes ; le déplacer après coup oblige à re-créer des identités et à migrer des données.
 - **S'articule avec** : ADR-010 (deux déploiements de Sluis : ce qui est exposé ne détient rien, ce qui détient n'est pas exposé ; l'exécutant sur un VPS séparé), ADR-011 (image exécutante exemptée du gate de scan pour `tofu`), ADR-008, ADR-012 et ADR-013 (Sluis ne peut que demander), ADR-007 (bacs à sable éphémères, hors des trois zones). Prolongé par ADR-015 à ADR-017, ADR-023 et ADR-033.
 - **Sert la vision (ADR-000)** : principe n°3, parce que la zone de confiance surveille la production depuis l'extérieur et qu'un témoin hors ligne surveille la zone de confiance ; règle « aucune brique ne détient tout », parce que chaque zone tient une part des pouvoirs et aucune ne les tient tous.

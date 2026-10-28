@@ -2,11 +2,10 @@
 
 - **Statut** : contresigné le 2026-10-18.
 - **Sorti de l'index le 2026-10-21** (revue des ADR, décision 7) : texte déplacé depuis `README.md` sans modification de fond.
-- **Amendé le 2026-10-28** (sluis#8) : k6 remplace wrk comme moteur de charge de l'image exécutante. Amendement proposé, non contresigné.
+- **Amendé le 2026-10-28** (sluis#8) : k6 remplace wrk comme moteur de charge de l'image exécutante. Amendement proposé, contresigné le 2026-10-28.
 
 **Amendée le 2026-10-21** (revue des ADR, décision 2) : le Sluis exécutant
-tourne sur un VPS séparé, hors de la machine de confiance. Amendement proposé,
-non contresigné ; le reste de l'ADR reste contresigné.
+tourne sur un VPS séparé, hors de la machine de confiance. Amendement proposé, contresigné le 2026-10-28 ; le reste de l'ADR reste contresigné.
 
 **Contexte.** Le Sprint 5 a livré la campagne de charge, donc du code capable de
 lancer `apply` et `destroy`. Un déploiement unique aurait fait du service exposé
@@ -62,7 +61,7 @@ binaire `tofu` (ADR-011) ; une image qui porte des vulnérabilités tolérées n
 cohabite pas avec le gardien de la clé maîtresse. « Ce qui détient n'est pas
 exposé » reste vrai : le VPS de l'exécutant n'a pas d'entrée depuis Internet.
 **Conséquence** : un VPS de plus à louer, tenir et superviser (ADR-014,
-ADR-033 étape 2). Proposé, non contresigné.
+ADR-033 étape 2). Proposé, contresigné le 2026-10-28.
 
 **Amendement du 2026-10-28 : k6 remplace wrk** (sluis#8, décision du
 superviseur). Le moteur de charge de l'image exécutante devient **k6**, embarqué
@@ -86,4 +85,4 @@ H5 du PRD (« corpus réutilisable tel quel ») tombe.
 
 *Calendrier.* Le remplacement dans le code vient après la gate review du jalon
 zéro : il dépasse la taille XS. D'ici là, `wrk` reste dans l'image.
-Proposé, non contresigné.
+Proposé, contresigné le 2026-10-28.

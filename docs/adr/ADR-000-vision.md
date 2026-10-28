@@ -1,6 +1,6 @@
 # ADR-000 : Vision, l'humain lit les alertes et valide l'irréversible
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
 - **Irréversible** : non. C'est une boussole, pas un mécanisme ; la changer ne casse rien, mais rend caduque la justification des ADR qui s'y réfèrent.
 - **S'articule avec** : ADR-008 et ADR-012 (« Sluis ne peut que demander »), ADR-007 (une délégation expire), `foyer/skills/enforcement.md` (les trois anneaux), `foyer/skills/conformite.md` (conforme par construction), `foyer/skills/convergence-iac.md` (la convergence se prouve par l'absence de diff).
 - **Numérotée 000** parce qu'elle précède les autres : chaque ADR à partir de la 014 dit comment elle la sert.

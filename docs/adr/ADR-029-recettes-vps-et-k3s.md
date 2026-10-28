@@ -1,8 +1,8 @@
 # ADR-029 : Une seule pile, K3s et Flux, d'un nœud à trois, derrière les mêmes outils MCP
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
-- **Réécrit le 2026-10-28** (sluis#6, décision du superviseur) : **Flux partout, Coolify abandonné**. La recette VPS devient un K3s à un nœud réconcilié par Flux, la recette K3s le même cluster porté à trois nœuds. Réécriture proposée, non contresignée.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
+- **Réécrit le 2026-10-28** (sluis#6, décision du superviseur) : **Flux partout, Coolify abandonné**. La recette VPS devient un K3s à un nœud réconcilié par Flux, la recette K3s le même cluster porté à trois nœuds. Réécriture proposée, contresignée le 2026-10-28.
 - **Irréversible** : oui pour la mise en production : les données d'un SaaS y naissent, et en sortir est une migration (ADR-026, ADR-027). Le passage d'un à trois nœuds n'est plus un changement de plateforme : c'est un ajout de nœuds, et la bascule de la base qui l'accompagne (ADR-026) reste un point à valider le moment venu.
 - **S'articule avec** : ADR-010 (OpenTofu loue, il ne configure pas), ADR-014 (trois zones), ADR-016 (secrets SOPS), ADR-026 (un nœud au démarrage, trois à terme, jamais deux), ADR-030 (serveur MCP), ADR-031 (pipeline), ADR-032 (Ansible), ADR-038 (double registre), ADR-041 (Keycloak) ; sluis#6 (ordre des deux portes) ; sluis#7 (réserve H1-Recette, sans objet) ; `foyer/skills/convergence-iac.md`.
 - **Sert la vision (ADR-000)** : principe 4, on commence petit (une machine) sans payer plus tard une migration de plateforme ; principe 1, le déploiement applicatif est confié à un réconciliateur, pas à un humain.

@@ -1,7 +1,7 @@
 # ADR-024 : L'agent IA d'exploitation collecte, propose, et n'agit jamais seul
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
-- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : non. C'est une règle de placement des droits ; la relâcher plus tard serait possible, mais chaque relâchement exigerait un nouvel ADR.
 - **S'articule avec** : ADR-008, ADR-012 et ADR-013 (l'action passe par une passerelle d'approbation), ADR-030 (outils MCP de lecture séparés des outils d'action), ADR-023 (l'alerte qui déclenche la persona platform engineer), `foyer/skills/enforcement.md` §Le contenu externe et anneau 3.
 - **Sert la vision (ADR-000)** : principe 1, l'agent prend en charge le diagnostic récurrent ; principe 3, la proposition du modèle est toujours lue à côté des preuves brutes ; règle « ce qui a des droits ne lit pas de texte libre ».

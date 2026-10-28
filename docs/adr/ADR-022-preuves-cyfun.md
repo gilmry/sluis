@@ -1,6 +1,6 @@
 # ADR-022 : Preuves CyFun, un rapport daté par déploiement, conservé hors du serveur
 
-- **Statut** : Proposé le 2026-10-21, non contresigné.
+- **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
 - **Irréversible** : non pour le format ; **oui** pour le stockage choisi, si c'est un stockage à verrouillage en écriture : ce qui y entre ne se corrige plus, ce qui est le but.
 - **S'articule avec** : Epic 9 story 9.3 (preuve de conformité par déploiement) et story 9.1 (profil de conformité déclaré) ; journal append-only de la story 0.5 ; ADR-021 (chaque gate de la barrière produit un rapport) ; ADR-020 (relevé de restauration) ; ADR-027 (stockage verrouillé en écriture dans une autre région) ; `foyer/skills/conformite.md` §2ter et §2quater.
 - **Sert la vision (ADR-000)** : principe n°5 au premier chef, la preuve est produite par l'outil qui a fait le contrôle ; principe n°3, une preuve conservée hors du serveur ne dépend pas de la santé de ce qu'elle atteste.
