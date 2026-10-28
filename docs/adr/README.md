@@ -94,7 +94,7 @@ Les ADR sont validés au fur et à mesure de la feuille de route (ADR-033),
 |---|---|---|---|---|
 | 1 | Identités et clés : deux YubiKeys, GPG, age | 015, 016 | 1 à 2 jours | aucune ; délai de livraison des YubiKeys |
 | 2 | Machine de confiance : step-ca, OpenBao (déverrouillage par le KMS d'OVHcloud), supervision, témoin externe ; Sluis exécutant sur un VPS séparé | 014, 015, 017, 023 | 3 à 5 jours | 1 à 2 semaines |
-| 3 | Recette VPS : Ansible et Coolify | 029, 031, 032, 034 | 2 à 4 jours | 1 semaine |
+| 3 | Recette VPS : Ansible, K3s à un nœud et Flux | 029, 031, 032, 034 | 3 à 5 jours | 1 semaine |
 | 4 | CloudNativePG et archivage des WAL | 026 | 2 à 3 jours | 1 semaine |
 | 5 | Backend chiffré, une clé par personne | 018, 019 | 1 à 2 semaines | migration validée projet par projet |
 | 6 | Seconde production éphémère restaurée chaque nuit | 020, 027 | 2 à 3 jours | 1 semaine |

@@ -28,7 +28,7 @@ chacune avec un rôle, une exposition et un ensemble de pouvoirs distincts.
 
 | Zone | Contient | Exposée à Internet | Ne contient jamais |
 |---|---|---|---|
-| **1. Production** | Le cluster ou le VPS des SaaS, leurs bases, leurs fichiers, le réconciliateur (Coolify ou Flux, ADR-029) | Oui, par l'entrée HTTP des applications seulement | La clé maîtresse applicative, l'autorité de certification, les journaux de référence |
+| **1. Production** | Le cluster ou le VPS des SaaS, leurs bases, leurs fichiers, le réconciliateur (Flux, ADR-029) | Oui, par l'entrée HTTP des applications seulement | La clé maîtresse applicative, l'autorité de certification, les journaux de référence |
 | **2. Confiance et supervision** | La machine de confiance : step-ca (ADR-015), OpenBao (ADR-017), la supervision et le stockage de ses journaux (ADR-023) | Non : accès par tunnel privé et double authentification | Les données des utilisateurs ; le Sluis exécutant (ADR-010), dont l'image est exemptée du gate de scan pour `tofu` (ADR-011) |
 | **3. Hors ligne et externe** | Les YubiKeys et leur copie de secours (ADR-015), les sauvegardes hors site dans une autre région (ADR-026, ADR-027), le témoin externe chez un autre hébergeur (ADR-023), l'archive des preuves (ADR-022) | Le témoin seul, qui sonde de l'extérieur | Aucun accès en écriture depuis les zones 1 et 2 vers ce qui fait foi |
 

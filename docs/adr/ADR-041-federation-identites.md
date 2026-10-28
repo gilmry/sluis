@@ -2,6 +2,7 @@
 
 - **Statut** : Proposé le 2026-10-22, contresigné le 2026-10-23.
 - **Décisions du superviseur du 2026-10-23**, intégrées au texte : déploiement par **Flux** (et non Argo CD) ; **un realm par SaaS**. Avant K3s : Coolify si un SaaS a de vrais utilisateurs avant l'étape 8, sinon Keycloak attend K3s (point 11).
+- **Amendé le 2026-10-28** (sluis#6) : Coolify est abandonné, la recette VPS est un K3s à un nœud (ADR-029). Keycloak arrive directement dans sa forme cible (opérateur, CloudNativePG) ; la branche Compose sous Coolify du point 11 et sa migration de comptes disparaissent. Amendement proposé, non contresigné.
 - **Irréversible** : oui, à mesure que des comptes y naissent. Les comptes, leurs empreintes de mots de passe, leurs seconds facteurs et leurs liens de fédération vivent dans la base du fournisseur d'identité ; l'identifiant qu'il attribue à chaque personne s'inscrit dans les données de chaque SaaS. En changer est une migration de comptes : réinitialisation probable des mots de passe et des seconds facteurs, ré-association des identifiants, nouvelle déclaration de chaque fédération. Réversible à faible coût tant qu'aucun utilisateur réel n'y a de compte.
 - **S'articule avec** : ADR-014 (zone de production, exposition), ADR-015 (identités d'administration et des machines, **inchangé**), ADR-016 (secrets du fournisseur de configuration), ADR-018 et ADR-019 (identifiant de personne, effacement), ADR-020 (seconde production éphémère), ADR-023 (supervision et journaux), ADR-026 (base sous CloudNativePG), ADR-029 (recettes VPS et K3s), ADR-030 (Sluis public et son propre serveur OAuth 2.1), ADR-032 (rôle d'OpenTofu, réconciliateur du cluster), ADR-033 (feuille de route), ADR-034 (liste blanche des fournisseurs OpenTofu).
 - **Sert la vision (ADR-000)** : principe n°4, parce qu'une brique d'authentification construite une fois évite à chaque SaaS de réécrire comptes, mots de passe, second facteur et fédération ; principe n°1, parce que la configuration des realms et des clients se déclare dans Git et se rejoue ; règle « aucune brique ne détient tout », parce que le fournisseur d'identité authentifie les utilisateurs sans détenir les clés de leurs données (ADR-017, ADR-018). Le principe n°4 est aussi ce qui le met en tension : voir les points ouverts.
@@ -66,7 +67,7 @@ Demande du superviseur (lettre de mission du 2026-10-22), proposée ici :
    doivent joindre les pages de connexion : Keycloak est exposé par l'entrée
    HTTP des applications, et par elle seulement. **Sa console et son API
    d'administration ne sont pas exposées** à Internet : elles se joignent comme
-   l'interface de Coolify, par tunnel privé (ADR-029). Le mécanisme exact de
+   l'API du cluster, par tunnel privé (ADR-029). Le mécanisme exact de
    séparation des chemins d'administration reste à vérifier sur la version
    retenue. Keycloak n'entre pas en zone 2, qui n'est pas exposée.
 6. **Sa base est une base PostgreSQL dédiée**, distincte de celles des SaaS et
@@ -111,15 +112,13 @@ Demande du superviseur (lettre de mission du 2026-10-22), proposée ici :
     (ADR-023). Les secrets du fournisseur OpenTofu (identifiant du client
     d'administration) sont chiffrés par SOPS (ADR-016).
 
-11. **Avant K3s, règle de déploiement** (décision du superviseur du
-    2026-10-23). **Si un SaaS doit accueillir de vrais utilisateurs avant
-    l'étape 8**, Keycloak tourne d'ici là comme service Compose sous Coolify,
-    configuré par le même fournisseur OpenTofu (qui parle à son API quel que
-    soit le mode de déploiement), avec une base PostgreSQL sauvegardée hors
-    hôte ; le passage à l'opérateur et à CloudNativePG au moment de K3s est
-    alors une **migration de données**, planifiée et approuvée comme telle.
-    **Sinon**, Keycloak n'arrive qu'avec K3s, directement dans sa forme cible,
-    et aucune migration des comptes n'a lieu.
+11. **Règle de déploiement** (amendée le 2026-10-28, sluis#6, qui remplace la
+    décision du superviseur du 2026-10-23). La recette VPS étant un K3s à un
+    nœud (ADR-029), Keycloak y arrive **directement dans sa forme cible** :
+    opérateur, base sous CloudNativePG, configuration par le fournisseur
+    OpenTofu. Le passage à trois nœuds ne migre aucun compte. La branche
+    d'origine (Keycloak en Compose sous Coolify avant l'étape 8, puis migration
+    de données) disparaît avec Coolify.
 
 ## Alternatives écartées
 

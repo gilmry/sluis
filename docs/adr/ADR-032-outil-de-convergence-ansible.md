@@ -23,7 +23,7 @@ installé, joignable en SSH, avec un écosystème suffisant pour LUKS, K3s et SO
 |---|---|---|
 | Location | **OpenTofu** (ADR-010) | crée et détruit les machines, réseaux et stockages chez l'hébergeur |
 | Socle | **Ansible** | système, durcissement, LUKS, pare-feu, agents de supervision, installation de K3s |
-| Cluster | **Flux** (recette K3s) ou **Coolify** (recette VPS) | ce qui tourne sur la machine ou dans le cluster (ADR-029) |
+| Cluster | **Flux**, à un nœud comme à trois | ce qui tourne dans le cluster (ADR-029 ; Coolify abandonné le 2026-10-28, sluis#6) |
 
 **Règles d'Ansible :**
 
