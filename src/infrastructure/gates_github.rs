@@ -150,12 +150,26 @@ impl VerificateurGates for VerificateurGatesGithub {
     }
 }
 
-/// Une gate est verte si **tous** les check-runs qui portent son nom sont
+/// Vrai si le check-run `nom_run` appartient à la gate `nom` : exactement
+/// `nom`, ou `nom / <job appelé>`, la forme que GitHub donne aux jobs d'un
+/// workflow réutilisable appelé par un job nommé `nom`.
+fn appartient(nom_run: &str, nom: &str) -> bool {
+    nom_run == nom
+        || nom_run
+            .strip_prefix(nom)
+            .is_some_and(|reste| reste.starts_with(" / "))
+}
+
+/// Une gate est verte si **tous** les check-runs qui lui appartiennent sont
 /// terminés en succès, et s'il en existe au moins un.
 fn etat_d_une_gate(gate: GatePlancher, nom: &str, runs: &[serde_json::Value]) -> EtatGate {
     let siens: Vec<&serde_json::Value> = runs
         .iter()
-        .filter(|run| run.get("name").and_then(|n| n.as_str()) == Some(nom))
+        .filter(|run| {
+            run.get("name")
+                .and_then(|n| n.as_str())
+                .is_some_and(|nom_run| appartient(nom_run, nom))
+        })
         .collect();
 
     if siens.is_empty() {

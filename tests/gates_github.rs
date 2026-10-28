@@ -258,3 +258,81 @@ fn security_un_jeton_refuse_est_une_erreur_d_authentification_masquee() {
         autre => panic!("authentification attendue, obtenu {autre:?}"),
     }
 }
+
+// ── Story 34.3c (#79) — les check-runs d'un workflow réutilisable ──
+
+fn plancher_du_contrat() -> Vec<(GatePlancher, String)> {
+    vec![
+        (GatePlancher::Secrets, "sluis/secrets".to_string()),
+        (GatePlancher::Sbom, "sluis/sbom".to_string()),
+        (
+            GatePlancher::ScanConteneur,
+            "sluis/scan-conteneur".to_string(),
+        ),
+    ]
+}
+
+fn etat(runs: Vec<serde_json::Value>, gate: GatePlancher) -> bool {
+    let serveur = lancer(200, check_runs(runs));
+    verificateur(&serveur.adresse, plancher_du_contrat())
+        .etat_plancher("abc123")
+        .expect("lecture")
+        .into_iter()
+        .find(|e| e.gate == gate)
+        .expect("gate")
+        .verte
+}
+
+fn reutilisables_verts() -> Vec<serde_json::Value> {
+    vec![
+        run(
+            "sluis/secrets / Gitleaks (bloquant)",
+            "completed",
+            Some("success"),
+        ),
+        run("sluis/sbom", "completed", Some("success")),
+        run(
+            "sluis/scan-conteneur / Trivy (bloquant)",
+            "completed",
+            Some("success"),
+        ),
+    ]
+}
+
+#[test]
+fn happy_une_gate_reutilisable_en_succes_est_verte() {
+    assert!(etat(reutilisables_verts(), GatePlancher::Secrets));
+    assert!(etat(reutilisables_verts(), GatePlancher::ScanConteneur));
+}
+
+#[test]
+fn negative_un_job_appele_en_echec_rend_la_gate_rouge() {
+    let mut runs = reutilisables_verts();
+    runs[2] = run(
+        "sluis/scan-conteneur / Trivy (bloquant)",
+        "completed",
+        Some("failure"),
+    );
+    assert!(!etat(runs, GatePlancher::ScanConteneur));
+}
+
+#[test]
+fn edge_un_nom_qui_commence_pareil_sans_separateur_n_appartient_pas_a_la_gate() {
+    let mut runs = reutilisables_verts();
+    runs[0] = run("sluis/secrets-bis", "completed", Some("success"));
+    assert!(
+        !etat(runs, GatePlancher::Secrets),
+        "secrets doit être absente"
+    );
+}
+
+#[test]
+fn security_un_job_saute_dans_la_famille_rend_la_gate_rouge() {
+    let mut runs = reutilisables_verts();
+    runs.push(run(
+        "sluis/scan-conteneur / Docker Scout",
+        "completed",
+        Some("skipped"),
+    ));
+    assert!(!etat(runs, GatePlancher::ScanConteneur));
+}
