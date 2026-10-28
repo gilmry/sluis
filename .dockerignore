@@ -5,6 +5,9 @@
 /target
 /.git
 /.github
+# Exception : le gabarit Tier 1 est inclus dans le binaire (include_str!,
+# section_empreinte.rs). Sans lui, la compilation échoue dans l'image.
+!/.github/workflows/tier1-apply.yml.example
 /donnees
 /deploy.log
 /.deploy.lock
