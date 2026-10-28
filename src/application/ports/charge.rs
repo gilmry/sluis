@@ -7,10 +7,8 @@ use crate::domain::{AppError, MesureCapacite, Palier};
 pub struct ReglagePalier {
     /// Palier concerné.
     pub palier: Palier,
-    /// Nombre de connexions simultanées.
+    /// Nombre de connexions simultanées : les utilisateurs virtuels de k6.
     pub connexions: u32,
-    /// Nombre de fils.
-    pub fils: u32,
     /// Durée, en secondes.
     pub duree_secondes: u32,
 }

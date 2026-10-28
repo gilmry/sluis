@@ -108,7 +108,7 @@ Ports en traits, un par préoccupation, volontairement étroits (ISP).
 | `HelmRunner` | `status`, `history`, `rollback` | `process::Helm` |
 | `KustomizeRenderer` | `build` | `process::Kustomize` |
 | `ArgoCdClient` | `app_status`, `sync` | `process::ArgoCd` |
-| `LoadTestRunner` | `run_step` | `loadtest::Wrk` |
+| `LoadTestRunner` | `run_step` | `charge::K6` |
 | `ApprovalGateway` | `submit`, `poll` | `github::Actions` |
 | `GateChecker` | `floor_status` (secrets, SBOM, scan d'image, retour de migration) | `github::Checks` + `process::Scanner` |
 | `AuditLog` | `append` (uniquement) | `audit::Jsonl` |
@@ -127,7 +127,7 @@ Un use case par outil MCP, sans logique métier dans les handlers. Les use cases
 | `process/` | Runners CLI | **Allowlist d'exécutables, arguments passés en tableau, jamais de shell.** Un binaire absent produit `AppError::EngineMissing` nommant le binaire |
 | `fs_inventory/` | Découverte | Racine autorisée, refus de toute remontée hors racine, liens symboliques non suivis hors racine |
 | `github/` | Passerelle | `workflow_dispatch` + interrogation du run ; ne détient qu'un jeton de déclenchement, jamais les secrets d'infrastructure |
-| `loadtest/` | Pilote `wrk` | Parsing structuré de la sortie, refus à l'admission si `wrk` est absent |
+| `charge` | Pilote `k6` (wrk jusqu'à sluis#8) | Script embarqué, résumé JSON sur une ligne marquée, lancé isolé sans l'environnement de Sluis, refus à l'admission si `k6` est absent |
 | `mcp/` | Transports | stdio et Streamable HTTP, dispatch JSON-RPC, registre d'outils |
 | `oauth/` | Serveur d'autorisation | Porté des références du skill `mcp-oauth-maison` |
 | `audit/` | Journal | JSONL append-only, ouverture en `O_APPEND`, verrou d'écriture |

@@ -47,7 +47,7 @@ pub const EXECUTABLES_AUTORISES: &[&str] = &[
     "kubectl",
     "kustomize",
     "argocd",
-    "wrk",
+    "k6",
 ];
 
 /// `PATH` donné à `tofu`, fixe : il ne vient pas de l'environnement de

@@ -22,7 +22,7 @@ Un serveur MCP distant qui expose **trois outils, tous en lecture** :
 La campagne de charge et la passerelle Tier 1 sont écrites et testées, mais
 **ce déploiement-ci ne les expose pas**. Un agent connecté à `sluis.ecosolva.org`
 ne peut donc rien muter, et c'est une propriété de l'image autant que de la
-configuration : l'image `server` ne contient ni `tofu` ni `wrk`, elle ne
+configuration : l'image `server` ne contient ni `tofu` ni `k6`, elle ne
 pourrait pas provisionner même si on lui donnait des clés OVH.
 
 C'est le second déploiement, décrit plus bas, qui porte les moteurs.
@@ -227,7 +227,7 @@ Vérification, qui ne passe pas par HTTP puisque rien n'est publié :
 ```
 Fumée sur le Sluis exécutant
   ✓ tofu présent
-  ✓ wrk présent
+  ✓ k6 présent
   ✓ identifiants OVH présents
 Fumée verte : les moteurs et les identifiants sont là.
 ```
@@ -304,7 +304,12 @@ transmise. Sluis la nomme sur sa sortie d'erreur à chaque lancement, et dans
 l'erreur rendue si `tofu` échoue : une authentification refusée se lit alors
 avec sa cause.
 
-Les autres moteurs (`helm`, `kubectl`, `kustomize`, `argocd`, `wrk`,
+`k6` est lui aussi lancé isolé, sans configuration possible : il ne reçoit
+que `PATH` et un `HOME` dans le dossier temporaire. C'est un binaire tiers
+écarté du gate bloquant (ADR-011), et il expose par défaut l'environnement au
+script de charge : il ne voit donc aucune variable de Sluis.
+
+Les autres moteurs (`helm`, `kubectl`, `kustomize`, `argocd`,
 `ansible-playbook`) gardent l'environnement hérité.
 
 **Le chemin du module est canonisé** avant tout lancement : il doit, une fois

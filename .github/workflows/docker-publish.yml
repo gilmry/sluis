@@ -24,21 +24,23 @@ jobs:
           - cible: public
             paquet: server
             ignorer_binaires: ""
-          # Le Sluis du réseau interne. Porte tofu et wrk.
+          # Le Sluis du réseau interne. Porte tofu et k6.
           #
-          # Le binaire `tofu` est écarté du gate BLOQUANT, et de lui seul.
-          # Raison, mesurée le 2026-09-02 : ses 12 CVE CRITICAL/HIGH vivent
-          # dans le go.mod d'OpenTofu (x/crypto, x/net, grpc, oras), que nous
-          # ne pouvons pas corriger. Terraform ne ferait pas mieux, 9 CVE dans
-          # les mêmes conditions : le problème est d'embarquer un binaire Go
-          # tiers, pas le choix du moteur. Voir ADR-011.
+          # Les binaires `tofu` et `k6` sont écartés du gate BLOQUANT, et eux
+          # seuls. Raison, mesurée le 2026-09-02 pour tofu : ses 12 CVE
+          # CRITICAL/HIGH vivent dans le go.mod d'OpenTofu (x/crypto, x/net,
+          # grpc, oras), que nous ne pouvons pas corriger. Terraform ne ferait
+          # pas mieux, 9 CVE dans les mêmes conditions : le problème est
+          # d'embarquer un binaire Go tiers, pas le choix du moteur. k6, autre
+          # binaire Go tiers, suit la même règle depuis l'amendement d'ADR-011
+          # du 2026-10-28 (sluis#8).
           #
-          # Ce qui reste bloquant sur cette image : les paquets système et wrk,
-          # qui sont, eux, de notre ressort. Les CVE de tofu sont rapportées à
-          # part, sans bloquer, pour rester visibles.
+          # Ce qui reste bloquant sur cette image : les paquets système, qui
+          # sont, eux, de notre ressort. Les CVE de tofu et de k6 sont
+          # rapportées à part, sans bloquer, pour rester visibles.
           - cible: executant
             paquet: executant
-            ignorer_binaires: "usr/local/bin/tofu"
+            ignorer_binaires: "usr/local/bin/tofu,usr/local/bin/k6"
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -72,7 +74,7 @@ jobs:
       # Ce que le gate ci-dessus a écarté est rapporté ici, sans bloquer. Une
       # exception muette redevient un angle mort à la première montée de
       # version : celle-ci reste lisible dans le journal de chaque build.
-      - name: Rapporter les CVE du moteur tiers (sans bloquer)
+      - name: Rapporter les CVE des moteurs tiers (sans bloquer)
         if: matrix.ignorer_binaires != ''
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

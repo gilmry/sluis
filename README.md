@@ -17,7 +17,7 @@ Livré depuis :
 - **2026-09-02** : la campagne de charge de bout en bout, et les deux
   déploiements prévus par l'architecture, un Sluis **public** exposé qui ne
   détient rien et un Sluis **exécutant** sur le réseau interne qui porte
-  OpenTofu, wrk et les clés OVH (ADR-010, ADR-011).
+  OpenTofu, k6 (wrk jusqu'au 2026-10-28, #8) et les clés OVH (ADR-010, ADR-011).
 - **2026-10-19** : la passerelle Tier 1 câblée dans les binaires (#4, ADR-012).
   Outils `sluis_mise_en_ligne`, `sluis_etat_approbation` et
   `sluis_renouvellement_derogation` sur le public, `sluis_ouvrir_derogation` sur

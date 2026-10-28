@@ -1,7 +1,7 @@
 //! Rapport de diagnostic de l'environnement d'exécution.
 //!
 //! Sluis pilote sept moteurs externes — tofu, ansible-playbook, helm, kubectl,
-//! kustomize, argocd, wrk — dont **aucun n'est garanti présent**. Sur une
+//! kustomize, argocd, k6 — dont **aucun n'est garanti présent**. Sur une
 //! machine de développement nue, les sept manquent, et c'est un état normal.
 //!
 //! Le rapport existe pour que l'agent sache ce qu'il peut tenter avant

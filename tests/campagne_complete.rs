@@ -136,7 +136,7 @@ impl MoteurCharge for MoteurDouble {
             .consigner(&format!("palier:{}", reglage.palier.nom()));
         if self.echoue_a == Some(reglage.palier) {
             return Err(AppError::ServiceTiers {
-                service: "wrk".to_string(),
+                service: "k6".to_string(),
                 detail: "connexion refusée".to_string(),
             });
         }
@@ -238,7 +238,7 @@ fn negative_un_moteur_absent_refuse_avant_de_provisionner_quoi_que_ce_soit() {
         )
         .expect_err("doit être refusée");
 
-    assert!(erreur.to_string().contains("wrk"));
+    assert!(erreur.to_string().contains("k6"));
     // Rien n'a été créé, donc rien n'est à détruire : le journal est vide.
     assert!(journal.lignes().is_empty());
 }
