@@ -10,7 +10,7 @@
 # Sur l'exécutant : on ne peut pas l'interroger en HTTP, il n'est publié nulle
 # part, et c'est voulu. On le fait donc parler par sa CLI, qui rend le même
 # diagnostic que `sluis_doctor`. C'est aussi le seul contrôle qui prouve ce
-# pour quoi cette image existe : que tofu et wrk sont présents.
+# pour quoi cette image existe : que tofu et k6 sont présents.
 set -euo pipefail
 
 echec=0
@@ -50,7 +50,7 @@ if [ "${1:-}" = "--executant" ]; then
   # Le diagnostic marque chaque moteur présent ou absent. Sur cette image, un
   # moteur absent n'est pas l'état normal d'une machine nue : c'est un défaut
   # de build, puisque l'image existe précisément pour les porter.
-  for moteur in tofu wrk; do
+  for moteur in tofu k6; do
     verifier "$moteur présent" \
       "$(printf '%s' "$rapport" | grep -ci "$moteur.*absent" || true)" \
       "0"

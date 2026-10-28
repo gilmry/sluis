@@ -129,7 +129,7 @@ impl MoteurCharge for MoteurDouble {
             .lock()
             .expect("verrou")
             .push(reglage.palier.nom().to_string());
-        // Les mêmes grandeurs que celles qu'analyse le pilote wrk, sans quoi
+        // Les mêmes grandeurs que celles qu'analyse le pilote k6, sans quoi
         // le verdict porterait sur des noms que la production ne produit pas.
         Ok(vec![
             MesureCapacite::mesuree(

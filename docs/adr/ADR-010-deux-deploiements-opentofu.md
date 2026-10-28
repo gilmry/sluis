@@ -85,4 +85,5 @@ H5 du PRD (« corpus réutilisable tel quel ») tombe.
 
 *Calendrier.* Le remplacement dans le code vient après la gate review du jalon
 zéro : il dépasse la taille XS. D'ici là, `wrk` reste dans l'image.
-Proposé, contresigné le 2026-10-28.
+Proposé, contresigné le 2026-10-28. **Mis en œuvre le 2026-10-28** (sluis#8) :
+k6 v2.3.0, licence et `SOURCES` dans `/usr/share/licenses/k6`, lancé isolé.

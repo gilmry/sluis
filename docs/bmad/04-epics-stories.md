@@ -373,7 +373,7 @@ Livre « la capacité de boucler ». Aucune story fonctionnelle ne démarre avan
 #### Story 6.1 — Campagne en paliers *(FR-017)*
 - **Classes de tests** :
   - `@happy` — les 7 paliers exécutés dans l'ordre, du warmup au soak
-  - `@negative` — `wrk` absent : refus **à l'admission**, jamais en cours de route
+  - `@negative` — moteur de charge absent (`wrk`, puis `k6` depuis sluis#8) : refus **à l'admission**, jamais en cours de route
   - `@edge` — palier échouant à mi-parcours, cible saturée dès le warmup, campagne interrompue
   - `@security` — refus si le rate limiting est actif (résultats faussés) ; refus si la cible n'est pas dans un bail
 - **Couche** : Application + Infrastructure · **Taille** : L · **Tours** : 5 · **FR** : FR-017

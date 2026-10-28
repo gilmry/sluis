@@ -7,7 +7,7 @@
 # **Deux cibles, un seul binaire Rust**, conformément au choix d'architecture
 # du Sprint 5 :
 #
-#   --target executant  le Sluis du réseau interne. Porte tofu et wrk, et c'est
+#   --target executant  le Sluis du réseau interne. Porte tofu et k6, et c'est
 #                       le seul à qui l'on confie des clés OVH.
 #   --target public     le Sluis exposé sur Internet. Ne porte aucun moteur, et
 #                       ne peut donc rien muter même si on lui donnait des clés.
@@ -70,19 +70,17 @@ RUN install -d -o 65532 -g 65532 /donnees
 # Terraform v1.16.1 porte 9 CVE CRITICAL/HIGH dans son propre binaire, tofu
 # 1.12.6 en porte 12. Voir ADR-011.
 #
-# Un seul étage produit les deux moteurs, puis on ne garde que les binaires.
-# wrk lie l'OpenSSL de cette Debian, que la distroless n'a pas ; les
-# bibliothèques nécessaires sont donc emportées avec lui, depuis la même
-# Debian 12, donc avec le même ABI.
+# Un seul étage télécharge et vérifie les deux moteurs, puis on ne garde que
+# les binaires. Les deux sont des binaires Go statiques : rien d'autre n'est
+# emporté, et l'image ne porte aucune bibliothèque copiée sans `dpkg`.
 FROM debian:bookworm-slim AS moteurs
-ARG WRK_VERSION=4.2.0
 ARG TOFU_VERSION=1.12.6
-# `unzip` n'est pas décoratif : le Makefile de wrk déballe un LuaJIT vendorisé
-# et échoue sinon sur un « make: unzip: No such file or directory » qui ne dit
-# pas qu'il s'agit d'une dépendance de build manquante.
+ARG K6_VERSION=2.3.0
+# Le texte de la licence AGPL de k6, au tag de la version embarquée. Il n'est
+# pas dans l'archive de release, d'où une empreinte épinglée ici.
+ARG K6_LICENCE_SHA256=45bd5efa5e66840e253253f3cc172d07213cb812206cda7bb71cd5b9dbd5a985
 RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-      build-essential libssl-dev ca-certificates curl unzip \
+ && apt-get install -y --no-install-recommends ca-certificates curl unzip \
  && rm -rf /var/lib/apt/lists/*
 
 # OpenTofu vient de son archive de release, PAS de son image.
@@ -111,48 +109,35 @@ RUN cd /tmp \
  && install -m 0755 tofu /usr/local/bin/tofu \
  && /usr/local/bin/tofu version | grep -q "OpenTofu v${TOFU_VERSION}"
 
-# `WITH_OPENSSL=/usr` n'est pas une optimisation, c'est un correctif de sécurité.
-# Sans lui, le Makefile de wrk compile et lie STATIQUEMENT l'OpenSSL 1.1.1i qu'il
-# embarque dans `deps/`, une version de décembre 2020, en fin de vie depuis
-# septembre 2023. On embarquerait sciemment de la cryptographie non maintenue
-# dans l'image qui détient les clés OVH, et le scan de la CI n'y verrait qu'un
-# binaire statique. Avec cette option, wrk lie l'OpenSSL 3 de Debian, que le
-# scan connaît et que les mises à jour de base suivent.
+# k6 remplace wrk depuis l'amendement d'ADR-010 du 2026-10-28 (sluis#8), et
+# il est embarqué exactement comme tofu : archive de release, empreinte
+# vérifiée contre le fichier de sommes publié à côté, version épinglée.
 #
-# Effet de bord bienvenu : le build passe de plusieurs minutes à quelques
-# dizaines de secondes, l'étage n'ayant plus tout OpenSSL à compiler.
-RUN curl -fsSL "https://github.com/wg/wrk/archive/refs/tags/${WRK_VERSION}.tar.gz" -o /tmp/wrk.tar.gz \
- && tar -xzf /tmp/wrk.tar.gz -C /tmp \
- && make -C "/tmp/wrk-${WRK_VERSION}" WITH_OPENSSL=/usr -j"$(nproc)" \
- && install -m 0755 "/tmp/wrk-${WRK_VERSION}/wrk" /usr/local/bin/wrk
-
-# Même garde-fou que pour les binaires Rust : un wrk qui ne répond pas doit
-# faire échouer le build, pas se découvrir au premier palier de charge.
-# `wrk --version` écrit sa bannière puis rend 1 ; c'est la bannière qui compte.
-RUN /usr/local/bin/wrk --version 2>&1 | grep -q '^wrk '
-
-# Ce que wrk réclame hors de la base distroless est emporté avec lui.
+# **Licence.** k6 est sous AGPL-3.0. Cette image MIT le redistribue sans
+# modification, comme un programme distinct que Sluis lance sans le lier.
+# ADR-010 pose deux conditions, tenues ici : le texte de la licence est copié à
+# côté du binaire, et un fichier `SOURCES` dit sa version et où trouver ses
+# sources. Les deux sont vérifiés, pas seulement copiés.
 #
-# Rien n'est codé en dur ici, et c'est délibéré : selon la version et l'OpenSSL
-# de l'hôte, wrk lie sa cryptographie statiquement ou dynamiquement. Une liste
-# devinée d'avance aurait été fausse dans un cas sur deux, et fausse tard, au
-# premier appel, avec un « no such file or directory » qui ne nomme pas le
-# manquant. On lit donc ce dont il a réellement besoin.
-RUN mkdir -p /sortie/lib && touch /sortie/lib/.garder \
- && ldd /usr/local/bin/wrk | awk '/=> \//{print $3}' \
-    | grep -vE '/(libc|libm|libdl|libpthread|librt|libgcc_s|libstdc\+\+)\.so' \
-    | xargs -r -I{} cp -L {} /sortie/lib/
-
-# Et on vérifie que la moisson est complète : toute dépendance hors base doit
-# désormais exister dans /sortie/lib. Ce contrôle transforme une panne différée
-# en échec de build.
-RUN ldd /usr/local/bin/wrk | awk '/=> \//{print $3}' \
-    | grep -vE '/(libc|libm|libdl|libpthread|librt|libgcc_s|libstdc\+\+)\.so' \
-    | while read -r so; do \
-        test -f "/sortie/lib/$(basename "$so")" \
-          || { echo "dépendance non emportée : $so" >&2; exit 1; }; \
-      done \
- && echo "wrk : $(ls /sortie/lib | grep -c '\.so' || true) bibliothèque(s) hors base emportée(s)"
+# Le build échoue si k6 ne répond pas, ou s'il n'est pas la version attendue :
+# un moteur absent doit se découvrir ici, pas au premier palier de charge.
+RUN cd /tmp \
+ && base="https://github.com/grafana/k6/releases/download/v${K6_VERSION}" \
+ && curl -fsSL -O "$base/k6-v${K6_VERSION}-linux-amd64.tar.gz" \
+ && curl -fsSL -O "$base/k6-v${K6_VERSION}-checksums.txt" \
+ && sha256sum -c --ignore-missing "k6-v${K6_VERSION}-checksums.txt" \
+ && tar -xzf "k6-v${K6_VERSION}-linux-amd64.tar.gz" \
+ && install -m 0755 "k6-v${K6_VERSION}-linux-amd64/k6" /usr/local/bin/k6 \
+ && /usr/local/bin/k6 version | grep -qF "${K6_VERSION}" \
+ && mkdir -p /sortie/licences/k6 \
+ && curl -fsSL -o /sortie/licences/k6/LICENSE.md \
+      "https://raw.githubusercontent.com/grafana/k6/v${K6_VERSION}/LICENSE.md" \
+ && echo "${K6_LICENCE_SHA256}  /sortie/licences/k6/LICENSE.md" | sha256sum -c - \
+ && printf '%s\n' \
+      "k6 v${K6_VERSION}, redistribué sans modification sous AGPL-3.0." \
+      "Sources : https://github.com/grafana/k6/tree/v${K6_VERSION}" \
+      "Binaire : $base/k6-v${K6_VERSION}-linux-amd64.tar.gz" \
+      > /sortie/licences/k6/SOURCES
 
 # ── OpenSSL du socle, quand la distroless retarde sur Debian ───────────────
 #
@@ -217,16 +202,12 @@ ENTRYPOINT ["/usr/local/bin/sluis-server"]
 
 # ── Sluis exécutant ────────────────────────────────────────────────────────
 #
-# Le socle plus les deux moteurs, et rien d'autre : ni shell, ni gestionnaire
-# de paquets, ni les outils de compilation de l'étage qui a produit wrk.
+# Le socle plus les deux moteurs et la licence de k6, et rien d'autre : ni
+# shell, ni gestionnaire de paquets, ni bibliothèque hors `dpkg`.
 FROM socle AS executant
 COPY --from=moteurs /usr/local/bin/tofu /usr/local/bin/tofu
-COPY --from=moteurs /usr/local/bin/wrk /usr/local/bin/wrk
-# Les bibliothèques que wrk réclame hors de la base, récoltées par l'étage
-# précédent. Le répertoire peut être vide, si wrk s'est lié statiquement ; c'est
-# un cas normal, pas une erreur.
-COPY --from=moteurs /sortie/lib/ /usr/local/lib/sluis/
-ENV LD_LIBRARY_PATH=/usr/local/lib/sluis
+COPY --from=moteurs /usr/local/bin/k6 /usr/local/bin/k6
+COPY --from=moteurs /sortie/licences/ /usr/share/licenses/
 
 # ── Sluis public ───────────────────────────────────────────────────────────
 #

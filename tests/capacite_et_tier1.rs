@@ -13,7 +13,7 @@ use sluis::domain::{
     etablir_convergence, AppError, Empreinte, Environnement, MesureCapacite, Palier, PlanTerraform,
     Prior, Provenance, RapportRecalage,
 };
-use sluis::infrastructure::charge::{analyser_sortie, duree_en_millisecondes};
+use sluis::infrastructure::charge::analyser_sortie;
 
 fn plan(creations: u32) -> PlanTerraform {
     PlanTerraform {
@@ -24,17 +24,16 @@ fn plan(creations: u32) -> PlanTerraform {
     }
 }
 
-const SORTIE_WRK: &str = "Running 30s test @ http://cible/\n\
-  4 threads and 50 connections\n\
-  Thread Stats   Avg      Stdev     Max   +/- Stdev\n\
-    Latency    12.34ms    5.67ms  89.01ms   70.12%\n\
-  Latency Distribution\n\
-     50%   10.00ms\n\
-     75%   15.00ms\n\
-     90%   20.00ms\n\
-     99%   50.00ms\n\
-  123456 requests in 30.00s, 12.34MB read\n\
-Requests/sec:   4115.20\n";
+/// Sortie capturée d'un vrai run de `k6` v2.3.0 (étage `moteurs` de l'image,
+/// environnement vidé, 5 utilisateurs virtuels pendant 5 s contre un nginx
+/// jetable), le 2026-10-28, pour sluis#8.
+const SORTIE_K6: &str = include_str!("fixtures/k6-palier.txt");
+
+/// Une ligne de résumé écrite à la main, pour les cas qu'un vrai run ne
+/// produit pas.
+fn resume(requetes: u64, p50: f64, p99: f64) -> String {
+    format!("SLUIS_RESUME {{\"requetes\":{requetes},\"debit\":10.0,\"p50\":{p50},\"p99\":{p99}}}\n")
+}
 
 // ── @happy ───────────────────────────────────────────────────
 
@@ -47,21 +46,21 @@ fn happy_un_reapply_sans_ecart_prouve_la_convergence() {
 }
 
 #[test]
-fn happy_la_sortie_wrk_donne_debit_et_latences() {
+fn happy_la_sortie_k6_donne_debit_et_latences() {
     let mesures =
-        analyser_sortie(SORTIE_WRK, Palier::Medium, "conditions de test").expect("analyse");
+        analyser_sortie(SORTIE_K6, Palier::Medium, "conditions de test").expect("analyse");
     let debit = mesures
         .iter()
         .find(|m| m.grandeur() == "debit")
         .expect("débit");
-    assert_eq!(debit.valeur(), 4115.20);
-    assert_eq!(debit.echantillon(), 123_456);
+    assert_eq!(debit.valeur(), 5209.702132379193);
+    assert_eq!(debit.echantillon(), 26_054);
     assert_eq!(debit.provenance(), Provenance::Mesure);
     let p99 = mesures
         .iter()
         .find(|m| m.grandeur() == "latence_p99")
         .expect("p99");
-    assert_eq!(p99.valeur(), 50.0);
+    assert_eq!(p99.valeur(), 4.45491059000001);
 }
 
 #[test]
@@ -127,8 +126,7 @@ fn negative_une_mesure_sans_conditions_est_refusee() {
 
 #[test]
 fn negative_des_latences_incoherentes_sont_rejetees() {
-    let sortie = SORTIE_WRK.replace("99%   50.00ms", "99%   1.00ms");
-    let erreur = analyser_sortie(&sortie, Palier::Medium, "c").unwrap_err();
+    let erreur = analyser_sortie(&resume(100, 10.0, 1.0), Palier::Medium, "c").unwrap_err();
     assert!(
         erreur.to_string().contains("impossible"),
         "un P99 sous la médiane signale un défaut de collecte : {erreur}"
@@ -137,7 +135,7 @@ fn negative_des_latences_incoherentes_sont_rejetees() {
 
 #[test]
 fn negative_une_sortie_sans_requete_ne_produit_aucune_mesure() {
-    let erreur = analyser_sortie("Requests/sec: 10\n", Palier::Light, "c").unwrap_err();
+    let erreur = analyser_sortie(&resume(0, 1.0, 2.0), Palier::Light, "c").unwrap_err();
     assert!(erreur.to_string().contains("sans échantillon"));
 }
 
@@ -149,15 +147,6 @@ fn negative_une_convergence_non_atteinte_echoue_au_lieu_de_boucler() {
 }
 
 // ── @edge ────────────────────────────────────────────────────
-
-#[test]
-fn edge_les_unites_de_duree_wrk_sont_toutes_converties() {
-    assert_eq!(duree_en_millisecondes("12.5ms"), Some(12.5));
-    assert_eq!(duree_en_millisecondes("2.00s"), Some(2000.0));
-    assert_eq!(duree_en_millisecondes("500us"), Some(0.5));
-    assert_eq!(duree_en_millisecondes("1.5m"), Some(90_000.0));
-    assert_eq!(duree_en_millisecondes("n'importe quoi"), None);
-}
 
 #[test]
 fn edge_un_prior_sans_mesure_est_signale_et_non_tu() {
@@ -216,11 +205,11 @@ impl MoteurCharge for MoteurDouble {
     ) -> Result<Vec<MesureCapacite>, AppError> {
         if self.echoue_a == Some(reglage.palier) {
             return Err(AppError::ServiceTiers {
-                service: "wrk".to_string(),
+                service: "k6".to_string(),
                 detail: "cible saturée".to_string(),
             });
         }
-        analyser_sortie(SORTIE_WRK, reglage.palier, "conditions")
+        analyser_sortie(SORTIE_K6, reglage.palier, "conditions")
     }
     fn disponible(&self) -> bool {
         self.disponible
@@ -235,7 +224,7 @@ fn security_une_campagne_est_refusee_a_l_admission_si_le_moteur_est_absent() {
     }));
     let erreur = campagne.verifier_admission(100, 10_000).unwrap_err();
     assert!(
-        erreur.to_string().contains("wrk"),
+        erreur.to_string().contains("k6"),
         "le refus doit avoir lieu avant tout provisionnement : {erreur}"
     );
 }

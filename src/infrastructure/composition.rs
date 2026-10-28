@@ -15,7 +15,7 @@ use crate::configuration::{ArchetypeGates, Configuration, TypePasserelle};
 use crate::domain::contrat_depot::check_runs;
 use crate::domain::{AppError, Duree, PlafondDepense};
 use crate::infrastructure::bac_a_sable::BacASableIac;
-use crate::infrastructure::charge::Wrk;
+use crate::infrastructure::charge::K6;
 use crate::infrastructure::derogation_depot::DepotDerogationFichier;
 use crate::infrastructure::etiquette_signee::PasserelleEtiquetteSignee;
 use crate::infrastructure::fs_charge::FsCharge;
@@ -77,7 +77,7 @@ pub fn outil_campagne_si_configure(
     ));
 
     Ok(Some(Box::new(OutilCampagne::new(
-        Arc::new(Campagne::new(Arc::new(Wrk::new(ExecuteurSysteme)))),
+        Arc::new(Campagne::new(Arc::new(K6::new(ExecuteurSysteme)))),
         Arc::new(FsCharge::new()),
         Arc::new(DepotDerogationFichier::nouveau(
             &configuration.fichier.bac_a_sable.depot_derogation,

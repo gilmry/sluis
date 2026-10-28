@@ -14,19 +14,18 @@ use crate::domain::{AppError, BailBacASable, CibleEphemere, MesureCapacite, Pali
 /// L'escalier de charge par défaut, calqué sur le corpus existant.
 pub fn escalier_par_defaut() -> Vec<ReglagePalier> {
     vec![
-        (Palier::Warmup, 2, 1, 10),
-        (Palier::Light, 10, 2, 30),
-        (Palier::Medium, 50, 4, 60),
-        (Palier::Heavy, 200, 8, 60),
-        (Palier::Realistic, 100, 4, 120),
-        (Palier::Spike, 500, 8, 30),
-        (Palier::Soak, 50, 4, 600),
+        (Palier::Warmup, 2, 10),
+        (Palier::Light, 10, 30),
+        (Palier::Medium, 50, 60),
+        (Palier::Heavy, 200, 60),
+        (Palier::Realistic, 100, 120),
+        (Palier::Spike, 500, 30),
+        (Palier::Soak, 50, 600),
     ]
     .into_iter()
-    .map(|(palier, connexions, fils, duree_secondes)| ReglagePalier {
+    .map(|(palier, connexions, duree_secondes)| ReglagePalier {
         palier,
         connexions,
-        fils,
         duree_secondes,
     })
     .collect()
@@ -89,7 +88,7 @@ impl Campagne {
     ) -> Result<(), AppError> {
         if !self.moteur.disponible() {
             return Err(AppError::EngineMissing {
-                binaire: "wrk".to_string(),
+                binaire: "k6".to_string(),
             });
         }
         if duree_totale_secondes > secondes_avant_fermeture_fenetre {

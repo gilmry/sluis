@@ -265,7 +265,7 @@ Le mapping terme → type Rust est un livrable de l'Architecte.
   - `Étant donné une cible qui n'est pas dans un bail, Quand je lance une campagne, Alors elle est refusée.`
 - **Classes de tests (4×N)** :
   - `@happy` — sept paliers dans l'ordre, résultats collectés à chacun
-  - `@negative` — `wrk` absent, cible injoignable, bail expiré en cours de campagne : refus à l'admission quand c'est possible, arrêt propre sinon
+  - `@negative` — moteur de charge (`k6`) absent, cible injoignable, bail expiré en cours de campagne : refus à l'admission quand c'est possible, arrêt propre sinon
   - `@edge` — palier échouant à mi-parcours, cible saturée dès le warmup, campagne interrompue par l'utilisateur, palier à zéro connexion
   - `@security` — refus si le rate limiting est actif, refus si la cible est hors bail, **aucune donnée de production dans les jeux d'essai**
 - **Capacité du Brief rattachée** : §7 C5
@@ -473,7 +473,7 @@ Trois migrations sont des **points irréversibles** exigeant validation humaine,
 | GitHub Actions + environnements protégés | **Passerelle d'approbation Tier 1** | Sans elle, aucune action Tier 1 n'est possible : c'est voulu |
 | GHCR | Distribution de l'image serveur | Le serveur ne construit rien |
 | Traefik (`ecosolva-web`) | Terminaison TLS et routage | Réseau externe non possédé par le dépôt |
-| `wrk` | Moteur de charge | Absent : campagne refusée à l'admission, pas en cours de route |
+| `k6` (remplace `wrk`, sluis#8) | Moteur de charge | Absent : campagne refusée à l'admission, pas en cours de route |
 | Terraform, Ansible, Helm, Kustomize, ArgoCD | Moteurs d'exécution | Absents : erreur typée nommant le binaire |
 
 ## 12. Contraintes et hypothèses
@@ -486,7 +486,7 @@ Trois migrations sont des **points irréversibles** exigeant validation humaine,
 - H2 — Les dépôts cibles peuvent recevoir un workflow lié à un environnement GitHub protégé. **Bloquant pour FR-021**.
 - H3 — Le serveur hébergeant n8n peut accueillir un service supplémentaire sur `ecosolva-web`, et son nom d'hôte reste à confirmer (`.org` par convention existante, `.com` mentionné par le superviseur).
 - H4 — L'API OVH expose une granularité de coût suffisante par projet pour alimenter le recalage.
-- H5 — Le corpus `wrk` de KoproGo est réutilisable tel quel sur un déploiement Sluis.
+- H5 — Le corpus `wrk` de KoproGo est réutilisable tel quel sur un déploiement Sluis. **Tombée le 2026-10-28** : k6 remplace wrk (ADR-010, sluis#8), le corpus est à réécrire en scénarios k6.
 
 ## 13. Critères de succès
 

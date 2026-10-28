@@ -11,7 +11,7 @@
 # n'ajoute pas est un fichier qui n'interpole rien.
 #
 # Même binaire que le Sluis public, même commit, même tag. Ce qui diffère :
-# l'image (elle porte tofu et wrk), la configuration, et le réseau. C'est lui
+# l'image (elle porte tofu et k6), la configuration, et le réseau. C'est lui
 # qui détient les clés OVH, et c'est pour cela qu'il n'est joignable de nulle
 # part : pas de label Traefik, pas de port publié, pas de place sur
 # `ecosolva-web`. Ce qui est exposé ne détient rien, ce qui détient n'est pas
@@ -59,7 +59,7 @@ services:
       # liste blanche `depots_autorises` borne ce qu'il a le droit d'y toucher.
       - ${SLUIS_DEPOTS:-/home/ubuntu/depots}:/depots
     read_only: true
-    # tofu et wrk écrivent des fichiers de travail dans /tmp. Un tmpfs le leur
+    # tofu et k6 écrivent des fichiers de travail dans /tmp. Un tmpfs le leur
     # donne sans rendre l'image inscriptible, et le vide à chaque redémarrage,
     # ce qu'un plan mérite.
     tmpfs:

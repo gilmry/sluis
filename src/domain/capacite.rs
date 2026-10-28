@@ -38,9 +38,9 @@ impl fmt::Display for Provenance {
 
 /// Les paliers d'un escalier de charge.
 ///
-/// Repris du corpus `wrk` existant de KoproGo, dans l'ordre où ils doivent être
-/// joués : chauffer avant de charger, et finir par le maintien long qui révèle
-/// les fuites que les pointes ne montrent pas.
+/// Repris du corpus de charge existant de KoproGo, dans l'ordre où ils doivent
+/// être joués : chauffer avant de charger, et finir par le maintien long qui
+/// révèle les fuites que les pointes ne montrent pas.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Palier {

@@ -27,7 +27,7 @@ pub const MOTEURS_ATTENDUS: &[(&str, &str)] = &[
     ("kubectl", "interrogation d'un cluster"),
     ("kustomize", "rendu des surcouches d'environnement"),
     ("argocd", "état de la réconciliation GitOps"),
-    ("wrk", "escalier de charge des campagnes de capacité"),
+    ("k6", "escalier de charge des campagnes de capacité"),
 ];
 
 /// Les identifiants attendus pour parler à OVH.
