@@ -158,11 +158,9 @@ Mapping dans `foyer/skills/conformite.md` §2bis, couche plateforme.
   registres portent exactement le même manifeste et sa signature ? Quel
   contrôle détecte un écart, et la barrière doit-elle vérifier la présence de
   l'empreinte dans les deux registres ?
-- **Identité de signature.** Clé cosign gérée (où, avec quelle rotation, en
-  lien avec ADR-015 et OpenBao) ou signature sans clé (*keyless*), qui
-  s'appuie sur l'identité du workflow et sur des services publics de
-  transparence ? ADR-021 parle de « la clé ou l'identité attendue » sans
-  choisir.
+- **Identité de signature.** Tranché le 2026-10-29 (sluis#50, Q3) : **clé
+  cosign gérée**, jamais sans clé (ADR-021, point 3). Reste ouvert : où vit
+  la clé et avec quelle rotation (ADR-021, points ouverts).
 - **Coût du registre d'OVHcloud.** Offre et volume retenus, sur le compte
   payant réservé au superviseur.
 - **Étape dans la feuille de route.** Après les étapes 1 à 3, sans les

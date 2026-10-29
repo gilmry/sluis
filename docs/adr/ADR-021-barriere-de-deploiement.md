@@ -3,7 +3,8 @@
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Amendé le 2026-10-21** (revue des ADR, décision 5) : la barrière est rejouée juste avant l'exécution, après l'approbation humaine ; un contrôle qui a changé arrête le déploiement et annule l'approbation. Amendement proposé, contresigné le 2026-10-28.
-- **Amendé le 2026-10-29** (sluis#50, Q1, décision du superviseur) : **exception datée pour une barrière vide**, admise avec mention dans le plan soumis, bornée à l'étape 6. Amendement proposé, non contresigné.
+- **Amendé le 2026-10-29** (sluis#50, Q1, décision du superviseur) : **exception datée pour une barrière vide**, admise avec mention dans le plan soumis, bornée à l'étape 6. Amendement proposé, contresigné le 2026-10-29.
+- **Amendé le 2026-10-29** (sluis#50, Q2 et Q3, décisions du superviseur) : la barrière se **rejoue dans le job de la passerelle approuvée**, avant qu'il n'écrive l'état voulu ; les images sont signées par **cosign avec clé**, jamais sans clé. Amendement proposé, non contresigné.
 - **Irréversible** : non. Une gate s'ajoute ou se retire par configuration ; mais retirer une gate de la barrière relâche un garde-fou et se trace en ADR.
 - **S'articule avec** : FR-024 et les gates du plancher déjà câblées (lecture des check-runs GitHub, sluis#16, story 4.2 de #4) ; Epic 9 stories 9.2 (gates de conformité) et 9.5 (dérive) ; ADR-022 (chaque contrôle produit sa preuve) ; ADR-023 (supervision vivante) ; ADR-031 (la barrière précède toute demande d'approbation) ; `foyer/skills/gates.md`.
 - **Sert la vision (ADR-000)** : principe n°3, chaque contrôle croise une seconde source au lieu de croire un voyant ; principe n°5, chaque contrôle produit un verdict machine ; principe n°2, une barrière qui ne peut pas s'évaluer bloque au lieu de laisser passer.
@@ -40,7 +41,12 @@ passées montrent que ces situations existent sans que personne ne le sache.
    - **sauvegarde récente** : la dernière sauvegarde a moins de N heures **et**
      la dernière restauration nocturne a réussi (ADR-020) ;
    - **images signées** : chaque image à déployer porte une signature cosign
-     vérifiée contre la clé ou l'identité attendue (ADR-015).
+     vérifiée contre la clé attendue (ADR-015). **Signature avec clé, jamais
+     sans clé** (décision du 2026-10-29, sluis#50 Q3) : la signature sans clé
+     de Sigstore inscrit l'identité du workflow, donc le nom des dépôts
+     privés, dans le journal public Rekor ; une clé ne publie rien et ne
+     dépend d'aucun service tiers. Une seule voie de vérification pour tous
+     les dépôts, publics comme privés.
 4. **Indétermination = échec** (fail-closed, comme ADR-007) : un contrôle qui
    ne peut pas s'exécuter, faute de réseau ou de source, bloque.
 5. **La barrière est exécutée par Sluis**, côté exécutant pour ce qui exige un
@@ -57,6 +63,16 @@ passées montrent que ces situations existent sans que personne ne le sache.
      a changé et pourquoi. Il doit réapprouver en connaissance de cause.
    - **Aucune nouvelle tentative automatique.** Une barrière rouge après
      approbation ne se rejoue pas seule jusqu'à ce qu'elle repasse au vert.
+   - **Où elle se rejoue** (décision du 2026-10-29, sluis#50 Q2) : dans le
+     job de la passerelle approuvée (ADR-008), qui demande à l'exécutant de
+     rejouer la barrière **avant** d'écrire l'état voulu que Flux réconcilie
+     (ADR-029). Ni le tireur GitOps actuel, qui disparaît à l'étape 3, ni un
+     contrôleur d'admission dans le cluster. La fenêtre résiduelle, entre
+     l'écriture et la réconciliation, relève du contrôle de dérive (ADR-025).
+   - **Comment l'approbation est annulée** : par la passerelle elle-même. Un
+     run GitHub dont la barrière rejouée est rouge échoue sans rien écrire, et
+     son approbation ne vaut que pour lui ; une étiquette signée (ADR-013)
+     voit son empreinte consommée, elle ne redéploie plus.
 
 7. **Exception datée pour une barrière vide** (amendement du 2026-10-29).
    Tant que la plateforme des étapes 2 à 6 n'existe pas, aucun contrôle n'a
@@ -118,6 +134,12 @@ PR.PS-05.2 I, et PR.DS-01.2 E pour l'alerte automatique.
 - **Contrôle « détection cohérente »** : la décision du 2026-10-21 nomme quatre
   contrôles à rejouer après l'approbation ; le cinquième (écart entre
   détecteur et bouncer) l'est-il aussi ?
-- **Annulation selon la passerelle** : comment l'approbation est annulée,
-  concrètement, pour un run GitHub (ADR-008) et pour une étiquette signée
-  (ADR-013, dont l'empreinte consommée ne redéploie déjà plus).
+- ~~**Annulation selon la passerelle**~~ : tranché le 2026-10-29 (point 6,
+  « Comment l'approbation est annulée »).
+- **Où vit la clé de signature des images** : une clé sur YubiKey ne peut pas
+  signer depuis la CI GitHub. Soit la signature se fait sur la machine de
+  confiance de l'étape 2, avec une clé détenue par OpenBao (cosign sait
+  signer par son moteur *transit*, la clé ne sort pas) ; soit sur le poste du
+  superviseur, à l'approbation, avec la YubiKey. Recommandation : OpenBao sur
+  la machine de confiance, la YubiKey restant l'ancre des identités humaines
+  (ADR-015, ADR-040).
