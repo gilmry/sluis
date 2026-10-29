@@ -67,3 +67,15 @@ chemin = "sluis-audit.jsonl"
 # ligne ne peut être demandée.
 # [github.gates]
 # archetype = "stateless"   # ou "stateful"
+
+# Barrière de déploiement (ADR-021) : des contrôles oui/non, chacun un
+# exécutable dont SEUL le code de sortie décide (0 vert, tout le reste rouge).
+# Chemin absolu exigé, arguments sans shell, délai de 60 s par défaut et 600 s
+# au plus ; au-delà, le contrôle et ses enfants sont tués et comptent rouge.
+# Lancés avec un environnement vidé (PATH seul). Cette liste est leur
+# allowlist. Un contrôle mal déclaré arrête le démarrage.
+# [[barriere.controles]]
+# nom = "supervision"
+# programme = "/usr/local/bin/verifier-supervision"
+# arguments = ["--fraicheur", "600"]
+# delai_secondes = 30

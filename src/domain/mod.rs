@@ -7,6 +7,7 @@
 pub mod audit;
 pub mod autorisation;
 pub mod bac_a_sable;
+pub mod barriere;
 pub mod capacite;
 pub mod charge_declaree;
 pub mod contrat_depot;
@@ -31,6 +32,7 @@ pub use bac_a_sable::{
     plan_renouvellement, BailBacASable, CibleEphemere, DemandeBail, DerogationValide,
     FenetreDerogation, FenetreScellee, PlafondDepense,
 };
+pub use barriere::{verifier_noms_uniques, ControleBarriere, VerdictControle};
 pub use capacite::{
     verifier_coherence_latences, MesureCapacite, Palier, Prior, Provenance, RapportRecalage,
     Recalage,

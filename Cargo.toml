@@ -18,6 +18,9 @@ ureq = { version = "3", features = ["json"] }
 thiserror = "2"
 tiny_http = "0.12"
 toml = "0.9"
+# Tuer le groupe de processus d'un contrôle de barrière hors délai : la
+# bibliothèque standard ne sait tuer qu'un processus, pas ses enfants.
+libc = "0.2"
 
 
 [dev-dependencies]
