@@ -60,7 +60,7 @@ fn evaluer_un(controle: &ControleBarriere) -> VerdictControle {
         .stderr(Stdio::piped())
         .process_group(0);
 
-    let mut enfant = match commande.spawn() {
+    let mut enfant = match lancer(&mut commande) {
         Ok(enfant) => enfant,
         Err(e) => {
             let motif = match e.kind() {
@@ -102,6 +102,28 @@ fn evaluer_un(controle: &ControleBarriere) -> VerdictControle {
             ),
             (None, None) => verdict(controle, false, "fin inexpliquée".to_string(), rapport),
         },
+    }
+}
+
+/// Tentatives de lancement quand le programme est « occupé » (`ETXTBSY`).
+const TENTATIVES_ETXTBSY: u32 = 5;
+
+/// Lance la commande, en retentant sur `ETXTBSY`.
+///
+/// Cette erreur est transitoire : le fichier est encore ouvert en écriture,
+/// soit qu'on vient de l'installer, soit qu'un `fork` concurrent hérite un
+/// instant de son descripteur avant son `exec`. Elle ne dit rien du
+/// contrôle ; après quelques essais, elle compte rouge comme toute autre.
+fn lancer(commande: &mut Command) -> std::io::Result<Child> {
+    let mut essai = 1;
+    loop {
+        match commande.spawn() {
+            Err(e) if e.raw_os_error() == Some(libc::ETXTBSY) && essai < TENTATIVES_ETXTBSY => {
+                std::thread::sleep(SONDAGE * essai);
+                essai += 1;
+            }
+            resultat => return resultat,
+        }
     }
 }
 
