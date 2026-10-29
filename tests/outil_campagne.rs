@@ -150,6 +150,15 @@ impl MoteurCharge for MoteurDouble {
                 format!("cible {cible}"),
             )
             .expect("mesure"),
+            MesureCapacite::mesuree(
+                "taux_echec".to_string(),
+                0.0,
+                "ratio".to_string(),
+                reglage.palier,
+                1_000,
+                format!("cible {cible}"),
+            )
+            .expect("mesure"),
         ])
     }
     fn disponible(&self) -> bool {

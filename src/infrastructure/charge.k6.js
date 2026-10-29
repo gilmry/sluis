@@ -21,11 +21,14 @@ export default function () {
 export function handleSummary(data) {
   const requetes = data.metrics.http_reqs ? data.metrics.http_reqs.values : {};
   const durees = data.metrics.http_req_duration ? data.metrics.http_req_duration.values : {};
+  const echecs = data.metrics.http_req_failed ? data.metrics.http_req_failed.values : {};
   const resume = {
     requetes: requetes.count || 0,
     debit: requetes.rate,
     p50: durees['p(50)'],
     p99: durees['p(99)'],
+    // Part des requêtes en échec (statut hors 2xx-3xx ou erreur réseau).
+    echecs: echecs.rate,
   };
   return { stdout: 'SLUIS_RESUME ' + JSON.stringify(resume) + '\n' };
 }

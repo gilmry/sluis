@@ -19,6 +19,14 @@ use crate::domain::{AppError, Duree, MesureCapacite, Palier, PlafondDepense};
 /// conditions, pas la résistance à une pointe.
 const PALIER_DE_REFERENCE: Palier = Palier::Realistic;
 
+/// Part des requêtes en échec au-delà de laquelle la cible ne tient pas.
+///
+/// Sans ce seuil, une cible qui répond 502 à tout, mais vite, aurait un débit
+/// élevé, un p99 bas, et « tiendrait ». Fixé par Sluis et non par la
+/// déclaration du projet : la déclaration demande, elle n'accorde pas, et un
+/// seuil relevé par pull request rendrait le verdict décoratif (sluis#90).
+pub const TAUX_ECHEC_TOLERE: f64 = 0.01;
+
 /// La cible de capacité, issue du brief.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct CibleCapacite {
@@ -66,6 +74,8 @@ pub enum Verdict {
         debit: f64,
         /// Latence au 99e centile constatée.
         p99: f64,
+        /// Part des requêtes en échec, entre 0 et 1.
+        taux_echec: f64,
     },
     /// La cible n'est pas tenue, avec un motif par grandeur manquée.
     NeTientPas {
@@ -75,6 +85,8 @@ pub enum Verdict {
         debit: f64,
         /// Latence au 99e centile constatée.
         p99: f64,
+        /// Part des requêtes en échec, entre 0 et 1.
+        taux_echec: f64,
     },
     /// Rien n'est affirmé, et la raison est dite.
     ///
@@ -188,6 +200,17 @@ impl DeclarationCharge {
                 ),
             };
         };
+        // Un taux d'échec absent ne vaut pas zéro : des réponses rapides
+        // peuvent être des erreurs.
+        let Some(taux_echec) = au_palier("taux_echec") else {
+            return Verdict::Indetermine {
+                motif: format!(
+                    "aucun taux d'échec au palier « {} » : un débit et une latence sans lui \
+                     peuvent mesurer des erreurs rapides",
+                    PALIER_DE_REFERENCE.nom()
+                ),
+            };
+        };
 
         let mut motifs = Vec::new();
         if debit < self.cible.requetes_par_seconde {
@@ -203,10 +226,27 @@ impl DeclarationCharge {
             ));
         }
 
+        if taux_echec > TAUX_ECHEC_TOLERE {
+            motifs.push(format!(
+                "taux d'échec mesuré {:.2} % au-dessus des {:.2} % tolérés",
+                taux_echec * 100.0,
+                TAUX_ECHEC_TOLERE * 100.0
+            ));
+        }
+
         if motifs.is_empty() {
-            Verdict::Tient { debit, p99 }
+            Verdict::Tient {
+                debit,
+                p99,
+                taux_echec,
+            }
         } else {
-            Verdict::NeTientPas { motifs, debit, p99 }
+            Verdict::NeTientPas {
+                motifs,
+                debit,
+                p99,
+                taux_echec,
+            }
         }
     }
 }

@@ -35,7 +35,7 @@ pub use capacite::{
     verifier_coherence_latences, MesureCapacite, Palier, Prior, Provenance, RapportRecalage,
     Recalage,
 };
-pub use charge_declaree::{CibleCapacite, DeclarationCharge, Verdict};
+pub use charge_declaree::{CibleCapacite, DeclarationCharge, Verdict, TAUX_ECHEC_TOLERE};
 pub use contrat_depot::{ContratDepot, VERSION_CONTRAT_DEPOT};
 pub use convergence::{etablir as etablir_convergence, PreuveConvergence};
 pub use diagnostic::{EtatBinaire, Identifiant, Moteur, RapportDiagnostic};
