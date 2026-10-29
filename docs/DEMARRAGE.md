@@ -360,8 +360,21 @@ gardée comme rapport, tronquée à 8 Kio par flux, sans être interprétée.
   un signal ou hors délai (60 s par défaut, 600 s au plus), il est rouge. Hors
   délai, son groupe de processus entier est tué.
 
-Les contrôles ne sont pas encore appelés par la mise en ligne : c'est la story
-7.2 de l'epic sluis#50.
+**La barrière s'évalue après le plancher et avant toute soumission** : un
+seul contrôle rouge refuse la mise en ligne (`refusee_par_la_barriere`), et
+la passerelle ne reçoit rien. Tous verts, le plan soumis nomme chacun.
+
+**Sans aucun contrôle, la mise en ligne est refusée** (`refusee_barriere_vide`),
+sauf exception datée d'ADR-021 :
+
+```toml
+[barriere]
+vide_admise_jusqu_au = "2026-12-31"   # jour inclus, UTC ; au plus tard l'étape 6
+```
+
+Jusqu'à cette date, chaque plan soumis porte « BARRIÈRE VIDE » : vous
+approuvez en sachant qu'aucun contrôle de plateforme n'a tourné. Le lendemain,
+la mise en ligne est refusée jusqu'à ce que des contrôles soient déclarés.
 
 ## Choisir la passerelle d'approbation : `[github] passerelle`
 

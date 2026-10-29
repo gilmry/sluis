@@ -312,6 +312,7 @@ fn happy_sluis_mise_en_ligne_rend_la_commande_dans_sa_sortie() {
         MiseEnLigne::new(
             Arc::new(GatesVertes),
             Arc::new(passerelle(&serveur.adresse)),
+            barriere_admise(),
         ),
         "cible".to_string(),
     );
@@ -468,4 +469,21 @@ fn security_le_debug_ne_montre_pas_le_jeton() {
     let vue = format!("{:?}", passerelle("http://127.0.0.1:9"));
     assert!(vue.contains("gilmry/cible"), "{vue}");
     assert!(!vue.contains("jeton-lecture-essai"), "{vue}");
+}
+
+/// Barrière vide admise par une exception lointaine : ces tests portent sur
+/// autre chose que la barrière (voir `tests/mise_en_ligne_barriere.rs`).
+fn barriere_admise() -> sluis::application::mise_en_ligne::Barriere {
+    sluis::application::mise_en_ligne::Barriere {
+        evaluateur: std::sync::Arc::new(
+            sluis::infrastructure::barriere_systeme::EvaluateurBarriereSysteme,
+        ),
+        controles: Vec::new(),
+        exception_vide: Some(
+            sluis::domain::ExceptionBarriereVide::depuis_date("2999-12-31").expect("date"),
+        ),
+        horloge: std::sync::Arc::new(sluis::application::ports::HorlogeFigee::a(
+            sluis::domain::Horodatage::new(0),
+        )),
+    }
 }

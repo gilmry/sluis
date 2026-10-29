@@ -163,6 +163,17 @@ impl Outil for OutilMiseEnLigne {
                 "issue": "refusee_par_les_gates",
                 "gates_rouges": gates_rouges.iter().map(|g| g.nom()).collect::<Vec<_>>(),
             })),
+            IssueMiseEnLigne::RefuseeParLaBarriere { controles_rouges } => Ok(json!({
+                "issue": "refusee_par_la_barriere",
+                "controles_rouges": controles_rouges
+                    .iter()
+                    .map(|v| json!({ "nom": v.nom, "motif": v.motif }))
+                    .collect::<Vec<_>>(),
+            })),
+            IssueMiseEnLigne::RefuseeBarriereVide { motif } => Ok(json!({
+                "issue": "refusee_barriere_vide",
+                "motif": motif,
+            })),
             IssueMiseEnLigne::Soumise { plan, etat } => Ok(json!({
                 "issue": "soumise",
                 "empreinte": plan.empreinte().hexadecimal(),

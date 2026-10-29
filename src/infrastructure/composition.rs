@@ -8,13 +8,14 @@
 use std::sync::Arc;
 
 use crate::application::campagne::Campagne;
-use crate::application::mise_en_ligne::MiseEnLigne;
+use crate::application::mise_en_ligne::{Barriere, MiseEnLigne};
 use crate::application::ouverture_derogation::OuvertureDerogation;
 use crate::application::ports::{GatePlancher, Horloge};
 use crate::configuration::{ArchetypeGates, Configuration, TypePasserelle};
 use crate::domain::contrat_depot::check_runs;
 use crate::domain::{AppError, Duree, PlafondDepense};
 use crate::infrastructure::bac_a_sable::BacASableIac;
+use crate::infrastructure::barriere_systeme::EvaluateurBarriereSysteme;
 use crate::infrastructure::charge::K6;
 use crate::infrastructure::derogation_depot::DepotDerogationFichier;
 use crate::infrastructure::etiquette_signee::PasserelleEtiquetteSignee;
@@ -236,7 +237,16 @@ pub fn outils_mise_en_ligne_si_configures(
         configuration.fichier.github.as_ref(),
     ) {
         outils.push(Box::new(OutilMiseEnLigne::new(
-            MiseEnLigne::new(Arc::new(verificateur), passerelle.clone()),
+            MiseEnLigne::new(
+                Arc::new(verificateur),
+                passerelle.clone(),
+                Barriere {
+                    evaluateur: Arc::new(EvaluateurBarriereSysteme),
+                    controles: configuration.barriere.clone(),
+                    exception_vide: configuration.exception_barriere_vide.clone(),
+                    horloge: horloge.clone(),
+                },
+            ),
             section.depot.clone(),
         )));
     }

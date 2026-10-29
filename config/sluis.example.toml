@@ -74,6 +74,12 @@ chemin = "sluis-audit.jsonl"
 # au plus ; au-delà, le contrôle et ses enfants sont tués et comptent rouge.
 # Lancés avec un environnement vidé (PATH seul). Cette liste est leur
 # allowlist. Un contrôle mal déclaré arrête le démarrage.
+#
+# Sans aucun contrôle, toute mise en ligne est REFUSÉE, sauf exception datée
+# d'ADR-021 (jour inclus, UTC), mentionnée « BARRIÈRE VIDE » dans chaque plan :
+# [barriere]
+# vide_admise_jusqu_au = "2026-12-31"
+#
 # [[barriere.controles]]
 # nom = "supervision"
 # programme = "/usr/local/bin/verifier-supervision"

@@ -9,7 +9,7 @@
 
 use serde::Serialize;
 
-use crate::domain::AppError;
+use crate::domain::{AppError, Horodatage};
 
 /// Délai d'un contrôle quand la configuration n'en donne pas, en secondes.
 pub const DELAI_PAR_DEFAUT_SECONDES: u64 = 60;
@@ -114,4 +114,88 @@ pub struct VerdictControle {
     pub motif: String,
     /// Sortie du contrôle, tronquée, conservée pour la preuve, jamais lue.
     pub rapport: String,
+}
+
+/// Exception datée d'ADR-021 : une barrière **vide** est admise jusqu'à une
+/// date, mentionnée dans chaque plan soumis.
+///
+/// Décision du superviseur du 2026-10-29 (sluis#50, Q1) : tant que la
+/// plateforme des étapes 2 à 6 n'existe pas, aucun contrôle n'a rien à
+/// vérifier. Sans date, une barrière vide refuse : l'exception se déclare et
+/// expire, elle ne s'oublie pas.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ExceptionBarriereVide {
+    jusqu_au: String,
+    fin: Horodatage,
+}
+
+impl ExceptionBarriereVide {
+    /// Lit une date `AAAA-MM-JJ`, jour inclus, en UTC.
+    pub fn depuis_date(texte: &str) -> Result<Self, AppError> {
+        let refus = || AppError::Configuration {
+            detail: format!(
+                "[barriere] vide_admise_jusqu_au « {texte} » : une date AAAA-MM-JJ valide est \
+                 exigée"
+            ),
+        };
+        let morceaux: Vec<&str> = texte.split('-').collect();
+        let [annee, mois, jour] = morceaux.as_slice() else {
+            return Err(refus());
+        };
+        if annee.len() != 4 || mois.len() != 2 || jour.len() != 2 {
+            return Err(refus());
+        }
+        let (Ok(annee), Ok(mois), Ok(jour)) = (
+            annee.parse::<i64>(),
+            mois.parse::<u32>(),
+            jour.parse::<u32>(),
+        ) else {
+            return Err(refus());
+        };
+        if !(1..=12).contains(&mois) || jour == 0 || jour > jours_du_mois(annee, mois) {
+            return Err(refus());
+        }
+        // Jour inclus : l'exception tombe au premier instant du lendemain.
+        let fin = (jours_depuis_epoque(annee, mois, jour) + 1) * 86_400;
+        Ok(Self {
+            jusqu_au: texte.to_string(),
+            fin: Horodatage::new(fin),
+        })
+    }
+
+    /// La date déclarée, telle qu'écrite.
+    pub fn jusqu_au(&self) -> &str {
+        &self.jusqu_au
+    }
+
+    /// Vrai si l'exception vaut encore à `maintenant`.
+    pub fn admet(&self, maintenant: Horodatage) -> bool {
+        self.fin.apres(maintenant)
+    }
+}
+
+fn bissextile(annee: i64) -> bool {
+    (annee % 4 == 0 && annee % 100 != 0) || annee % 400 == 0
+}
+
+fn jours_du_mois(annee: i64, mois: u32) -> u32 {
+    match mois {
+        2 if bissextile(annee) => 29,
+        2 => 28,
+        4 | 6 | 9 | 11 => 30,
+        _ => 31,
+    }
+}
+
+/// Jours depuis le 1970-01-01 (algorithme « days from civil » de H. Hinnant).
+fn jours_depuis_epoque(annee: i64, mois: u32, jour: u32) -> i64 {
+    let annee = if mois <= 2 { annee - 1 } else { annee };
+    let ere = annee.div_euclid(400);
+    let annee_de_l_ere = annee - ere * 400;
+    let mois = i64::from(mois);
+    let jour_de_l_annee =
+        (153 * (if mois > 2 { mois - 3 } else { mois + 9 }) + 2) / 5 + i64::from(jour) - 1;
+    let jour_de_l_ere =
+        annee_de_l_ere * 365 + annee_de_l_ere / 4 - annee_de_l_ere / 100 + jour_de_l_annee;
+    ere * 146_097 + jour_de_l_ere - 719_468
 }

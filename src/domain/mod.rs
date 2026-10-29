@@ -32,7 +32,9 @@ pub use bac_a_sable::{
     plan_renouvellement, BailBacASable, CibleEphemere, DemandeBail, DerogationValide,
     FenetreDerogation, FenetreScellee, PlafondDepense,
 };
-pub use barriere::{verifier_noms_uniques, ControleBarriere, VerdictControle};
+pub use barriere::{
+    verifier_noms_uniques, ControleBarriere, ExceptionBarriereVide, VerdictControle,
+};
 pub use capacite::{
     verifier_coherence_latences, MesureCapacite, Palier, Prior, Provenance, RapportRecalage,
     Recalage,

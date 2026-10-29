@@ -76,7 +76,10 @@ impl VerificateurGates for GatesDouble {
 }
 
 fn outil(gates: Arc<GatesDouble>, passerelle: Arc<PasserelleDouble>) -> OutilMiseEnLigne {
-    OutilMiseEnLigne::new(MiseEnLigne::new(gates, passerelle), "koprogo".to_string())
+    OutilMiseEnLigne::new(
+        MiseEnLigne::new(gates, passerelle, barriere_admise()),
+        "koprogo".to_string(),
+    )
 }
 
 // ── @happy ───────────────────────────────────────────────────
@@ -280,5 +283,22 @@ mod renouvellement {
             b.empreinte(),
             "une approbation ancienne ne doit pas valoir pour une demande nouvelle"
         );
+    }
+}
+
+/// Barrière vide admise par une exception lointaine : ces tests portent sur
+/// autre chose que la barrière (voir `tests/mise_en_ligne_barriere.rs`).
+fn barriere_admise() -> sluis::application::mise_en_ligne::Barriere {
+    sluis::application::mise_en_ligne::Barriere {
+        evaluateur: std::sync::Arc::new(
+            sluis::infrastructure::barriere_systeme::EvaluateurBarriereSysteme,
+        ),
+        controles: Vec::new(),
+        exception_vide: Some(
+            sluis::domain::ExceptionBarriereVide::depuis_date("2999-12-31").expect("date"),
+        ),
+        horloge: std::sync::Arc::new(sluis::application::ports::HorlogeFigee::a(
+            sluis::domain::Horodatage::new(0),
+        )),
     }
 }
