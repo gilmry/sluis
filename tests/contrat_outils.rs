@@ -371,7 +371,7 @@ mod mise_en_ligne {
         let inerte = Arc::new(Inerte);
         let outils: Vec<Box<dyn ContratOutil>> = vec![
             Box::new(OutilMiseEnLigne::new(
-                MiseEnLigne::new(inerte.clone(), inerte.clone()),
+                MiseEnLigne::new(inerte.clone(), inerte.clone(), super::barriere_admise()),
                 "koprogo".to_string(),
             )),
             Box::new(OutilEtatApprobation::new(inerte.clone())),
@@ -443,5 +443,22 @@ mod ouverture {
         if let Err(faute) = super::verifier_contrat(&outil) {
             panic!("{faute}");
         }
+    }
+}
+
+/// Barrière vide admise par une exception lointaine : ces tests portent sur
+/// autre chose que la barrière (voir `tests/mise_en_ligne_barriere.rs`).
+fn barriere_admise() -> sluis::application::mise_en_ligne::Barriere {
+    sluis::application::mise_en_ligne::Barriere {
+        evaluateur: std::sync::Arc::new(
+            sluis::infrastructure::barriere_systeme::EvaluateurBarriereSysteme,
+        ),
+        controles: Vec::new(),
+        exception_vide: Some(
+            sluis::domain::ExceptionBarriereVide::depuis_date("2999-12-31").expect("date"),
+        ),
+        horloge: std::sync::Arc::new(sluis::application::ports::HorlogeFigee::a(
+            sluis::domain::Horodatage::new(0),
+        )),
     }
 }

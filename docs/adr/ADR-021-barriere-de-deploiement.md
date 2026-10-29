@@ -3,6 +3,7 @@
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Amendé le 2026-10-21** (revue des ADR, décision 5) : la barrière est rejouée juste avant l'exécution, après l'approbation humaine ; un contrôle qui a changé arrête le déploiement et annule l'approbation. Amendement proposé, contresigné le 2026-10-28.
+- **Amendé le 2026-10-29** (sluis#50, Q1, décision du superviseur) : **exception datée pour une barrière vide**, admise avec mention dans le plan soumis, bornée à l'étape 6. Amendement proposé, non contresigné.
 - **Irréversible** : non. Une gate s'ajoute ou se retire par configuration ; mais retirer une gate de la barrière relâche un garde-fou et se trace en ADR.
 - **S'articule avec** : FR-024 et les gates du plancher déjà câblées (lecture des check-runs GitHub, sluis#16, story 4.2 de #4) ; Epic 9 stories 9.2 (gates de conformité) et 9.5 (dérive) ; ADR-022 (chaque contrôle produit sa preuve) ; ADR-023 (supervision vivante) ; ADR-031 (la barrière précède toute demande d'approbation) ; `foyer/skills/gates.md`.
 - **Sert la vision (ADR-000)** : principe n°3, chaque contrôle croise une seconde source au lieu de croire un voyant ; principe n°5, chaque contrôle produit un verdict machine ; principe n°2, une barrière qui ne peut pas s'évaluer bloque au lieu de laisser passer.
@@ -56,6 +57,17 @@ passées montrent que ces situations existent sans que personne ne le sache.
      a changé et pourquoi. Il doit réapprouver en connaissance de cause.
    - **Aucune nouvelle tentative automatique.** Une barrière rouge après
      approbation ne se rejoue pas seule jusqu'à ce qu'elle repasse au vert.
+
+7. **Exception datée pour une barrière vide** (amendement du 2026-10-29).
+   Tant que la plateforme des étapes 2 à 6 n'existe pas, aucun contrôle n'a
+   rien à vérifier. Une barrière **sans contrôle** refuse par défaut ; elle
+   n'est admise que si la configuration déclare
+   `[barriere] vide_admise_jusqu_au = "AAAA-MM-JJ"`, et seulement jusqu'à
+   cette date incluse (UTC). Chaque plan soumis porte alors **« BARRIÈRE
+   VIDE »** dans sa description et le dit dans son détail : le superviseur
+   approuve en sachant qu'aucun contrôle de plateforme n'a tourné. La date est
+   la date de réexamen ; elle ne va pas au-delà de l'étape 6. L'exception ne
+   rattrape jamais un contrôle déclaré et rouge.
 
 ## Alternatives écartées
 

@@ -311,7 +311,11 @@ fn happy_une_mise_en_ligne_aux_gates_vertes_est_soumise_a_approbation() {
     let passerelle = Arc::new(PasserelleDouble {
         soumissions: Mutex::new(Vec::new()),
     });
-    let cas = MiseEnLigne::new(Arc::new(GatesDouble { rouges: vec![] }), passerelle.clone());
+    let cas = MiseEnLigne::new(
+        Arc::new(GatesDouble { rouges: vec![] }),
+        passerelle.clone(),
+        barriere_admise(),
+    );
     let issue = cas
         .demander("koprogo", Environnement::Production, "v1.2.3")
         .expect("demande");
@@ -336,6 +340,7 @@ fn security_une_gate_rouge_bloque_avant_meme_la_soumission() {
             rouges: vec![GatePlancher::Secrets],
         }),
         passerelle.clone(),
+        barriere_admise(),
     );
     let issue = cas
         .demander("koprogo", Environnement::Production, "v1.2.3")
@@ -361,9 +366,27 @@ fn security_l_absence_de_fichier_de_retour_de_migration_bloque_aussi() {
         Arc::new(PasserelleDouble {
             soumissions: Mutex::new(Vec::new()),
         }),
+        barriere_admise(),
     );
     let issue = cas
         .demander("koprogo", Environnement::Production, "v1")
         .expect("demande");
     assert!(matches!(issue, IssueMiseEnLigne::RefuseeParLesGates { .. }));
+}
+
+/// Barrière vide admise par une exception lointaine : ces tests portent sur
+/// autre chose que la barrière (voir `tests/mise_en_ligne_barriere.rs`).
+fn barriere_admise() -> sluis::application::mise_en_ligne::Barriere {
+    sluis::application::mise_en_ligne::Barriere {
+        evaluateur: std::sync::Arc::new(
+            sluis::infrastructure::barriere_systeme::EvaluateurBarriereSysteme,
+        ),
+        controles: Vec::new(),
+        exception_vide: Some(
+            sluis::domain::ExceptionBarriereVide::depuis_date("2999-12-31").expect("date"),
+        ),
+        horloge: std::sync::Arc::new(sluis::application::ports::HorlogeFigee::a(
+            sluis::domain::Horodatage::new(0),
+        )),
+    }
 }

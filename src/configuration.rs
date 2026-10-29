@@ -12,7 +12,8 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::domain::{
-    verifier_noms_uniques, AppError, ControleBarriere, Duree, ListeAutorisation, Redacted,
+    verifier_noms_uniques, AppError, ControleBarriere, Duree, ExceptionBarriereVide,
+    ListeAutorisation, Redacted,
 };
 use crate::infrastructure::ovh::signature::IdentiteOvh;
 
@@ -54,6 +55,11 @@ pub struct SectionBarriere {
     /// Contrôles, dans l'ordre d'évaluation.
     #[serde(default)]
     pub controles: Vec<ControleDeclare>,
+    /// Exception d'ADR-021 : sans contrôle déclaré, une mise en ligne n'est
+    /// admise que jusqu'à cette date (`AAAA-MM-JJ`, jour inclus, UTC), et le
+    /// plan soumis le mentionne. **Absente : une barrière vide refuse.**
+    #[serde(default)]
+    pub vide_admise_jusqu_au: Option<String>,
 }
 
 /// Un contrôle tel qu'il est écrit dans le fichier.
@@ -341,6 +347,8 @@ pub struct Configuration {
     pub jeton_github: Option<Redacted<String>>,
     /// Contrôles de la barrière, validés au chargement.
     pub barriere: Vec<ControleBarriere>,
+    /// Exception datée qui admet une barrière vide, validée au chargement.
+    pub exception_barriere_vide: Option<ExceptionBarriereVide>,
 }
 
 impl Configuration {
@@ -408,6 +416,12 @@ impl Configuration {
             })
             .collect::<Result<Vec<_>, _>>()?;
         verifier_noms_uniques(&barriere)?;
+        let exception_barriere_vide = fichier
+            .barriere
+            .vide_admise_jusqu_au
+            .as_deref()
+            .map(ExceptionBarriereVide::depuis_date)
+            .transpose()?;
 
         let autorisation = ListeAutorisation::new(
             fichier.ovh.projets_production.clone(),
@@ -441,6 +455,7 @@ impl Configuration {
             identite,
             jeton_github,
             barriere,
+            exception_barriere_vide,
         })
     }
 
