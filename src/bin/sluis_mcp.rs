@@ -89,9 +89,12 @@ fn executer() -> Result<(), sluis::domain::AppError> {
     // vérifiable (ADR-012). Son état est dit au démarrage.
     let passerelle = passerelle_github_si_configuree(&configuration);
     eprintln!("sluis-mcp : {}", passerelle.diagnostic());
-    for outil in
-        outils_mise_en_ligne_si_configures(&configuration, passerelle, Arc::new(HorlogeSysteme))
-    {
+    for outil in outils_mise_en_ligne_si_configures(
+        &configuration,
+        passerelle,
+        Arc::new(HorlogeSysteme),
+        journal.clone(),
+    ) {
         eprintln!("sluis-mcp : « {} » exposé", outil.nom());
         registre.enregistrer(outil)?;
     }

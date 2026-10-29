@@ -376,6 +376,16 @@ Jusqu'à cette date, chaque plan soumis porte « BARRIÈRE VIDE » : vous
 approuvez en sachant qu'aucun contrôle de plateforme n'a tourné. Le lendemain,
 la mise en ligne est refusée jusqu'à ce que des contrôles soient déclarés.
 
+**Chaque demande laisse un rapport de preuve au journal** (ADR-022), refus
+compris, sous l'outil `sluis_mise_en_ligne/preuve` : référence, version de
+Sluis, verdict et motif de chaque gate et de chaque contrôle, sortie des
+contrôles, empreinte du plan s'il est soumis, exception de barrière vide.
+Chaque élément porte ses identifiants CyFun : ceux des gates du plancher
+viennent de `foyer/skills/conformite.md` §2ter, ceux d'un contrôle se
+déclarent avec `cyfun = ["PR.PS-01.1"]` dans `[[barriere.controles]]`. Le
+rapport est écrit **avant** la soumission : si le journal refuse, rien n'est
+soumis. La copie hors du serveur n'est pas encore faite (story 7.6).
+
 ## Choisir la passerelle d'approbation : `[github] passerelle`
 
 La section `[github]` du fichier de configuration compose la passerelle de

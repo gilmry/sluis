@@ -9,7 +9,7 @@
 
 use serde::Serialize;
 
-use crate::domain::{AppError, Horodatage};
+use crate::domain::{verifier_identifiant_cyfun, AppError, Horodatage};
 
 /// Délai d'un contrôle quand la configuration n'en donne pas, en secondes.
 pub const DELAI_PAR_DEFAUT_SECONDES: u64 = 60;
@@ -27,6 +27,7 @@ pub struct ControleBarriere {
     programme: String,
     arguments: Vec<String>,
     delai_secondes: u64,
+    cyfun: Vec<String>,
 }
 
 impl ControleBarriere {
@@ -69,7 +70,24 @@ impl ControleBarriere {
             programme,
             arguments,
             delai_secondes,
+            cyfun: Vec::new(),
         })
+    }
+
+    /// Rattache le contrôle aux identifiants CyFun dont il produit la preuve
+    /// (ADR-022). La forme est vérifiée, pas l'existence : la liste vit dans
+    /// Foyer.
+    pub fn avec_cyfun(mut self, cyfun: Vec<String>) -> Result<Self, AppError> {
+        for identifiant in &cyfun {
+            verifier_identifiant_cyfun(identifiant)?;
+        }
+        self.cyfun = cyfun;
+        Ok(self)
+    }
+
+    /// Identifiants CyFun auxquels le contrôle répond.
+    pub fn cyfun(&self) -> &[String] {
+        &self.cyfun
     }
 
     /// Nom du contrôle.

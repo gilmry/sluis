@@ -77,7 +77,7 @@ impl VerificateurGates for GatesDouble {
 
 fn outil(gates: Arc<GatesDouble>, passerelle: Arc<PasserelleDouble>) -> OutilMiseEnLigne {
     OutilMiseEnLigne::new(
-        MiseEnLigne::new(gates, passerelle, barriere_admise()),
+        MiseEnLigne::new(gates, passerelle, barriere_admise(), journal_muet()),
         "koprogo".to_string(),
     )
 }
@@ -301,4 +301,18 @@ fn barriere_admise() -> sluis::application::mise_en_ligne::Barriere {
             sluis::domain::Horodatage::new(0),
         )),
     }
+}
+
+/// Journal qui accepte tout : ces tests ne portent pas sur le rapport de
+/// preuve (voir `tests/rapport_preuve.rs`).
+struct JournalMuet;
+
+impl sluis::application::ports::AuditLog for JournalMuet {
+    fn append(&self, _entree: &sluis::domain::AuditEntry) -> Result<(), sluis::domain::AppError> {
+        Ok(())
+    }
+}
+
+fn journal_muet() -> std::sync::Arc<dyn sluis::application::ports::AuditLog> {
+    std::sync::Arc::new(JournalMuet)
 }

@@ -37,6 +37,21 @@ impl GatePlancher {
             GatePlancher::RetourMigration => "retour-migration",
         }
     }
+
+    /// Identifiants CyFun dont la gate produit la preuve, d'après
+    /// `foyer/skills/conformite.md` §2ter. Référencés, pas recopiés : le sens
+    /// de chaque identifiant reste dans Foyer.
+    ///
+    /// Le retour de migration n'y est pas mappé : il ne revendique rien
+    /// plutôt qu'un identifiant choisi ici.
+    pub fn cyfun(&self) -> &'static [&'static str] {
+        match self {
+            GatePlancher::Secrets => &["PR.AA-01.1"],
+            GatePlancher::Sbom => &["ID.AM-02.1", "ID.AM-02.2"],
+            GatePlancher::ScanConteneur => &["ID.RA-01.1", "ID.RA-01.2", "ID.RA-01.6"],
+            GatePlancher::RetourMigration => &[],
+        }
+    }
 }
 
 /// État d'une gate.

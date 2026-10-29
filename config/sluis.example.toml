@@ -85,3 +85,4 @@ chemin = "sluis-audit.jsonl"
 # programme = "/usr/local/bin/verifier-supervision"
 # arguments = ["--fraicheur", "600"]
 # delai_secondes = 30
+# cyfun = ["PR.PS-01.1"]    # identifiants dont ce contrôle produit la preuve (ADR-022)

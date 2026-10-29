@@ -17,13 +17,21 @@
 use std::sync::Arc;
 
 use crate::application::ports::{
-    EtatApprobation, EvaluateurBarriere, GatePlancher, Horloge, PasserelleApprobation,
+    AuditLog, EtatApprobation, EvaluateurBarriere, GatePlancher, Horloge, PasserelleApprobation,
     VerificateurGates,
 };
 use crate::domain::{
-    Action, AppError, ControleBarriere, Environnement, ExceptionBarriereVide, PlanChangement, Tier,
-    VerdictControle,
+    Action, AppError, AuditEntry, ControleBarriere, ElementPreuve, Environnement,
+    ExceptionBarriereVide, PlanChangement, RapportPreuve, Tier, VerdictControle,
+    SCHEMA_RAPPORT_PREUVE,
 };
+
+/// Nom sous lequel le rapport de preuve est consigné au journal.
+pub const OUTIL_PREUVE: &str = "sluis_mise_en_ligne/preuve";
+
+/// Identifiant couvert quand le plancher est vert avant la demande
+/// (« changements testés avant la production », conformite.md §2ter).
+const CYFUN_PLANCHER_VERT: &str = "PR.PS-06.2";
 
 /// Résultat d'une demande de mise en ligne.
 #[derive(Debug)]
@@ -71,17 +79,29 @@ enum Passage {
     VideAdmise(String),
 }
 
+/// Ce que la barrière a vu, qu'elle laisse passer ou non : le rapport de
+/// preuve en a besoin dans les deux cas.
+struct Franchissement {
+    verdicts: Vec<VerdictControle>,
+    exception: Option<String>,
+    issue: Result<Passage, IssueMiseEnLigne>,
+}
+
 impl Barriere {
-    fn franchir(&self) -> Result<Passage, IssueMiseEnLigne> {
+    fn franchir(&self) -> Franchissement {
         if self.controles.is_empty() {
-            return match &self.exception_vide {
-                Some(exception) if exception.admet(self.horloge.maintenant()) => {
-                    Ok(Passage::VideAdmise(exception.jusqu_au().to_string()))
+            let exception = self
+                .exception_vide
+                .as_ref()
+                .map(|e| e.jusqu_au().to_string());
+            let issue = match &self.exception_vide {
+                Some(e) if e.admet(self.horloge.maintenant()) => {
+                    Ok(Passage::VideAdmise(e.jusqu_au().to_string()))
                 }
-                Some(exception) => Err(IssueMiseEnLigne::RefuseeBarriereVide {
+                Some(e) => Err(IssueMiseEnLigne::RefuseeBarriereVide {
                     motif: format!(
                         "barrière vide : l'exception d'ADR-021 a expiré le {}",
-                        exception.jusqu_au()
+                        e.jusqu_au()
                     ),
                 }),
                 None => Err(IssueMiseEnLigne::RefuseeBarriereVide {
@@ -90,30 +110,49 @@ impl Barriere {
                         .to_string(),
                 }),
             };
+            return Franchissement {
+                verdicts: Vec::new(),
+                exception,
+                issue,
+            };
         }
-        let verdicts = self.evaluateur.evaluer(&self.controles);
-        let mut rouges: Vec<VerdictControle> =
-            verdicts.iter().filter(|v| !v.vert).cloned().collect();
+        let mut verdicts = self.evaluateur.evaluer(&self.controles);
         // Un verdict manquant compte rouge : un évaluateur qui en perdrait
         // un ne doit pas ouvrir la barrière.
         if verdicts.len() != self.controles.len() {
-            rouges.push(VerdictControle {
+            let motif = format!(
+                "{} verdict(s) pour {} contrôle(s)",
+                verdicts.len(),
+                self.controles.len()
+            );
+            verdicts.push(VerdictControle {
                 nom: "barriere".to_string(),
                 vert: false,
-                motif: format!(
-                    "{} verdict(s) pour {} contrôle(s)",
-                    verdicts.len(),
-                    self.controles.len()
-                ),
+                motif,
                 rapport: String::new(),
             });
         }
-        if !rouges.is_empty() {
-            return Err(IssueMiseEnLigne::RefuseeParLaBarriere {
+        let rouges: Vec<VerdictControle> = verdicts.iter().filter(|v| !v.vert).cloned().collect();
+        let issue = if rouges.is_empty() {
+            Ok(Passage::Verte(verdicts.clone()))
+        } else {
+            Err(IssueMiseEnLigne::RefuseeParLaBarriere {
                 controles_rouges: rouges,
-            });
+            })
+        };
+        Franchissement {
+            verdicts,
+            exception: None,
+            issue,
         }
-        Ok(Passage::Verte(verdicts))
+    }
+
+    fn cyfun_de(&self, nom: &str) -> Vec<String> {
+        self.controles
+            .iter()
+            .find(|c| c.nom() == nom)
+            .map(|c| c.cyfun().to_vec())
+            .unwrap_or_default()
     }
 }
 
@@ -122,19 +161,24 @@ pub struct MiseEnLigne {
     gates: Arc<dyn VerificateurGates>,
     passerelle: Arc<dyn PasserelleApprobation>,
     barriere: Barriere,
+    journal: Arc<dyn AuditLog>,
 }
 
 impl MiseEnLigne {
     /// Construit le cas d'usage.
+    ///
+    /// `journal` reçoit le rapport de preuve de chaque demande (ADR-022).
     pub fn new(
         gates: Arc<dyn VerificateurGates>,
         passerelle: Arc<dyn PasserelleApprobation>,
         barriere: Barriere,
+        journal: Arc<dyn AuditLog>,
     ) -> Self {
         Self {
             gates,
             passerelle,
             barriere,
+            journal,
         }
     }
 
@@ -143,6 +187,10 @@ impl MiseEnLigne {
     /// Ne met rien en ligne : produit un plan de Tier 1 et le soumet. C'est
     /// l'humain, via un environnement GitHub protégé, qui décide, et c'est le
     /// travail GitHub qui exécute avec des secrets que Sluis n'a pas.
+    ///
+    /// Toute demande qui atteint le plancher laisse un rapport de preuve au
+    /// journal, refus compris, **avant** la soumission : sans preuve écrite,
+    /// rien n'est soumis.
     pub fn demander(
         &self,
         projet: &str,
@@ -150,16 +198,65 @@ impl MiseEnLigne {
         reference: &str,
     ) -> Result<IssueMiseEnLigne, AppError> {
         let etats = self.gates.etat_plancher(reference)?;
+        let mut rapport = RapportPreuve {
+            schema: SCHEMA_RAPPORT_PREUVE,
+            horodatage: self.barriere.horloge.maintenant(),
+            projet: projet.to_string(),
+            environnement: environnement.nom().to_string(),
+            reference: reference.to_string(),
+            version_sluis: env!("CARGO_PKG_VERSION").to_string(),
+            issue: "refusee_par_les_gates",
+            empreinte_plan: None,
+            barriere_vide_jusqu_au: None,
+            cyfun: Vec::new(),
+            controles: etats
+                .iter()
+                .map(|e| ElementPreuve {
+                    source: "plancher",
+                    nom: e.gate.nom().to_string(),
+                    vert: e.verte,
+                    motif: if e.verte {
+                        "vert".to_string()
+                    } else {
+                        format!("rouge : {}", e.detail)
+                    },
+                    rapport: String::new(),
+                    cyfun: e.gate.cyfun().iter().map(|c| c.to_string()).collect(),
+                })
+                .collect(),
+        };
+
         let rouges: Vec<GatePlancher> = etats.iter().filter(|e| !e.verte).map(|e| e.gate).collect();
         if !rouges.is_empty() {
+            self.consigner(rapport)?;
             return Ok(IssueMiseEnLigne::RefuseeParLesGates {
                 gates_rouges: rouges,
             });
         }
+        rapport.cyfun.push(CYFUN_PLANCHER_VERT.to_string());
 
-        let passage = match self.barriere.franchir() {
+        let franchissement = self.barriere.franchir();
+        rapport.barriere_vide_jusqu_au = franchissement.exception.clone();
+        rapport
+            .controles
+            .extend(franchissement.verdicts.iter().map(|v| ElementPreuve {
+                source: "barriere",
+                nom: v.nom.clone(),
+                vert: v.vert,
+                motif: v.motif.clone(),
+                rapport: v.rapport.clone(),
+                cyfun: self.barriere.cyfun_de(&v.nom),
+            }));
+        let passage = match franchissement.issue {
             Ok(passage) => passage,
-            Err(refus) => return Ok(refus),
+            Err(refus) => {
+                rapport.issue = match refus {
+                    IssueMiseEnLigne::RefuseeBarriereVide { .. } => "refusee_barriere_vide",
+                    _ => "refusee_par_la_barriere",
+                };
+                self.consigner(rapport)?;
+                return Ok(refus);
+            }
         };
         let (barriere_resume, barriere_detail) = match &passage {
             Passage::Verte(verdicts) => (
@@ -196,10 +293,33 @@ impl MiseEnLigne {
                 .join("\n"),
         )?;
 
+        rapport.issue = "admise";
+        rapport.empreinte_plan = Some(plan.empreinte().hexadecimal().to_string());
+        // Écrit avant la soumission : une approbation demandée sans preuve
+        // serait une preuve manquante, pas un oubli (ADR-022, point 5).
+        self.consigner(rapport)?;
+
         let etat = self.passerelle.soumettre(&plan)?;
         Ok(IssueMiseEnLigne::Soumise {
             plan: Box::new(plan),
             etat,
         })
+    }
+
+    fn consigner(&self, rapport: RapportPreuve) -> Result<(), AppError> {
+        let empreinte = rapport
+            .empreinte_plan
+            .as_deref()
+            .map(|e| e.chars().take(12).collect())
+            .unwrap_or_else(|| "-".to_string());
+        let entree = AuditEntry::new(
+            rapport.horodatage.to_string(),
+            OUTIL_PREUVE.to_string(),
+            Tier::Two,
+            empreinte,
+            Ok(()),
+        )
+        .avec_preuve(rapport);
+        self.journal.append(&entree)
     }
 }

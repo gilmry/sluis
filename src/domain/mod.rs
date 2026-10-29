@@ -20,6 +20,7 @@ pub mod jeton_acces;
 pub mod module_tofu;
 pub mod oauth;
 pub mod ovh;
+pub mod preuve;
 pub mod redacted;
 pub mod section_empreinte;
 pub mod temps;
@@ -61,6 +62,7 @@ pub use ovh::{
     CoutCourant, EnregistrementDns, InstanceOvh, ListeAutorisation, ProjetBacASable, ProjetOvh,
     ProjetProduction,
 };
+pub use preuve::{verifier_identifiant_cyfun, ElementPreuve, RapportPreuve, SCHEMA_RAPPORT_PREUVE};
 pub use redacted::Redacted;
 pub use temps::{Duree, Horodatage};
 pub use valeur_sure::{MutationTerraform, PlanTerraform, StatutArgocd, StatutHelm, ValeurSure};

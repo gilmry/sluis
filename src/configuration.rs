@@ -76,6 +76,10 @@ pub struct ControleDeclare {
     /// Délai en secondes (60 par défaut, 600 au plus).
     #[serde(default)]
     pub delai_secondes: Option<u64>,
+    /// Identifiants CyFun dont ce contrôle produit la preuve (ADR-022),
+    /// par exemple `["PR.PS-01.1"]`.
+    #[serde(default)]
+    pub cyfun: Vec<String>,
 }
 
 /// Réglages de la passerelle GitHub.
@@ -413,6 +417,7 @@ impl Configuration {
                     c.arguments.clone(),
                     c.delai_secondes,
                 )
+                .and_then(|controle| controle.avec_cyfun(c.cyfun.clone()))
             })
             .collect::<Result<Vec<_>, _>>()?;
         verifier_noms_uniques(&barriere)?;
