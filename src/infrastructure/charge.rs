@@ -147,6 +147,7 @@ struct Resume {
     debit: Option<f64>,
     p50: Option<f64>,
     p99: Option<f64>,
+    echecs: Option<f64>,
 }
 
 /// Analyse la sortie de `k6 run` : la ligne `SLUIS_RESUME`, et elle seule.
@@ -175,6 +176,12 @@ pub fn analyser_sortie(
             "aucune requête comptée : la mesure serait sans échantillon".to_string(),
         ));
     }
+    // Sans taux d'échec, le débit et la latence peuvent mesurer des erreurs
+    // rapides (sluis#90) : son absence est une erreur, pas un zéro.
+    let echecs = resume
+        .echecs
+        .filter(|t| (0.0..=1.0).contains(t))
+        .ok_or_else(|| erreur("taux d'échec absent ou hors de [0, 1]".to_string()))?;
     if let (Some(p50), Some(p99)) = (resume.p50, resume.p99) {
         crate::domain::verifier_coherence_latences(p50, p99)?;
     }
@@ -184,6 +191,7 @@ pub fn analyser_sortie(
         ("debit", resume.debit, "req/s"),
         ("latence_p50", resume.p50, "ms"),
         ("latence_p99", resume.p99, "ms"),
+        ("taux_echec", Some(echecs), "ratio"),
     ] {
         if let Some(valeur) = valeur {
             mesures.push(MesureCapacite::mesuree(

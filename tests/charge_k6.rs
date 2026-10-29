@@ -14,6 +14,18 @@ use sluis::domain::{AppError, Palier};
 use sluis::infrastructure::charge::{analyser_sortie, ecrire_script, K6, SCRIPT_K6};
 
 const SORTIE_K6: &str = include_str!("fixtures/k6-palier.txt");
+/// Vrai run contre un chemin qui répond 404 : débit élevé, p99 bas, tout en
+/// échec (sluis#90).
+const SORTIE_K6_404: &str = include_str!("fixtures/k6-palier-404.txt");
+
+fn taux_echec(sortie: &str) -> f64 {
+    analyser_sortie(sortie, Palier::Realistic, "c")
+        .expect("analyse")
+        .into_iter()
+        .find(|m| m.grandeur() == "taux_echec")
+        .expect("taux_echec")
+        .valeur()
+}
 
 /// Exécuteur doublé : consigne les arguments et le script tel qu'il existe
 /// au moment de l'appel, puis rend une sortie décidée d'avance.
@@ -145,7 +157,10 @@ fn happy_un_palier_joue_le_script_embarque_et_rend_les_trois_grandeurs() {
     let mesures = k6.jouer("http://cible/", &reglage()).expect("palier");
 
     let grandeurs: Vec<&str> = mesures.iter().map(|m| m.grandeur()).collect();
-    assert_eq!(grandeurs, ["debit", "latence_p50", "latence_p99"]);
+    assert_eq!(
+        grandeurs,
+        ["debit", "latence_p50", "latence_p99", "taux_echec"]
+    );
     assert!(mesures[0].conditions().contains("50 utilisateurs virtuels"));
 }
 
@@ -173,7 +188,24 @@ fn happy_la_commande_porte_la_cible_les_utilisateurs_et_la_duree() {
     );
 }
 
+#[test]
+fn happy_une_cible_qui_repond_a_un_taux_d_echec_nul() {
+    assert_eq!(taux_echec(SORTIE_K6), 0.0);
+}
+
 // ── @negative ────────────────────────────────────────────────
+
+#[test]
+fn negative_un_chemin_en_404_a_un_taux_d_echec_de_un() {
+    assert_eq!(taux_echec(SORTIE_K6_404), 1.0);
+}
+
+#[test]
+fn negative_un_resume_sans_taux_d_echec_est_une_erreur() {
+    let sortie = "SLUIS_RESUME {\"requetes\":10,\"debit\":1.0,\"p50\":1.0,\"p99\":2.0}\n";
+    let erreur = analyser_sortie(sortie, Palier::Light, "c").unwrap_err();
+    assert!(erreur.to_string().contains("taux d'échec"), "{erreur}");
+}
 
 #[test]
 fn negative_une_sortie_sans_resume_est_une_erreur_nommant_k6_et_le_palier() {
@@ -215,7 +247,7 @@ fn edge_seule_la_ligne_marquee_est_lue_au_milieu_du_bruit() {
         analyser_sortie(&sortie, Palier::Light, "c")
             .expect("analyse")
             .len(),
-        3
+        4
     );
 }
 

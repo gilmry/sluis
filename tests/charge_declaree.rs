@@ -12,7 +12,9 @@
 
 use sluis::domain::{
     CibleCapacite, DeclarationCharge, Duree, MesureCapacite, Palier, PlafondDepense, Verdict,
+    TAUX_ECHEC_TOLERE,
 };
+use sluis::infrastructure::charge::analyser_sortie;
 
 fn declaration(ttl: i64, plafond: f64) -> DeclarationCharge {
     DeclarationCharge::new(
@@ -56,6 +58,7 @@ fn happy_une_cible_atteinte_rend_un_verdict_favorable() {
     let mesures = vec![
         mesure("debit", 240.0, "req/s", Palier::Realistic),
         mesure("latence_p99", 210.0, "ms", Palier::Realistic),
+        mesure("taux_echec", 0.0, "ratio", Palier::Realistic),
     ];
 
     assert!(matches!(
@@ -72,6 +75,7 @@ fn negative_une_cible_manquee_nomme_chacun_de_ses_motifs() {
     let mesures = vec![
         mesure("debit", 90.0, "req/s", Palier::Realistic),
         mesure("latence_p99", 480.0, "ms", Palier::Realistic),
+        mesure("taux_echec", 0.0, "ratio", Palier::Realistic),
     ];
 
     let Verdict::NeTientPas { motifs, .. } = declaration.verdict(&mesures) else {
@@ -84,6 +88,24 @@ fn negative_une_cible_manquee_nomme_chacun_de_ses_motifs() {
     );
     assert!(motifs.iter().any(|m| m.contains("débit")));
     assert!(motifs.iter().any(|m| m.contains("p99")));
+}
+
+#[test]
+fn negative_une_cible_qui_echoue_vite_ne_tient_pas() {
+    // Vrai run de k6 contre un chemin en 404 : débit et p99 bien meilleurs
+    // que la cible, et pourtant rien n'a été servi (sluis#90).
+    let mesures = analyser_sortie(
+        include_str!("fixtures/k6-palier-404.txt"),
+        Palier::Realistic,
+        "nginx jetable, chemin absent",
+    )
+    .expect("analyse");
+
+    let Verdict::NeTientPas { motifs, .. } = declaration(3_600, 20.0).verdict(&mesures) else {
+        panic!("des erreurs rapides ne doivent pas tenir la cible");
+    };
+    assert_eq!(motifs.len(), 1, "{motifs:?}");
+    assert!(motifs[0].contains("taux d'échec"), "{motifs:?}");
 }
 
 #[test]
@@ -127,6 +149,34 @@ fn edge_un_palier_de_reference_non_joue_rend_un_verdict_indetermine() {
     assert!(
         matches!(verdict, Verdict::Indetermine { .. }),
         "sans palier de référence, aucun verdict ne doit être affirmé : {verdict:?}"
+    );
+}
+
+#[test]
+fn edge_le_seuil_d_echec_est_strict() {
+    let verdict = |taux: f64| {
+        declaration(3_600, 20.0).verdict(&[
+            mesure("debit", 240.0, "req/s", Palier::Realistic),
+            mesure("latence_p99", 210.0, "ms", Palier::Realistic),
+            mesure("taux_echec", taux, "ratio", Palier::Realistic),
+        ])
+    };
+    assert!(matches!(verdict(TAUX_ECHEC_TOLERE), Verdict::Tient { .. }));
+    assert!(matches!(
+        verdict(TAUX_ECHEC_TOLERE + 0.0001),
+        Verdict::NeTientPas { .. }
+    ));
+}
+
+#[test]
+fn security_un_taux_d_echec_absent_ne_vaut_pas_zero() {
+    let verdict = declaration(3_600, 20.0).verdict(&[
+        mesure("debit", 240.0, "req/s", Palier::Realistic),
+        mesure("latence_p99", 210.0, "ms", Palier::Realistic),
+    ]);
+    assert!(
+        matches!(&verdict, Verdict::Indetermine { motif } if motif.contains("taux d'échec")),
+        "{verdict:?}"
     );
 }
 

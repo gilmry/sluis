@@ -26,13 +26,13 @@ fn plan(creations: u32) -> PlanTerraform {
 
 /// Sortie capturée d'un vrai run de `k6` v2.3.0 (étage `moteurs` de l'image,
 /// environnement vidé, 5 utilisateurs virtuels pendant 5 s contre un nginx
-/// jetable), le 2026-10-28, pour sluis#8.
+/// jetable), recapturée le 2026-10-29 pour sluis#90 (taux d'échec).
 const SORTIE_K6: &str = include_str!("fixtures/k6-palier.txt");
 
 /// Une ligne de résumé écrite à la main, pour les cas qu'un vrai run ne
 /// produit pas.
 fn resume(requetes: u64, p50: f64, p99: f64) -> String {
-    format!("SLUIS_RESUME {{\"requetes\":{requetes},\"debit\":10.0,\"p50\":{p50},\"p99\":{p99}}}\n")
+    format!("SLUIS_RESUME {{\"requetes\":{requetes},\"debit\":10.0,\"p50\":{p50},\"p99\":{p99},\"echecs\":0}}\n")
 }
 
 // ── @happy ───────────────────────────────────────────────────
@@ -53,14 +53,14 @@ fn happy_la_sortie_k6_donne_debit_et_latences() {
         .iter()
         .find(|m| m.grandeur() == "debit")
         .expect("débit");
-    assert_eq!(debit.valeur(), 5209.702132379193);
-    assert_eq!(debit.echantillon(), 26_054);
+    assert_eq!(debit.valeur(), 7409.651132110036);
+    assert_eq!(debit.echantillon(), 37_054);
     assert_eq!(debit.provenance(), Provenance::Mesure);
     let p99 = mesures
         .iter()
         .find(|m| m.grandeur() == "latence_p99")
         .expect("p99");
-    assert_eq!(p99.valeur(), 4.45491059000001);
+    assert_eq!(p99.valeur(), 3.0119142800000005);
 }
 
 #[test]
