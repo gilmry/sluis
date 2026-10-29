@@ -5,6 +5,7 @@
 
 pub mod audit;
 pub mod bac_a_sable;
+pub mod barriere_systeme;
 pub mod charge;
 pub mod composition;
 pub mod depot_git;

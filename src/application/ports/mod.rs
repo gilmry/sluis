@@ -1,6 +1,7 @@
 //! Ports — les frontières que le domaine offre au monde extérieur.
 
 mod audit_log;
+mod barriere;
 mod charge;
 mod charge_declaree;
 mod derogation;
@@ -15,6 +16,7 @@ mod passerelle;
 mod provisionnement;
 
 pub use audit_log::AuditLog;
+pub use barriere::EvaluateurBarriere;
 pub use charge::{MoteurCharge, ReglagePalier};
 pub use charge_declaree::DepotCharge;
 pub use derogation::{DepotDerogation, RegistreRenouvellements};

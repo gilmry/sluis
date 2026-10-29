@@ -344,6 +344,25 @@ racine du dépôt) rend le verdict d'un dépôt : `conforme`, `ecarts` bloquants
 OpenTofu compris (écart `tofu`, avec la liste blanche de ce Sluis ; vide, les
 fournisseurs ne sont pas jugés et une remarque le dit).
 
+### Les contrôles de la barrière : `[barriere]`
+
+La barrière de déploiement (ADR-021) est une liste de contrôles oui/non. Chacun
+est un exécutable déclaré dans `[[barriere.controles]]` (voir
+`config/sluis.example.toml`), et **seul son code de sortie décide** : 0 est
+vert, tout le reste est rouge, quel que soit ce qu'il écrit. Sa sortie est
+gardée comme rapport, tronquée à 8 Kio par flux, sans être interprétée.
+
+- `programme` est un **chemin absolu** : un nom résolu par `PATH` est refusé
+  au chargement, et Sluis ne démarre pas.
+- Le contrôle est lancé sans shell, avec un environnement **vidé** (`PATH`
+  seul) : il ne voit ni `SLUIS_GITHUB_TOKEN` ni les clés OVH.
+- **Un contrôle qui ne répond pas bloque** : absent, non exécutable, tué par
+  un signal ou hors délai (60 s par défaut, 600 s au plus), il est rouge. Hors
+  délai, son groupe de processus entier est tué.
+
+Les contrôles ne sont pas encore appelés par la mise en ligne : c'est la story
+7.2 de l'epic sluis#50.
+
 ## Choisir la passerelle d'approbation : `[github] passerelle`
 
 La section `[github]` du fichier de configuration compose la passerelle de

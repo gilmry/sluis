@@ -11,7 +11,9 @@ use std::path::Path;
 
 use serde::Deserialize;
 
-use crate::domain::{AppError, Duree, ListeAutorisation, Redacted};
+use crate::domain::{
+    verifier_noms_uniques, AppError, ControleBarriere, Duree, ListeAutorisation, Redacted,
+};
 use crate::infrastructure::ovh::signature::IdentiteOvh;
 
 /// Fichier de configuration, tel qu'il est lu sur disque.
@@ -36,6 +38,38 @@ pub struct FichierConfiguration {
     /// le serveur ne peut rien soumettre.
     #[serde(default)]
     pub github: Option<SectionGithub>,
+    /// Section barrière de déploiement (ADR-021) : les contrôles déclarés.
+    #[serde(default)]
+    pub barriere: SectionBarriere,
+}
+
+/// Les contrôles de la barrière de déploiement (ADR-021).
+///
+/// **Cette liste est l'allowlist des contrôles** : ils ne passent pas par
+/// celle des moteurs, et rien d'autre que ce qui est déclaré ici ne peut être
+/// lancé comme contrôle.
+#[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SectionBarriere {
+    /// Contrôles, dans l'ordre d'évaluation.
+    #[serde(default)]
+    pub controles: Vec<ControleDeclare>,
+}
+
+/// Un contrôle tel qu'il est écrit dans le fichier.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ControleDeclare {
+    /// Nom, en minuscules, chiffres et « - ».
+    pub nom: String,
+    /// Chemin absolu de l'exécutable.
+    pub programme: String,
+    /// Arguments, passés sans shell.
+    #[serde(default)]
+    pub arguments: Vec<String>,
+    /// Délai en secondes (60 par défaut, 600 au plus).
+    #[serde(default)]
+    pub delai_secondes: Option<u64>,
 }
 
 /// Réglages de la passerelle GitHub.
@@ -305,6 +339,8 @@ pub struct Configuration {
     pub identite: Option<IdentiteOvh>,
     /// Jeton GitHub de la passerelle, si `SLUIS_GITHUB_TOKEN` est non vide.
     pub jeton_github: Option<Redacted<String>>,
+    /// Contrôles de la barrière, validés au chargement.
+    pub barriere: Vec<ControleBarriere>,
 }
 
 impl Configuration {
@@ -356,6 +392,23 @@ impl Configuration {
             }
         }
 
+        // Un contrôle mal déclaré arrête le démarrage : découvert à la
+        // première mise en ligne, il serait découvert trop tard.
+        let barriere = fichier
+            .barriere
+            .controles
+            .iter()
+            .map(|c| {
+                ControleBarriere::new(
+                    c.nom.clone(),
+                    c.programme.clone(),
+                    c.arguments.clone(),
+                    c.delai_secondes,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        verifier_noms_uniques(&barriere)?;
+
         let autorisation = ListeAutorisation::new(
             fichier.ovh.projets_production.clone(),
             fichier.ovh.projets_bac_a_sable.clone(),
@@ -387,6 +440,7 @@ impl Configuration {
             autorisation,
             identite,
             jeton_github,
+            barriere,
         })
     }
 
