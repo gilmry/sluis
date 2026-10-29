@@ -136,10 +136,9 @@ PR.PS-05.2 I, et PR.DS-01.2 E pour l'alerte automatique.
   détecteur et bouncer) l'est-il aussi ?
 - ~~**Annulation selon la passerelle**~~ : tranché le 2026-10-29 (point 6,
   « Comment l'approbation est annulée »).
-- **Où vit la clé de signature des images** : une clé sur YubiKey ne peut pas
-  signer depuis la CI GitHub. Soit la signature se fait sur la machine de
+- **Où vit la clé de signature des images** : ni dans la CI GitHub, ni sur
+  une machine où tourne un agent. Soit la signature se fait sur la machine de
   confiance de l'étape 2, avec une clé détenue par OpenBao (cosign sait
   signer par son moteur *transit*, la clé ne sort pas) ; soit sur le poste du
-  superviseur, à l'approbation, avec la YubiKey. Recommandation : OpenBao sur
-  la machine de confiance, la YubiKey restant l'ancre des identités humaines
-  (ADR-015, ADR-040).
+  superviseur, à l'approbation. Recommandation : OpenBao sur la machine de
+  confiance.
