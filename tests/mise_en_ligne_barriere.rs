@@ -115,6 +115,7 @@ fn cas(
             exception_vide: exception.map(|d| ExceptionBarriereVide::depuis_date(d).expect("date")),
             horloge: Arc::new(HorlogeFigee::a(Horodatage::new(maintenant))),
         },
+        journal_muet(),
     );
     Cas {
         mise_en_ligne,
@@ -296,6 +297,7 @@ fn security_un_verdict_perdu_par_l_evaluateur_compte_rouge() {
             exception_vide: None,
             horloge: Arc::new(HorlogeFigee::a(Horodatage::new(0))),
         },
+        journal_muet(),
     )
     .demander("koprogo", Environnement::Production, "v1.0.0")
     .expect("demande");
@@ -304,4 +306,18 @@ fn security_un_verdict_perdu_par_l_evaluateur_compte_rouge() {
         IssueMiseEnLigne::RefuseeParLaBarriere { .. }
     ));
     assert!(passerelle.plans.lock().expect("verrou").is_empty());
+}
+
+/// Journal qui accepte tout : ces tests ne portent pas sur le rapport de
+/// preuve (voir `tests/rapport_preuve.rs`).
+struct JournalMuet;
+
+impl sluis::application::ports::AuditLog for JournalMuet {
+    fn append(&self, _entree: &sluis::domain::AuditEntry) -> Result<(), sluis::domain::AppError> {
+        Ok(())
+    }
+}
+
+fn journal_muet() -> std::sync::Arc<dyn sluis::application::ports::AuditLog> {
+    std::sync::Arc::new(JournalMuet)
 }

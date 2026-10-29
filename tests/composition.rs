@@ -348,10 +348,15 @@ archetype = "stateless"
         .expect("chargement");
         let _ = std::fs::remove_file(&chemin);
         let passerelle = passerelle_github_si_configuree(&configuration);
-        outils_mise_en_ligne_si_configures(&configuration, passerelle, super::horloge())
-            .iter()
-            .map(|o| o.nom())
-            .collect()
+        outils_mise_en_ligne_si_configures(
+            &configuration,
+            passerelle,
+            super::horloge(),
+            super::journal_muet(),
+        )
+        .iter()
+        .map(|o| o.nom())
+        .collect()
     }
 
     #[test]
@@ -471,6 +476,7 @@ workflow = "tier1-apply.yml"
             &configuration,
             passerelle_github_si_configuree(&configuration),
             super::horloge(),
+            super::journal_muet(),
         );
         assert!(
             outils.is_empty(),
@@ -557,6 +563,7 @@ archetype = "stateless"
             &configuration,
             passerelle_github_si_configuree(&configuration),
             super::horloge(),
+            super::journal_muet(),
         )
         .iter()
         .map(|o| o.nom())
@@ -594,4 +601,18 @@ archetype = "stateless"
             );
         }
     }
+}
+
+/// Journal qui accepte tout : ces tests ne portent pas sur le rapport de
+/// preuve (voir `tests/rapport_preuve.rs`).
+struct JournalMuet;
+
+impl sluis::application::ports::AuditLog for JournalMuet {
+    fn append(&self, _entree: &sluis::domain::AuditEntry) -> Result<(), sluis::domain::AppError> {
+        Ok(())
+    }
+}
+
+fn journal_muet() -> std::sync::Arc<dyn sluis::application::ports::AuditLog> {
+    std::sync::Arc::new(JournalMuet)
 }

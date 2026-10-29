@@ -371,7 +371,12 @@ mod mise_en_ligne {
         let inerte = Arc::new(Inerte);
         let outils: Vec<Box<dyn ContratOutil>> = vec![
             Box::new(OutilMiseEnLigne::new(
-                MiseEnLigne::new(inerte.clone(), inerte.clone(), super::barriere_admise()),
+                MiseEnLigne::new(
+                    inerte.clone(),
+                    inerte.clone(),
+                    super::barriere_admise(),
+                    super::journal_muet(),
+                ),
                 "koprogo".to_string(),
             )),
             Box::new(OutilEtatApprobation::new(inerte.clone())),
@@ -461,4 +466,18 @@ fn barriere_admise() -> sluis::application::mise_en_ligne::Barriere {
             sluis::domain::Horodatage::new(0),
         )),
     }
+}
+
+/// Journal qui accepte tout : ces tests ne portent pas sur le rapport de
+/// preuve (voir `tests/rapport_preuve.rs`).
+struct JournalMuet;
+
+impl sluis::application::ports::AuditLog for JournalMuet {
+    fn append(&self, _entree: &sluis::domain::AuditEntry) -> Result<(), sluis::domain::AppError> {
+        Ok(())
+    }
+}
+
+fn journal_muet() -> std::sync::Arc<dyn sluis::application::ports::AuditLog> {
+    std::sync::Arc::new(JournalMuet)
 }

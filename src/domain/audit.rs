@@ -5,7 +5,7 @@
 //! exige une validation humaine. La règle d'or vaut aussi ici : au doute,
 //! Tier 1.
 
-use crate::domain::Redacted;
+use crate::domain::{RapportPreuve, Redacted};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
@@ -42,6 +42,10 @@ pub struct AuditEntry {
     /// quand l'appel n'a rien lu : les entrées d'avant gardent leur forme.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     lectures: Vec<Lecture>,
+    /// Rapport de preuve d'une demande de mise en ligne (ADR-022). Omis
+    /// ailleurs : les autres entrées gardent leur forme.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    preuve: Option<RapportPreuve>,
 }
 
 /// Un fichier lu pendant un appel, et l'empreinte de ce qui a été lu.
@@ -121,7 +125,19 @@ impl AuditEntry {
             },
             secret: None,
             lectures: Vec::new(),
+            preuve: None,
         }
+    }
+
+    /// Attache le rapport de preuve d'une demande de mise en ligne.
+    pub fn avec_preuve(mut self, preuve: RapportPreuve) -> Self {
+        self.preuve = Some(preuve);
+        self
+    }
+
+    /// Rapport de preuve attaché, s'il y en a un.
+    pub fn preuve(&self) -> Option<&RapportPreuve> {
+        self.preuve.as_ref()
     }
 
     /// Attache les fichiers lus pendant l'appel.

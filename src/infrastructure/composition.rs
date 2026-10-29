@@ -10,7 +10,7 @@ use std::sync::Arc;
 use crate::application::campagne::Campagne;
 use crate::application::mise_en_ligne::{Barriere, MiseEnLigne};
 use crate::application::ouverture_derogation::OuvertureDerogation;
-use crate::application::ports::{GatePlancher, Horloge};
+use crate::application::ports::{AuditLog, GatePlancher, Horloge};
 use crate::configuration::{ArchetypeGates, Configuration, TypePasserelle};
 use crate::domain::contrat_depot::check_runs;
 use crate::domain::{AppError, Duree, PlafondDepense};
@@ -209,6 +209,7 @@ pub fn outils_mise_en_ligne_si_configures(
     configuration: &Configuration,
     passerelle: EtatPasserelle,
     horloge: Arc<dyn Horloge>,
+    journal: Arc<dyn AuditLog>,
 ) -> Vec<Box<dyn Outil>> {
     // L'exécutant ne demande pas, il ouvre (ADR-012, partie 3) : un serveur
     // qui arme un bac à sable n'expose aucun outil de soumission.
@@ -246,6 +247,7 @@ pub fn outils_mise_en_ligne_si_configures(
                     exception_vide: configuration.exception_barriere_vide.clone(),
                     horloge: horloge.clone(),
                 },
+                journal,
             ),
             section.depot.clone(),
         )));
