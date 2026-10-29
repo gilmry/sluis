@@ -31,7 +31,8 @@ Deux garde-fous, sans quoi la décision serait un simple relâchement :
    version.
 2. **La version d'OpenTofu est épinglée dans le Dockerfile et se remonte.** La
    1.8.8 en portait 53, la 1.12.6 en porte 12 : le chiffre est un indicateur à
-   suivre, pas une fatalité.
+   suivre, pas une fatalité. *Relevé du 2026-10-29* : la 1.12.6, non remontée,
+   était passée à 22 ; la 1.13.2 en porte 5.
 
 **Alternatives écartées.** Un `.trivyignore` daté listant les 12 CVE : il attrape
 mieux les nouveautés, mais il est à refaire à chaque montée de version et pourrit

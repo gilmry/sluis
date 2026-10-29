@@ -74,7 +74,7 @@ RUN install -d -o 65532 -g 65532 /donnees
 # les binaires. Les deux sont des binaires Go statiques : rien d'autre n'est
 # emporté, et l'image ne porte aucune bibliothèque copiée sans `dpkg`.
 FROM debian:bookworm-slim AS moteurs
-ARG TOFU_VERSION=1.12.6
+ARG TOFU_VERSION=1.13.2
 ARG K6_VERSION=2.3.0
 # Le texte de la licence AGPL de k6, au tag de la version embarquée. Il n'est
 # pas dans l'archive de release, d'où une empreinte épinglée ici.
@@ -98,7 +98,9 @@ RUN apt-get update \
 #
 # **Version épinglée, et à remonter régulièrement.** Le binaire embarque ses
 # dépendances Go, donc leurs CVE : la 1.8.8 en portait 53 en CRITICAL/HIGH, la
-# 1.12.6 en porte 12. C'est la charge de sécurité que l'image exécutante
+# 1.12.6 en portait 12 le 2026-09-02 et 22 le 2026-10-29, faute d'avoir été
+# remontée ; la 1.13.2 en porte 5 ce même jour (Trivy, HIGH et CRITICAL
+# corrigeables). C'est la charge de sécurité que l'image exécutante
 # transporte, et le scan de la CI la mesure (ADR-011).
 RUN cd /tmp \
  && base="https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}" \
