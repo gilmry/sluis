@@ -3,6 +3,7 @@
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Réécrit le 2026-10-28** (sluis#6, décision du superviseur) : **Flux partout, Coolify abandonné**. La recette VPS devient un K3s à un nœud réconcilié par Flux, la recette K3s le même cluster porté à trois nœuds. Réécriture proposée, contresignée le 2026-10-28.
+- **Amendé le 2026-10-29** (recherche documentaire) : deux points ouverts tranchés, **Flux vérifie la signature SSH en plus de la passerelle** et **SQLite au démarrage, etcd par conversion à l'étape 8**. Amendement proposé, non contresigné.
 - **Irréversible** : oui pour la mise en production : les données d'un SaaS y naissent, et en sortir est une migration (ADR-026, ADR-027). Le passage d'un à trois nœuds n'est plus un changement de plateforme : c'est un ajout de nœuds, et la bascule de la base qui l'accompagne (ADR-026) reste un point à valider le moment venu.
 - **S'articule avec** : ADR-010 (OpenTofu loue, il ne configure pas), ADR-014 (trois zones), ADR-016 (secrets SOPS), ADR-026 (un nœud au démarrage, trois à terme, jamais deux), ADR-030 (serveur MCP), ADR-031 (pipeline), ADR-032 (Ansible), ADR-038 (double registre), ADR-041 (Keycloak) ; sluis#6 (ordre des deux portes) ; sluis#7 (réserve H1-Recette, sans objet) ; `foyer/skills/convergence-iac.md`.
 - **Sert la vision (ADR-000)** : principe 4, on commence petit (une machine) sans payer plus tard une migration de plateforme ; principe 1, le déploiement applicatif est confié à un réconciliateur, pas à un humain.
@@ -75,9 +76,52 @@ Mapping dans `foyer/skills/conformite.md` §2bis, couche **plateforme**.
 - Pare-feu réseau actif : PR.IR-01.1 ★ (Epic 9, story 9.2).
 - Accès à privilèges sur l'API du cluster (tunnel, certificats courts d'ADR-015) : PR.AA-03.2 ★B, PR.AA-05.7 I, PR.AA-03.4 E et PR.AA-05.9 E.
 
+## Amendement du 2026-10-29 : deux points ouverts tranchés
+
+Proposé, non contresigné. Les faits viennent de la documentation des deux
+projets, lue le 2026-10-29 (sources en fin de section).
+
+**1. Flux n'applique que l'approuvé : les deux portes se cumulent.**
+
+*Constat.* Flux vérifie les signatures **SSH** de commits et d'étiquettes
+depuis source-controller 1.9.0 (2026-06-17), en plus d'OpenPGP : clés
+publiques au format `authorized_keys`, rangées sous des clés `.sshpub` d'un
+Secret, mode `TagAndHEAD` pour vérifier l'étiquette et le commit qu'elle
+désigne. La clé SSH de signature d'ADR-013 est donc utilisable telle quelle.
+Deux limites : Flux ne vérifie que la signature, **pas le message** de
+l'étiquette, donc pas l'environnement qu'elle nomme (ADR-031) ; et il ne suit
+qu'une référence exacte ou une plage semver, pas « la dernière étiquette
+`approuve/*` ».
+
+*Décision.* Ni l'une ni l'autre option seule, les deux :
+- **la passerelle désigne la référence** que Flux applique, après avoir
+  vérifié que l'étiquette nomme son environnement ;
+- **Flux vérifie la signature SSH** (`TagAndHEAD`) contre la seule clé du
+  superviseur, et refuse sinon (`GitRepository` non prête, rien d'appliqué).
+
+Une passerelle ou un compte GitHub compromis peut donc désigner une mauvaise
+référence, mais pas faire appliquer ce que le superviseur n'a pas signé.
+
+**2. Base du cluster à un nœud : SQLite, etcd par conversion à l'étape 8.**
+
+*Constat.* K3s convertit un serveur unique sous SQLite en etcd embarqué en
+redémarrant avec `--cluster-init` ; les nœuds suivants rejoignent ensuite. Le
+sens inverse n'est pas pris en charge. etcd est « write intensive » et
+réclame un SSD ; le minimum d'un serveur K3s est de 2 cœurs et 2 Go.
+
+*Décision.* **SQLite au démarrage** (principe 4 : ne pas payer d'avance les
+trois nœuds). La conversion devient une tâche du playbook Ansible de
+l'étape 8 (ADR-032), précédée d'une sauvegarde de
+`/var/lib/rancher/k3s/server/db/` et **répétée sur la seconde production
+éphémère** (ADR-020) avant la vraie.
+
+*Sources.* fluxcd.io/flux/components/source/gitrepositories (section
+Verification) ; CHANGELOG de fluxcd/source-controller, 1.9.0 ;
+docs.k3s.io/datastore/ha-embedded ; docs.k3s.io/installation/requirements.
+
 ## Points ouverts
 
-- **Comment Flux n'applique que l'approuvé** : branche de déploiement que seule la passerelle fait avancer, ou vérification par Flux de l'étiquette signée (ADR-031, point ouvert sur les formats de signature). À trancher avant la première mise en ligne.
+- ~~**Comment Flux n'applique que l'approuvé**~~ : tranché le 2026-10-29, voir l'amendement. Reste ouvert : comment la passerelle désigne la référence à Flux (champ `spec.ref` du `GitRepository`, ou fichier du dépôt de déploiement), sans lui donner d'écriture dans le cluster de production ; et une clé de signature par environnement, qui lierait l'étiquette à son environnement par la clé plutôt que par le message.
 - Choisir le tunnel privé (WireGuard ou équivalent) et l'endroit où il aboutit (machine de confiance, ADR-014).
 - Fixer le critère qui déclenche le passage à trois nœuds (charge mesurée par Sluis, nombre de SaaS, exigence de disponibilité).
-- Base du cluster à un nœud : SQLite intégrée (défaut de K3s) ou etcd dès le départ, pour que le passage à trois nœuds ne change pas de magasin.
+- ~~Base du cluster à un nœud~~ : tranché le 2026-10-29, SQLite puis conversion en etcd à l'étape 8, voir l'amendement.
