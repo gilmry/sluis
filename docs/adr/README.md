@@ -60,6 +60,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-040](ADR-040-cles-materielles.md) | Gestion des clés matérielles : trois YubiKeys, une copie papier scellée, une station hors ligne · amende ADR-015 | en partie (**oui** pour les ancres, ADR-015) | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 | [ADR-041](ADR-041-federation-identites.md) | Fédération des identités, Keycloak fournisseur d'identité commun des utilisateurs des SaaS | **oui** | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 | [ADR-042](ADR-042-identites-sans-pki.md) | Identités sans PKI : Keycloak de plateforme, FIDO2 sans mot de passe pour les humains, assertions fédérées et jetons courts pour les machines, WireGuard entre zones · amende ADR-015, 014, 017, 025, 029, 032, 033, 035, 036, 037, 040, 041 | **oui** (réversible à faible coût avant tout enrôlement) | proposée le 2026-11-13, **contresignée le 2026-11-14** |
+| [ADR-043](ADR-043-cohabitation-des-zones.md) | Cohabitation des zones au démarrage : un cluster pour les zones 1 et 2, Sluis public et exécutant sur un petit VPS, supervision sur le serveur actuel ; éclatement dès le premier revenu · dérogation bornée, amende ADR-010, 014, 017 | non | proposée le 2026-11-13, **non contresignée** |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
