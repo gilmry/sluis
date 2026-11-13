@@ -2,6 +2,7 @@
 
 - **Statut** : Proposé le 2026-11-13, **non contresigné**.
 - **Décisions du superviseur du 2026-11-13**, à l'origine de cet ADR : « pour des raisons de coût, tout mettre sur le même cluster, avec des mesures conservatoires pour l'éclatement en plusieurs zones » ; « supervision sur ce serveur, et Sluis planifiant et exécutant sur un même petit VPS au début » ; « dès que l'argent rentre, on fait les migrations et on éclate les zones et les serveurs ».
+- **Précision du superviseur du 2026-11-13** : ce qui compte, ce sont l'architecture et les mesures conservatoires, et **avant chaque migration, une restauration déchiffrée jouée** pour vérifier qu'un retour arrière malheureux est possible (point 6).
 - **Dérogation bornée**, sur le modèle d'ADR-007 : elle prend fin à son déclencheur (point 4), et rien ne la reconduit en silence.
 - **Amende, pour la durée de la dérogation** : ADR-014 (zones 1 et 2 sur un même cluster), ADR-017 (OpenBao dans ce cluster, hors de la machine de confiance), ADR-010 (Sluis public et exécutant sur un même VPS). ADR-042 (proposé, sluis#101) est concerné : la haute disponibilité de Keycloak n'y devient effective qu'à l'éclatement.
 - **Irréversible** : non. C'est son objet : chaque mesure conservatoire existe pour que l'éclatement soit un déménagement. Un secret exposé pendant la cohabitation reste toutefois compromis pour toujours (ADR-016).
@@ -67,7 +68,8 @@ cet ordre :
    effective la haute disponibilité de Keycloak.
 
 Chaque migration est une demande de mise en ligne comme une autre : approuvée,
-barrière rejouée, preuve au journal.
+barrière rejouée, preuve au journal ; et aucune ne part sans la restauration
+déchiffrée du point 6.
 
 **5. Mesures conservatoires, à tenir dès le premier jour.** Elles rendent le
 point 4 peu coûteux :
@@ -94,6 +96,36 @@ point 4 peu coûteux :
 8. **L'accès d'urgence GPG testé**, pas seulement prévu : si le cluster tombe,
    le Keycloak de plateforme tombe avec lui, et c'est par ce chemin qu'on le
    répare.
+
+**6. Avant chaque migration, une restauration déchiffrée jouée.** Un retour
+arrière n'est possible que s'il a été joué. Revenir à l'image d'avant ne défait
+pas une migration : sans restauration éprouvée, le retour arrière aggrave la
+panne.
+
+1. **Une donnée témoin** est enveloppée par OpenBao avant l'instantané, à côté
+   des données réelles existantes.
+2. **L'instantané** de ce qui migre est pris : stockage d'OpenBao
+   (`bao operator raft snapshot save`), base du Keycloak de plateforme
+   (CloudNativePG), secrets SOPS de la zone concernée.
+3. **Il est restauré sur un environnement jetable**, isolé du réseau de la
+   production, comme les exercices d'ADR-036, avec le même déverrouillage (KMS
+   d'OVHcloud).
+4. **Le contrôle est un déchiffrement, pas un démarrage** : la donnée témoin
+   **et** une enveloppe réelle existante se désenveloppent ; le Keycloak
+   restauré émet un jeton dont un client vérifie la signature, avec le même
+   `iss` ; une connexion FIDO2 aboutit.
+5. **Fail-closed** : le contrôle est un exécutable dont seul le code de sortie
+   fait foi (ADR-021). Sans restauration verte de moins de 24 heures, la
+   barrière refuse la migration. Le résultat entre au rapport de preuve
+   (ADR-022).
+6. **Le chemin de retour reste intact** jusqu'à la fin de la validation : la
+   source n'est pas détruite, elle passe en lecture seule. Revenir en arrière,
+   c'est rejouer sur la source l'instantané qui vient d'être éprouvé.
+7. **Gel pendant la fenêtre**, de l'instantané à la fin de la validation : pas
+   de rotation de la clé maîtresse ni des clés de signature du realm, pas de
+   nouvel enrôlement. Une version de clé ou une passkey créée après
+   l'instantané serait perdue au retour arrière, et ce qu'elle a chiffré
+   deviendrait illisible.
 
 ## Alternatives écartées
 
@@ -133,6 +165,9 @@ compensatoire est le déclencheur écrit et l'exercice de déménagement.
   avec de vrais utilisateurs remplirait OpenBao sans rien encaisser.
 - **Taille du petit VPS Sluis** : à mesurer avec les deux conteneurs, k6 et
   `tofu` compris.
-- **Ce que veut dire « premier revenu »** : premier paiement encaissé, premier
-  contrat signé, ou seuil couvrant le coût des machines de l'éclatement ?
+- **Durée de la fenêtre de validation** (point 6.6 et 6.7) avant de détruire la
+  source : à fixer par migration.
+- **Étendre le point 6** à toute migration de schéma des SaaS, au-delà de
+  l'éclatement ? La seconde production éphémère (ADR-020) restaure déjà chaque
+  nuit ; il resterait à en faire une condition de la barrière.
 - **Contresignature** de cet ADR.
