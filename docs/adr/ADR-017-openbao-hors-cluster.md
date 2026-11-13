@@ -1,6 +1,7 @@
 # ADR-017 : OpenBao hors du cluster, gardien de la seule clé maîtresse
 
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-11-13 par ADR-043**, pour la durée de la dérogation (proposé, non contresigné) : cohabitation des zones au démarrage, éclatement dès le premier revenu.
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Amendé le 2026-10-21** (revue des ADR, décision 1) : déverrouillage automatique par le KMS d'OVHcloud, parts de secours hors ligne. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : oui. La clé maîtresse chiffre toutes les clés de données (ADR-018) ; sa perte rend les données illisibles, et la migrer vers un autre gardien est une opération sur chaque enveloppe.
