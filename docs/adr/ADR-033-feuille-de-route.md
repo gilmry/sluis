@@ -1,6 +1,7 @@
 # ADR-033 : Feuille de route, huit étapes utilisables seules
 
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-11-13 par ADR-042** (proposé, non contresigné) : plus de PKI ; ce que cet ADR dit de step-ca, du mTLS ou des certificats SSH est remplacé par ADR-042 (Keycloak de plateforme, FIDO2 pour les humains, assertions fédérées et jetons courts pour les machines, WireGuard entre zones).
 - **Amendé le 2026-10-21** (revue des ADR, décision 6) : l'étape 6 devient la seconde production éphémère restaurée chaque nuit. Amendement proposé, contresigné le 2026-10-28.
 - **Amendé le 2026-10-21** (revue des ADR, décision 2) : l'étape 2 compte un VPS de plus pour le Sluis exécutant. Amendement proposé, contresigné le 2026-10-28.
 - **Décision du superviseur du 2026-10-23** : le miroir des dépôts publics (3a) passe avant l'étape 3 ; les dépôts privés vont vers un Forgejo auto-hébergé (ADR-039).

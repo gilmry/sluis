@@ -1,6 +1,7 @@
 # ADR-014 : Trois zones, la production, la confiance, le hors-ligne
 
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-11-13 par ADR-042** (proposé, non contresigné) : plus de PKI ; ce que cet ADR dit de step-ca, du mTLS ou des certificats SSH est remplacé par ADR-042 (Keycloak de plateforme, FIDO2 pour les humains, assertions fédérées et jetons courts pour les machines, WireGuard entre zones).
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Amendé le 2026-10-21** (revue des ADR, décision 2) : le Sluis exécutant quitte la machine de confiance pour un VPS séparé. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : oui. Le découpage fixe où vivent les clés, les journaux et les sauvegardes ; le déplacer après coup oblige à re-créer des identités et à migrer des données.

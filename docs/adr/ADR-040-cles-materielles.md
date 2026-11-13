@@ -1,6 +1,7 @@
 # ADR-040 : Gestion des clés matérielles, trois YubiKeys, une copie papier, une station hors ligne
 
 - **Statut** : Proposé le 2026-10-22, contresigné le 2026-10-23.
+- **Amendé le 2026-11-13 par ADR-042** (proposé, non contresigné) : plus de PKI ; ce que cet ADR dit de step-ca, du mTLS ou des certificats SSH est remplacé par ADR-042 (Keycloak de plateforme, FIDO2 pour les humains, assertions fédérées et jetons courts pour les machines, WireGuard entre zones).
 - **Décisions du superviseur du 2026-10-23** : partage à seuil 2 sur 3 de la phrase de passe GPG (point 7) ; intégrée au point 2 : le destinataire SOPS humain est la sous-clé de chiffrement GPG (amende ADR-016 sur ce point).
 - **Amende ADR-015** : trois YubiKeys au lieu de deux (point 1 d'ADR-015, « deux YubiKeys : une d'usage, une de secours »). Le reste d'ADR-015 est inchangé.
 - **Irréversible** : en partie. **Oui** pour ce que les clés ancrent : la clé GPG maîtresse, la racine de step-ca et les identités qui déchiffrent les secrets et les sauvegardes, déjà qualifiées d'irréversibles par ADR-015, ADR-016 et ADR-035 ; une copie papier perdue ou un partage à seuil distribué ne se rattrape pas, il se remplace par une cérémonie complète. **Non** pour le nombre de clés, leurs lieux et la cadence de vérification, qui se révisent sans re-signer quoi que ce soit.
