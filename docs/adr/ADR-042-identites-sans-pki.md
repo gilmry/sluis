@@ -2,6 +2,7 @@
 
 - **Statut** : Proposé le 2026-11-13, **non contresigné**.
 - **Décision du superviseur du 2026-11-13**, à l'origine de cet ADR : « il n'y aura pas de PKI mais du PKI-less, avec les protocoles qu'il faut pour le machine à machine, et l'authentification humaine avec Keycloak » ; « ce sera FIDO2, ou passwordless WebAuthn » ; « pour le machine à machine, des protocoles PKI-less gérés par Keycloak, pour faire du zero trust ».
+- **Décision du superviseur du 2026-11-13 (suite)** : « on retire step-ca et on met Keycloak » dans la zone de confiance. Le point ouvert A est tranché : un Keycloak de plateforme en zone 2, distinct de celui des SaaS. **OpenBao est maintenu** (ADR-017) : il porte la clé maîtresse du chiffrement par personne, ce que Keycloak ne fait pas ; seule change son authentification (point 6).
 - **Amende ADR-015** : son point 3 (step-ca, certificats X.509 pour le mTLS et certificats SSH courts) est **remplacé** ; son point 1 est complété (les sous-clés GPG restent, l'accès courant passe par Keycloak). Le point 2 (clé SSH `ed25519-sk` des approbations, ADR-013) est **inchangé**.
 - **Amende aussi**, chacun sur ce qu'il dit de step-ca ou du mTLS : ADR-014, ADR-017, ADR-025, ADR-029, ADR-032, ADR-033, ADR-035, ADR-036, ADR-037, ADR-040, ADR-041 (voir « Ce qui change ailleurs »).
 - **Irréversible** : oui, à mesure que des identités y naissent ; **réversible à faible coût aujourd'hui**. Aucune racine step-ca n'a été générée : les étapes 1 et 2 d'ADR-033 ne sont pas commencées (epics #44 et #45 ouverts, constat du 2026-11-13). Une fois les machines et les humains enrôlés dans Keycloak, en sortir est une migration de toutes les identités.
@@ -62,7 +63,7 @@ de racine, pas d'intermédiaire, pas de certificat X.509 émis par nous, pas de
 certificat SSH.
 
 **2. Un Keycloak de plateforme, distinct de celui des SaaS.**
-*Recommandation, à trancher (point ouvert A).*
+*Tranché par le superviseur le 2026-11-13.*
 
 - Une instance dédiée en **zone 2** (machine de confiance), non exposée à
   Internet, joignable par le tunnel privé seulement (point 5). Un realm
@@ -180,8 +181,8 @@ réécrit, cet ADR prévaut sur ce qu'il dit de step-ca.
 - **mTLS avec clés publiques nues** (RFC 7250). Sans autorité, mais peu outillé
   dans les briques visées (OpenBao, supervision, Traefik).
 - **Un seul Keycloak pour les SaaS et la plateforme.** Une instance de moins,
-  mais l'administration dépendrait de la production exposée ; écarté par la
-  recommandation du point 2, à confirmer.
+  mais l'administration dépendrait de la production exposée ; écarté par le
+  superviseur le 2026-11-13 (point 2).
 - **Secrets de client partagés.** Simples, mais statiques : exactement ce
   qu'ADR-015 voulait supprimer.
 
@@ -220,8 +221,8 @@ Renvoi à `foyer/skills/conformite.md` §2bis :
 
 ## Points ouverts
 
-- **A. Une ou deux instances Keycloak** : recommandation, une instance de
-  plateforme en zone 2, distincte de celle des SaaS.
+- ~~**A. Une ou deux instances Keycloak**~~ : tranché le 2026-11-13, deux
+  instances, celle de la plateforme en zone 2 (point 2).
 - **B. Ansible** : B1 (opkssh avec jeton machine, recommandée) ou B2
   (`ansible-pull`).
 - **C. OpenBao** : jeton Kubernetes direct (pas de dépendance à Keycloak sur le
