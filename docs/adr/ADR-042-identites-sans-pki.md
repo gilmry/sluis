@@ -3,6 +3,7 @@
 - **Statut** : Proposé le 2026-11-13, **non contresigné**.
 - **Décision du superviseur du 2026-11-13**, à l'origine de cet ADR : « il n'y aura pas de PKI mais du PKI-less, avec les protocoles qu'il faut pour le machine à machine, et l'authentification humaine avec Keycloak » ; « ce sera FIDO2, ou passwordless WebAuthn » ; « pour le machine à machine, des protocoles PKI-less gérés par Keycloak, pour faire du zero trust ».
 - **Décision du superviseur du 2026-11-13 (suite)** : « on retire step-ca et on met Keycloak » dans la zone de confiance. Le point ouvert A est tranché : un Keycloak de plateforme en zone 2, distinct de celui des SaaS. **OpenBao est maintenu** (ADR-017) : il porte la clé maîtresse du chiffrement par personne, ce que Keycloak ne fait pas ; seule change son authentification (point 6).
+- **Décisions du superviseur du 2026-11-13 (fin)** : point B tranché, voie B1 (Ansible en SSH avec opkssh et un jeton machine) ; **le Keycloak de plateforme est en haute disponibilité, OpenBao ne l'est pas** (une instance, déverrouillage automatique et cache court côté backend, ADR-017 et ADR-018).
 - **Amende ADR-015** : son point 3 (step-ca, certificats X.509 pour le mTLS et certificats SSH courts) est **remplacé** ; son point 1 est complété (les sous-clés GPG restent, l'accès courant passe par Keycloak). Le point 2 (clé SSH `ed25519-sk` des approbations, ADR-013) est **inchangé**.
 - **Amende aussi**, chacun sur ce qu'il dit de step-ca ou du mTLS : ADR-014, ADR-017, ADR-025, ADR-029, ADR-032, ADR-033, ADR-035, ADR-036, ADR-037, ADR-040, ADR-041 (voir « Ce qui change ailleurs »).
 - **Irréversible** : oui, à mesure que des identités y naissent ; **réversible à faible coût aujourd'hui**. Aucune racine step-ca n'a été générée : les étapes 1 et 2 d'ADR-033 ne sont pas commencées (epics #44 et #45 ouverts, constat du 2026-11-13). Une fois les machines et les humains enrôlés dans Keycloak, en sortir est une migration de toutes les identités.
@@ -74,6 +75,16 @@ certificat SSH.
   production. Un Keycloak commun ferait de la page de connexion publique des
   SaaS la porte de l'infrastructure.
 
+**2bis. Haute disponibilité : Keycloak oui, OpenBao non.**
+
+- Le Keycloak de plateforme est en **haute disponibilité** : avec des jetons
+  machines de 10 minutes, une panne plus longue arrête tous les échanges entre
+  machines et l'accès d'Ansible. Sa topologie est un point ouvert (D).
+- OpenBao reste à **une instance** : il redémarre seul (déverrouillage par le
+  KMS d'OVHcloud, ADR-017), et le cache court des clés de données côté backend
+  (ADR-018) couvre un redémarrage. Une panne plus longue empêche d'ouvrir de
+  nouvelles données chiffrées : risque assumé, déjà écrit dans ADR-017.
+
 **3. Humains : FIDO2, WebAuthn sans mot de passe.**
 
 - Les comptes du realm `plateforme` s'authentifient par **passkey résidente sur
@@ -135,12 +146,20 @@ donc par FIDO2. *Choix entre jeton Kubernetes direct et jeton Keycloak : point
 ouvert C.*
 
 **7. Ansible et l'administration des machines (amende ADR-032, point 1).**
-*À trancher (point ouvert B).* Sans certificat SSH, deux voies :
+*Tranché le 2026-11-13 : B1.* Keycloak authentifie, Ansible fait le travail :
+il installe et converge sur chaque machine le Keycloak de plateforme (la zone 2
+n'est pas un cluster, il n'y a donc pas d'opérateur), opkssh et la
+configuration de `sshd`, WireGuard et OpenBao. Les realms, les clients et les
+politiques WebAuthn se déclarent par le fournisseur OpenTofu de Keycloak, comme
+pour ADR-041. **Amorce** : le premier passage d'Ansible, avant que Keycloak
+existe, se fait avec la sous-clé d'authentification GPG sur YubiKey (ADR-037),
+qui est retirée des chemins courants une fois opkssh en place. Les deux voies
+examinées :
 
-- **B1, recommandée** : Ansible exécuté par le Sluis exécutant, en SSH, avec
+- **B1, retenue** : Ansible exécuté par le Sluis exécutant, en SSH, avec
   opkssh et un jeton machine du realm `plateforme`. Reste sans agent, comme
   ADR-032. *Que opkssh accepte un jeton obtenu sans navigateur est à vérifier.*
-- **B2** : bascule en tirage (`ansible-pull`) : chaque machine tire le dépôt et
+- **B2, écartée** : bascule en tirage (`ansible-pull`) : chaque machine tire le dépôt et
   vérifie la signature du commit contre `allowed_signers`, comme Flux
   (ADR-029). Plus aucun accès SSH entrant d'automate, mais un agent sur chaque
   machine, contraire au choix d'ADR-032.
@@ -194,8 +213,8 @@ réécrit, cet ADR prévaut sur ce qu'il dit de step-ca.
   deviennent ce que la racine step-ca était. Leur perte coupe tous les accès
   sauf l'accès d'urgence GPG ; leur vol permet de forger toute identité. Elles
   se sauvegardent chiffrées vers les seules identités humaines (ADR-035).
-- **Point de défaillance** : si le Keycloak de plateforme tombe, plus aucun
-  jeton ne s'émet ; les jetons en cours expirent en minutes. Les composants qui
+- **Point de défaillance**, réduit par la haute disponibilité (point 2bis) : si
+  le Keycloak de plateforme tombe entièrement, plus aucun jeton ne s'émet ; les jetons en cours expirent en minutes. Les composants qui
   vérifient localement les JWKS continuent tant qu'ils ont des jetons. Le témoin
   externe doit sonder Keycloak (ADR-023).
 - **Coût** : une seconde instance Keycloak et sa base sur la machine de
@@ -223,8 +242,13 @@ Renvoi à `foyer/skills/conformite.md` §2bis :
 
 - ~~**A. Une ou deux instances Keycloak**~~ : tranché le 2026-11-13, deux
   instances, celle de la plateforme en zone 2 (point 2).
-- **B. Ansible** : B1 (opkssh avec jeton machine, recommandée) ou B2
-  (`ansible-pull`).
+- ~~**B. Ansible**~~ : tranché le 2026-11-13, B1 (point 7).
+- **D. Topologie de la haute disponibilité de Keycloak** : la haute
+  disponibilité suppose au moins deux nœuds et une base PostgreSQL elle-même
+  hautement disponible, sinon la base reste le point unique. La zone 2 n'est
+  aujourd'hui qu'une machine (ADR-014). Voies : plusieurs machines de confiance
+  avec PostgreSQL répliqué (Patroni), ou un petit cluster dédié en zone 2 avec
+  l'opérateur Keycloak et CloudNativePG. Coût à mesurer.
 - **C. OpenBao** : jeton Kubernetes direct (pas de dépendance à Keycloak sur le
   chemin du chiffrement) ou jeton Keycloak (un seul émetteur à surveiller).
   Recommandation : jeton Kubernetes direct, pour que la panne de Keycloak
