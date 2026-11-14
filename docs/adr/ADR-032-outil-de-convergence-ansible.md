@@ -1,6 +1,7 @@
 # ADR-032 : Ansible configure le socle, OpenTofu loue, Flux réconcilie le cluster
 
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-11-13 par ADR-042** (contresigné le 2026-11-14) : plus de PKI ; ce que cet ADR dit de step-ca, du mTLS ou des certificats SSH est remplacé par ADR-042 (Keycloak de plateforme, FIDO2 pour les humains, assertions fédérées et jetons courts pour les machines, WireGuard entre zones).
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Irréversible** : oui : le durcissement serveur et le chiffrement des disques sont des points irréversibles (`foyer/skills/convergence-iac.md`), et les playbooks deviennent la mémoire de chaque machine.
 - **S'articule avec** : ADR-010 (OpenTofu est le moteur de **location** d'infrastructure, inchangé) ; ADR-015 (certificats SSH courts) ; ADR-016 (SOPS) ; ADR-025 (dérive quotidienne) ; ADR-029 (recettes) ; **écart assumé avec `foyer/skills/convergence-iac.md`**, qui cite `salt-ssh`.

@@ -77,3 +77,10 @@ chemin = "/app/donnees/sluis-audit.jsonl"
 proprietaire = "gilmry"
 depot = "koprogo"
 workflow = "tier1-apply.yml"
+
+# Exception d'ADR-021 : aucun contrôle n'est encore déclaré. Sans cette date,
+# toute mise en ligne est refusée. Décision du superviseur du 2026-11-14
+# (ADR-044, palier 0) : admise jusqu'au 2027-02-25, jour inclus, UTC. Chaque
+# plan porte la mention « BARRIÈRE VIDE ».
+[barriere]
+vide_admise_jusqu_au = "2027-02-25"
