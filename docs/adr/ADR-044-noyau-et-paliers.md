@@ -78,7 +78,8 @@ qu'un choix et évitent de défaire un palier au suivant :
    déplace plus que la base de comptes, précédé d'une restauration jouée.
 
 **5. Le chiffrement par personne attend sa mesure.** Avant de l'inscrire au
-palier 2, un spike mesure son coût : le port `Chiffreur` dans kit-actix, quatre
+palier 2, un spike mesure son coût (gilmry/foyer#28 pour le kit, sluis#104
+pour la campagne) : le port `Chiffreur` dans kit-actix, quatre
 variantes (en clair, chiffrement local, OpenBao sans cache, OpenBao avec
 cache), une campagne de charge lancée **par le noyau de Sluis**. Fini quand un
 tableau daté donne pour chacune la latence p95, le débit, le processeur, la
