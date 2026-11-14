@@ -71,6 +71,13 @@ renouvellement dépendant du gate Tier 1 qu'elle relâche.
 > ⏳ **Première fenêtre : 2026-08-29 → 2026-11-27 (90 jours).**
 > Passé cette date et sans renouvellement Tier 1, tout bail de bac à
 > sable est refusé. C'est voulu : le silence ne reconduit rien.
+>
+> 🔁 **Renouvellement décidé le 2026-11-14** par le superviseur (ADR-044,
+> palier 0) : seconde fenêtre de 90 jours, du **2026-11-27** au
+> **2027-02-25**. La décision ne vaut pas renouvellement : celui-ci reste un
+> acte de Tier 1, demandé par `sluis_renouvellement_derogation`, approuvé dans
+> l'environnement protégé, puis ouvert par `sluis_ouvrir_derogation`, avant le
+> 2026-11-27.
 
 
 ## Contresignature
