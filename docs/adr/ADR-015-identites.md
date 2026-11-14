@@ -1,6 +1,7 @@
 # ADR-015 : Identités, des YubiKeys pour les humains, step-ca pour les machines
 
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-11-13 par ADR-042** (contresigné le 2026-11-14) : plus de PKI ; ce que cet ADR dit de step-ca, du mTLS ou des certificats SSH est remplacé par ADR-042 (Keycloak de plateforme, FIDO2 pour les humains, assertions fédérées et jetons courts pour les machines, WireGuard entre zones).
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Amendé le 2026-10-22 par ADR-040** (contresigné le 2026-10-23) : trois YubiKeys au lieu de deux.
 - **Irréversible** : oui. Les clés racines des humains et de l'autorité de certification ancrent toutes les autres identités ; les changer oblige à re-signer, re-déployer et re-déclarer partout.

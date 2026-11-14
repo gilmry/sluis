@@ -1,6 +1,7 @@
 # ADR-029 : Une seule pile, K3s et Flux, d'un nœud à trois, derrière les mêmes outils MCP
 
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-11-13 par ADR-042** (contresigné le 2026-11-14) : plus de PKI ; ce que cet ADR dit de step-ca, du mTLS ou des certificats SSH est remplacé par ADR-042 (Keycloak de plateforme, FIDO2 pour les humains, assertions fédérées et jetons courts pour les machines, WireGuard entre zones).
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Réécrit le 2026-10-28** (sluis#6, décision du superviseur) : **Flux partout, Coolify abandonné**. La recette VPS devient un K3s à un nœud réconcilié par Flux, la recette K3s le même cluster porté à trois nœuds. Réécriture proposée, contresignée le 2026-10-28.
 - **Amendé le 2026-10-29** (recherche documentaire) : deux points ouverts tranchés, **Flux vérifie la signature SSH en plus de la passerelle** et **SQLite au démarrage, etcd par conversion à l'étape 8**. Amendement proposé, contresigné le 2026-10-29.

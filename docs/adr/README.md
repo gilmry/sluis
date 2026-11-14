@@ -32,7 +32,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-012](ADR-012-mise-en-ligne-par-mcp.md) | La mise en ligne se demande par un outil MCP du Sluis public · amende ADR-010 | **oui** | **contresignée le 2026-10-19** · relance d'un run approuvé à vérifier au premier essai (#4, 4.5) |
 | [ADR-013](ADR-013-approbation-par-etiquette-signee.md) | Pour un dépôt privé, l'approbation est une étiquette signée par le superviseur, vérifiée par le tireur GitOps de la cible · amende ADR-008 | **oui** | **contresignée le 2026-10-21** · **amendée le 2026-10-21** : l'étiquette nomme son environnement (contresigné le 2026-10-21) ; format du message signé fixé le 2026-10-23 |
 | [ADR-014](ADR-014-trois-zones.md) | Trois zones, la production, la confiance, le hors-ligne | **oui** | proposée le 2026-10-21, **contresignée le 2026-10-28** · **amendée le 2026-10-21** : le Sluis exécutant quitte la machine de confiance ; identifiants CyFun complétés (contresigné le 2026-10-28) |
-| [ADR-015](ADR-015-identites.md) | Identités, des YubiKeys pour les humains, step-ca pour les machines | **oui** | proposée le 2026-10-21, **contresignée le 2026-10-28** · **amendée le 2026-10-21** : identifiants CyFun complétés (contresigné le 2026-10-28) · **amendée le 2026-10-22 par ADR-040** : trois YubiKeys au lieu de deux ; destinataire SOPS humain = sous-clé GPG (contresigné le 2026-10-23) |
+| [ADR-015](ADR-015-identites.md) | Identités, des YubiKeys pour les humains, step-ca pour les machines · **point 3 remplacé par ADR-042** (proposé) | **oui** | proposée le 2026-10-21, **contresignée le 2026-10-28** · **amendée le 2026-10-21** : identifiants CyFun complétés (contresigné le 2026-10-28) · **amendée le 2026-10-22 par ADR-040** : trois YubiKeys au lieu de deux ; destinataire SOPS humain = sous-clé GPG (contresigné le 2026-10-23) |
 | [ADR-016](ADR-016-secrets-de-deploiement.md) | Secrets de déploiement chiffrés dans Git avec SOPS et age | non | proposée le 2026-10-21, **contresignée le 2026-10-28** · **amendée le 2026-10-21** : identifiants CyFun complétés (contresigné le 2026-10-28) · **amendée le 2026-10-23 par ADR-040** : destinataire SOPS humain = sous-clé GPG (contresigné le 2026-10-23) |
 | [ADR-017](ADR-017-openbao-hors-cluster.md) | OpenBao hors du cluster, gardien de la seule clé maîtresse | **oui** | proposée le 2026-10-21, **contresignée le 2026-10-28** · **amendée le 2026-10-21** : déverrouillage automatique par le KMS d'OVHcloud ; identifiants CyFun complétés (contresigné le 2026-10-28) |
 | [ADR-018](ADR-018-chiffrement-applicatif.md) | Chiffrement applicatif par enveloppe, une clé par personne | **oui** | proposée le 2026-10-21, **contresignée le 2026-10-28** · **amendée le 2026-10-21** : renvoi à ADR-020 mis en cohérence ; identifiants CyFun complétés (contresigné le 2026-10-28) |
@@ -60,6 +60,7 @@ ceux qui sont amendés le disent dans leur ligne.
 | [ADR-040](ADR-040-cles-materielles.md) | Gestion des clés matérielles : trois YubiKeys, une copie papier scellée, une station hors ligne · amende ADR-015 | en partie (**oui** pour les ancres, ADR-015) | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 | [ADR-041](ADR-041-federation-identites.md) | Fédération des identités, Keycloak fournisseur d'identité commun des utilisateurs des SaaS | **oui** | proposée le 2026-10-22, **contresignée le 2026-10-23** |
 | [ADR-043](ADR-043-cohabitation-des-zones.md) | Cohabitation des zones au démarrage : un cluster pour les zones 1 et 2, Sluis public et exécutant sur un petit VPS, supervision sur le serveur actuel ; éclatement dès le premier revenu · dérogation bornée, amende ADR-010, 014, 017 | non | proposée le 2026-11-13, **non contresignée** |
+| [ADR-042](ADR-042-identites-sans-pki.md) | Identités sans PKI : Keycloak de plateforme, FIDO2 sans mot de passe pour les humains, assertions fédérées et jetons courts pour les machines, WireGuard entre zones · amende ADR-015, 014, 017, 025, 029, 032, 033, 035, 036, 037, 040, 041 | **oui** (réversible à faible coût avant tout enrôlement) | proposée le 2026-11-13, **contresignée le 2026-11-14** |
 
 Tout point marqué irréversible exige une validation humaine explicite
 avant d'être mis en œuvre. ADR-007 est le seul du lot qui assouplit un
@@ -72,6 +73,13 @@ renouvellement dépendant du gate Tier 1 qu'elle relâche.
 > ⏳ **Première fenêtre : 2026-08-29 → 2026-11-27 (90 jours).**
 > Passé cette date et sans renouvellement Tier 1, tout bail de bac à
 > sable est refusé. C'est voulu : le silence ne reconduit rien.
+>
+> 🔁 **Renouvellement décidé le 2026-11-14** par le superviseur (ADR-044,
+> palier 0) : seconde fenêtre de 90 jours, du **2026-11-27** au
+> **2027-02-25**. La décision ne vaut pas renouvellement : celui-ci reste un
+> acte de Tier 1, demandé par `sluis_renouvellement_derogation`, approuvé dans
+> l'environnement protégé, puis ouvert par `sluis_ouvrir_derogation`, avant le
+> 2026-11-27.
 
 
 ## Contresignature
