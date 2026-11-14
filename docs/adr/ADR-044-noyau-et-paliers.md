@@ -1,9 +1,9 @@
 # ADR-044 : Le noyau de Sluis et la plateforme commune, atteinte par paliers du moins cher au plus complet
 
-- **Statut** : Proposé le 2026-11-14, **non contresigné**.
+- **Statut** : Proposé le 2026-11-14, contresigné le 2026-11-14.
 - **Décisions du superviseur du 2026-11-13 et du 2026-11-14**, à l'origine de cet ADR : les mécanismes de sécurité « handicapent les déploiements des SaaS » et sont « trop contraignants pour le moment », et il n'y a « pas les fonds pour une infrastructure aussi importante » ; « maintenant qu'on a l'image cible, il faut planifier une évolution du moins cher au plus complet » ; « l'idée de Sluis à la base, c'est de permettre à Claude Code d'utiliser un serveur MCP pour faire un test de montée en charge avec une skill Foyer, et après de demander la mise en production. C'est tout. » ; séparation du noyau et de la plateforme validée le 2026-11-14.
 - **Amende ADR-033** : l'ordre des huit étapes et de 3a à 3d est remplacé par les paliers du point 3. Les étapes, leurs critères de fin et leurs ADR restent la définition de la cible ; seul leur déclenchement change.
-- **Ne change pas** la cible : ADR-014 à ADR-043 décrivent toujours la plateforme complète. ADR-042 (sluis#101) et ADR-043 (sluis#102), proposés, y prennent leur place au palier indiqué.
+- **Ne change pas** la cible : ADR-014 à ADR-043 décrivent toujours la plateforme complète. ADR-042 (sluis#101) et ADR-043 (sluis#102), contresignés le 2026-11-14, y prennent leur place au palier indiqué.
 - **Irréversible** : non. Un palier se révise en gate review. Les mesures conservatoires du point 4 sont justement là pour qu'aucun palier ne force à défaire le précédent.
 - **S'articule avec** : ADR-000 (principe n°4), ADR-007 (bacs à sable), ADR-010 et ADR-012 (« Sluis ne peut que demander »), ADR-018 (chiffrement par personne, conditionné au point 5), ADR-021 et ADR-022 (barrière, preuve), ADR-033 (qu'il amende), ADR-041 (Keycloak), ADR-042, ADR-043.
 - **Sert la vision (ADR-000)** : principe n°4 avant tout, « chaque brique justifie son coût » : une garantie n'arrive que quand un événement réel la justifie ; principe n°3, parce que chaque palier garde une restauration éprouvée, même au plus bas.
@@ -133,4 +133,3 @@ supervision (**DE.CM-09.1 I**). Le niveau Essential n'est visé qu'au palier 4.
   personne glisse au palier 3 ou se limite aux champs les plus sensibles.
 - **Restauration hebdomadaire du palier 0** : quelle base, quel contrôle de
   lecture, quel signal de succès (ADR-000, principe n°2).
-- **Contresignature** de cet ADR.
