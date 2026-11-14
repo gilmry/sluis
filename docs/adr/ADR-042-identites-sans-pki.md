@@ -1,6 +1,6 @@
 # ADR-042 : Identités sans PKI, Keycloak pour les humains (FIDO2) et pour les machines (assertions fédérées)
 
-- **Statut** : Proposé le 2026-11-13, **non contresigné**.
+- **Statut** : Proposé le 2026-11-13, contresigné le 2026-11-14.
 - **Décision du superviseur du 2026-11-13**, à l'origine de cet ADR : « il n'y aura pas de PKI mais du PKI-less, avec les protocoles qu'il faut pour le machine à machine, et l'authentification humaine avec Keycloak » ; « ce sera FIDO2, ou passwordless WebAuthn » ; « pour le machine à machine, des protocoles PKI-less gérés par Keycloak, pour faire du zero trust ».
 - **Décision du superviseur du 2026-11-13 (suite)** : « on retire step-ca et on met Keycloak » dans la zone de confiance. Le point ouvert A est tranché : un Keycloak de plateforme en zone 2, distinct de celui des SaaS. **OpenBao est maintenu** (ADR-017) : il porte la clé maîtresse du chiffrement par personne, ce que Keycloak ne fait pas ; seule change son authentification (point 6).
 - **Décisions du superviseur du 2026-11-13 (fin)** : point B tranché, voie B1 (Ansible en SSH avec opkssh et un jeton machine) ; **le Keycloak de plateforme est en haute disponibilité, OpenBao ne l'est pas** (une instance, déverrouillage automatique et cache court côté backend, ADR-017 et ADR-018).
@@ -265,4 +265,3 @@ Renvoi à `foyer/skills/conformite.md` §2bis :
   sur 26.8.
 - **Exercice de reprise** (ADR-036) : remplacer le scénario step-ca par la
   restauration du Keycloak de plateforme.
-- **Contresignature** de cet ADR et des amendements qu'il porte.
