@@ -1,6 +1,7 @@
 # ADR-033 : Feuille de route, huit étapes utilisables seules
 
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
+- **Amendé le 2026-11-14 par ADR-044** (proposé, non contresigné) : les étapes restent la définition de la cible, mais elles se déclenchent par paliers (événements réels : comptes utilisateurs, premier revenu, clients engagés, croissance), et non plus dans cet ordre et sans condition. Le noyau de Sluis ne dépend d'aucune étape.
 - **Amendé le 2026-10-21** (revue des ADR, décision 6) : l'étape 6 devient la seconde production éphémère restaurée chaque nuit. Amendement proposé, contresigné le 2026-10-28.
 - **Amendé le 2026-10-21** (revue des ADR, décision 2) : l'étape 2 compte un VPS de plus pour le Sluis exécutant. Amendement proposé, contresigné le 2026-10-28.
 - **Décision du superviseur du 2026-10-23** : le miroir des dépôts publics (3a) passe avant l'étape 3 ; les dépôts privés vont vers un Forgejo auto-hébergé (ADR-039).
