@@ -1,7 +1,7 @@
 # ADR-017 : OpenBao hors du cluster, gardien de la seule clé maîtresse
 
 - **Statut** : Proposé le 2026-10-21, contresigné le 2026-10-28.
-- **Amendé le 2026-11-13 par ADR-043**, pour la durée de la dérogation (proposé, non contresigné) : cohabitation des zones au démarrage, éclatement dès le premier revenu.
+- **Amendé le 2026-11-13 par ADR-043**, pour la durée de la dérogation (contresigné le 2026-11-14) : cohabitation des zones au démarrage, éclatement dès le premier revenu.
 - **Amendé le 2026-11-13 par ADR-042** (contresigné le 2026-11-14) : plus de PKI ; ce que cet ADR dit de step-ca, du mTLS ou des certificats SSH est remplacé par ADR-042 (Keycloak de plateforme, FIDO2 pour les humains, assertions fédérées et jetons courts pour les machines, WireGuard entre zones).
 - **Amendé le 2026-10-21** (revue des ADR, décision 7) : identifiants CyFun 2025 complétés. Amendement proposé, contresigné le 2026-10-28.
 - **Amendé le 2026-10-21** (revue des ADR, décision 1) : déverrouillage automatique par le KMS d'OVHcloud, parts de secours hors ligne. Amendement proposé, contresigné le 2026-10-28.

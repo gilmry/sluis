@@ -1,10 +1,10 @@
 # ADR-043 : Cohabitation des zones au démarrage, éclatement dès les premiers revenus
 
-- **Statut** : Proposé le 2026-11-13, **non contresigné**.
+- **Statut** : Proposé le 2026-11-13, contresigné le 2026-11-14.
 - **Décisions du superviseur du 2026-11-13**, à l'origine de cet ADR : « pour des raisons de coût, tout mettre sur le même cluster, avec des mesures conservatoires pour l'éclatement en plusieurs zones » ; « supervision sur ce serveur, et Sluis planifiant et exécutant sur un même petit VPS au début » ; « dès que l'argent rentre, on fait les migrations et on éclate les zones et les serveurs ».
 - **Précision du superviseur du 2026-11-13** : ce qui compte, ce sont l'architecture et les mesures conservatoires, et **avant chaque migration, une restauration déchiffrée jouée** pour vérifier qu'un retour arrière malheureux est possible (point 6).
 - **Dérogation bornée**, sur le modèle d'ADR-007 : elle prend fin à son déclencheur (point 4), et rien ne la reconduit en silence.
-- **Amende, pour la durée de la dérogation** : ADR-014 (zones 1 et 2 sur un même cluster), ADR-017 (OpenBao dans ce cluster, hors de la machine de confiance), ADR-010 (Sluis public et exécutant sur un même VPS). ADR-042 (proposé, sluis#101) est concerné : la haute disponibilité de Keycloak n'y devient effective qu'à l'éclatement.
+- **Amende, pour la durée de la dérogation** : ADR-014 (zones 1 et 2 sur un même cluster), ADR-017 (OpenBao dans ce cluster, hors de la machine de confiance), ADR-010 (Sluis public et exécutant sur un même VPS). ADR-042 (sluis#101) est concerné : la haute disponibilité de Keycloak n'y devient effective qu'à l'éclatement.
 - **Irréversible** : non. C'est son objet : chaque mesure conservatoire existe pour que l'éclatement soit un déménagement. Un secret exposé pendant la cohabitation reste toutefois compromis pour toujours (ADR-016).
 - **S'articule avec** : ADR-007 (modèle de dérogation datée), ADR-010, ADR-014, ADR-016 (SOPS), ADR-017, ADR-023 (supervision, témoin externe), ADR-026 (CloudNativePG), ADR-029 (K3s à un nœud, Flux), ADR-033 (feuille de route), ADR-036 (exercices de reprise), ADR-042 (identités sans PKI).
 - **Sert la vision (ADR-000)** : principe n°4, parce qu'on ne paie pas trois machines avant d'avoir un revenu qui les justifie ; principe n°2, parce que la dérogation a un déclencheur écrit et que l'éclatement est répété avant d'être nécessaire. Elle va **contre** la règle « aucune brique ne détient tout » pendant sa durée : c'est le prix assumé, borné par le point 4.
@@ -170,4 +170,3 @@ compensatoire est le déclencheur écrit et l'exercice de déménagement.
 - **Étendre le point 6** à toute migration de schéma des SaaS, au-delà de
   l'éclatement ? La seconde production éphémère (ADR-020) restaure déjà chaque
   nuit ; il resterait à en faire une condition de la barrière.
-- **Contresignature** de cet ADR.

@@ -1,7 +1,7 @@
 # ADR-010 : Deux déploiements, et OpenTofu comme moteur
 
 - **Statut** : contresigné le 2026-10-18.
-- **Amendé le 2026-11-13 par ADR-043**, pour la durée de la dérogation (proposé, non contresigné) : cohabitation des zones au démarrage, éclatement dès le premier revenu.
+- **Amendé le 2026-11-13 par ADR-043**, pour la durée de la dérogation (contresigné le 2026-11-14) : cohabitation des zones au démarrage, éclatement dès le premier revenu.
 - **Sorti de l'index le 2026-10-21** (revue des ADR, décision 7) : texte déplacé depuis `README.md` sans modification de fond.
 - **Amendé le 2026-10-28** (sluis#8) : k6 remplace wrk comme moteur de charge de l'image exécutante. Amendement proposé, contresigné le 2026-10-28.
 
