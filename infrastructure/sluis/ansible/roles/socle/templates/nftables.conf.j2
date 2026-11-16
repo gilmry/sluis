@@ -1,8 +1,8 @@
 #!/usr/sbin/nft -f
 # {{ ansible_managed }}
 #
-# PAS de `flush ruleset` : il effacerait les règles que Docker pose pour ses
-# réseaux. Ce fichier ne remplace que sa propre table.
+# PAS de `flush ruleset` : il effacerait les règles que Docker ou K3s posent
+# pour leurs réseaux. Ce fichier ne remplace que sa propre table.
 
 table inet sluis_filtre
 delete table inet sluis_filtre
@@ -39,8 +39,18 @@ table inet sluis_filtre {
     tcp dport 22 ip saddr @ssh_v4 accept
     tcp dport 22 ip6 saddr @ssh_v6 accept
 
-    # Traefik. Ses ports publiés par Docker passent en réalité par la chaîne
-    # de transfert que Docker gère ; cette règle couvre l'écoute directe.
+{% if socle_vlan %}
+    # VLAN de la zone dans le vRack. Il isole sans chiffrer ni authentifier :
+    # ce qui y circule s'authentifie lui-même (ADR-042, point 4).
+    ip saddr {{ socle_vlan }} accept
+{% endif %}
+{% for regle in socle_entrees_supplementaires %}
+    {{ regle }}
+{% endfor %}
+
+    # Traefik. Ses ports publiés par Docker ou par K3s passent en réalité par
+    # la chaîne de transfert qu'ils gèrent ; cette règle couvre l'écoute
+    # directe.
     tcp dport { {{ socle_ports_publics | join(', ') }} } accept
   }
 }

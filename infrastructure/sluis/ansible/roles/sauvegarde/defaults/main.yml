@@ -1,0 +1,17 @@
+# Sauvegarde des données de la machine Sluis vers Paris (ADR-045, point 5) :
+# journal d'audit et dépôt OAuth, dans les volumes Docker des deux Sluis.
+#
+# Chiffrées par age AVANT l'envoi, pour des destinataires dont la clé privée
+# reste hors de la machine (sur le poste, et sa copie hors ligne). Déposées
+# avec un identifiant en écriture seule, dans un compartiment verrouillé : la
+# machine compromise ne relit ni n'efface ses sauvegardes.
+sauvegarde_volumes:
+  - depot_sluis_donnees
+  - depot_sluis_executant_donnees
+
+# Clés publiques age (age1...) des destinataires. Obligatoire.
+sauvegarde_destinataires_age: []
+
+sauvegarde_calendrier: "*-*-* 03:17:00"
+sauvegarde_temporaire: "{{ chiffrement_point }}/sauvegarde"
+sauvegarde_metriques: /var/lib/sluis-metriques

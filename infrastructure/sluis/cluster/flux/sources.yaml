@@ -1,0 +1,59 @@
+# Chaque source est épinglée : version de chart exacte dans les HelmRelease,
+# commit exact pour les ressources de Keycloak.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: jetstack
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://charts.jetstack.io
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: cloudnative-pg
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://cloudnative-pg.github.io/charts
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: openbao
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://openbao.github.io/openbao-helm
+---
+# Définitions des ressources de Keycloak (environ 1 Mo), partagées par les
+# deux opérateurs. Lues dans le dépôt amont plutôt que recopiées ici.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: keycloak-crd
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://github.com/keycloak/keycloak-k8s-resources
+  ref:
+    commit: 79ba77fd65bb05a8300cd1396d6be9806a0f290f
+  ignore: |
+    /*
+    !/kubernetes/*-v1.yml
+---
+# Le manifeste de l'opérateur seul, rendu une fois par zone.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: keycloak-operateur
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://github.com/keycloak/keycloak-k8s-resources
+  ref:
+    commit: 79ba77fd65bb05a8300cd1396d6be9806a0f290f
+  ignore: |
+    /*
+    !/kubernetes/kubernetes.yml

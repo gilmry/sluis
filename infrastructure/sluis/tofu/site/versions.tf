@@ -1,8 +1,9 @@
-# Location du petit VPS Sluis (ADR-043, point 1). OpenTofu loue, il ne
-# configure pas (ADR-010, ADR-032) : tout ce qui se passe sur la machine est
-# l'affaire d'Ansible, dans ../ansible.
+# Location des machines d'un site (ADR-043, point 1). OpenTofu loue, il ne
+# configure pas (ADR-010, ADR-032) : tout ce qui se passe sur les machines est
+# l'affaire d'Ansible, dans ../../ansible. Ce qui doit survivre à la perte
+# du centre de données (stockage, KMS) vit à part, dans ../durable.
 #
-# Lancé uniquement depuis le poste du superviseur, par ../deployer.sh
+# Lancé uniquement depuis le poste du superviseur, par ../../deployer.sh
 # (ADR-037, invariant 1). Aucun agent IA ne lance ce module : le jeton OVH qui
 # le pilote est un secret d'amorce.
 

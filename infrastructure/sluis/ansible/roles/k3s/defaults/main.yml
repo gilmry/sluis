@@ -1,0 +1,15 @@
+# K3s à un nœud (ADR-044, palier 2). Le binaire est épinglé par version ET
+# par empreinte : une version republiée sous le même nom ne s'installe pas.
+k3s_version: v1.36.6+k3s1
+k3s_sha256: 66ceb8e67edfa547195135d74783bfadc2ecc04a91059e90ae5f70a3dbc98c15
+k3s_url: "https://github.com/k3s-io/k3s/releases/download/{{ k3s_version | urlencode }}/k3s"
+
+# Tout ce que K3s écrit vit sur le volume chiffré : base du cluster (SQLite),
+# secrets, images, volumes des pods, répertoire du kubelet.
+k3s_donnees: "{{ chiffrement_point }}/k3s"
+k3s_kubelet: "{{ chiffrement_point }}/kubelet"
+k3s_stockage_local: "{{ chiffrement_point }}/stockage"
+
+# Adresse du nœud dans le VLAN (`machines.k3s.vlan` du site) : l'API et le
+# trafic entre nœuds y restent quand le cluster grandira.
+k3s_ip_vlan: "{{ lookup('ansible.builtin.env', 'SLUIS_VLAN_K3S') }}"

@@ -48,23 +48,26 @@
     mode: "0600"
 
 # Aucune entrée dans /etc/crypttab : un déverrouillage automatique exigerait
-# la clé sur la machine. Docker attend le montage au lieu d'écrire, à vide,
+# la clé sur la machine. Les services qui écrivent sur le volume (Docker sur
+# la machine Sluis, K3s sur le nœud) l'attendent au lieu d'écrire, à vide,
 # sur le disque en clair.
-- name: Répertoire des surcharges de docker.service
+- name: Répertoire des surcharges des services dépendants
   ansible.builtin.file:
-    path: /etc/systemd/system/docker.service.d
+    path: /etc/systemd/system/{{ item }}.d
     state: directory
     owner: root
     group: root
     mode: "0755"
+  loop: "{{ chiffrement_services }}"
 
-- name: Docker attend le volume chiffré
+- name: Les services dépendants attendent le volume chiffré
   ansible.builtin.copy:
-    dest: /etc/systemd/system/docker.service.d/10-chiffre.conf
+    dest: /etc/systemd/system/{{ item }}.d/10-chiffre.conf
     content: |
       [Unit]
       RequiresMountsFor={{ chiffrement_point }}
     owner: root
     group: root
     mode: "0644"
+  loop: "{{ chiffrement_services }}"
   notify: Recharger systemd

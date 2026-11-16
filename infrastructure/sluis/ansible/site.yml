@@ -1,14 +1,19 @@
-# Configuration complète du VPS Sluis : socle, volume chiffré, Docker,
-# Traefik, Sluis.
+# Configuration complète des deux machines du palier 2 (ADR-044) :
+#
+#   toutes  socle (SSH, pare-feu, mises à jour), volume chiffré, agent de
+#           supervision
+#   sluis   Docker, Traefik, Sluis, sauvegarde de ses données vers Paris
+#   k3s     K3s, secrets du cluster, Flux, qui pose le reste depuis
+#           infrastructure/sluis/cluster/
 #
 # Idempotent : un second passage rend changed=0, et c'est la preuve de
 # convergence d'ADR-032 (règle 5), que `deployer.sh verifier` exige.
-- name: VPS Sluis
-  hosts: sluis
+- name: Socle commun
+  hosts: all
   become: true
 
   vars:
-    # Partagé par les rôles chiffrement, docker, traefik et sluis.
+    # Partagé par les rôles chiffrement, docker, traefik, sluis et k3s.
     chiffrement_point: /srv/chiffre
 
   pre_tasks:
@@ -22,6 +27,29 @@
   roles:
     - socle
     - chiffrement
+    - supervision
+
+- name: Machine Sluis
+  hosts: sluis
+  become: true
+
+  vars:
+    chiffrement_point: /srv/chiffre
+
+  roles:
     - docker
     - traefik
     - sluis
+    - sauvegarde
+
+- name: Nœud K3s
+  hosts: k3s
+  become: true
+
+  vars:
+    chiffrement_point: /srv/chiffre
+
+  roles:
+    - k3s
+    - plateforme
+    - flux

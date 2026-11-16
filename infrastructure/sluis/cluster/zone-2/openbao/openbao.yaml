@@ -1,0 +1,87 @@
+# OpenBao (ADR-035), scellé par le KMS d'OVHcloud (ADR-017) : il se
+# déverrouille seul au démarrage, sans clé sur le nœud. Les parts de
+# récupération, elles, restent hors ligne chez le superviseur. Stockage
+# intégré (Raft) sur le volume chiffré du nœud, un seul membre.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: openbao
+spec:
+  interval: 1h
+  releaseName: openbao
+  chart:
+    spec:
+      chart: openbao
+      version: 0.30.6
+      sourceRef:
+        kind: HelmRepository
+        name: openbao
+        namespace: flux-system
+  values:
+    injector:
+      enabled: false
+    server:
+      image:
+        registry: ghcr.io
+        repository: openbao/openbao
+        tag: "2.7.2@sha256:5046911075e137e154ce49ab051502f4ec7cf367d484ae4a4dce665d9b90561f"
+      dataStorage:
+        enabled: true
+        size: 2Gi
+        storageClass: local-path
+      volumes:
+        - name: okms
+          secret:
+            secretName: okms
+            defaultMode: 0400
+        - name: greffons
+          emptyDir: {}
+      volumeMounts:
+        - name: okms
+          mountPath: /openbao/okms
+          readOnly: true
+        - name: greffons
+          mountPath: /openbao/plugins
+      resources:
+        requests:
+          memory: 256Mi
+        limits:
+          memory: 512Mi
+      ha:
+        enabled: true
+        replicas: 1
+        raft:
+          enabled: true
+          setNodeId: true
+          config: |
+            ui = true
+
+            # En clair dans le cluster, derrière les NetworkPolicy : aucune
+            # entrée publique, seuls l'espace et le renvoi de port y
+            # accèdent. TLS interne à poser à l'éclatement (ADR-042).
+            listener "tcp" {
+              address         = "[::]:8200"
+              cluster_address = "[::]:8201"
+              tls_disable     = true
+            }
+
+            storage "raft" {
+              path = "/openbao/data"
+            }
+
+            plugin_directory = "/openbao/plugins"
+
+            plugin "kms" "ovhcloud" {
+              image = "ghcr.io/openbao/openbao-plugin-kms-ovhcloud:v0.0.2@sha256:184fc18395f9b13e47b1407bcbae98f9bddea2f6d922b0186de50b960b06595e"
+            }
+
+            seal "ovhcloud" {
+              endpoint    = "${kms_endpoint}"
+              kms_id      = "${kms_id}"
+              key_id      = "${kms_cle}"
+              client_cert = "/openbao/okms/client.crt"
+              client_key  = "/openbao/okms/client.key"
+              ca_cert     = "/openbao/okms/ca.crt"
+            }
+
+            service_registration "kubernetes" {}

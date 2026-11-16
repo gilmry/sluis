@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Sauvegarde chiffrée des données de Sluis vers Paris
+RequiresMountsFor={{ chiffrement_point }}
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sluis-sauvegarde
+Nice=10
+IOSchedulingClass=idle

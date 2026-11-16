@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Sauvegarde quotidienne de Sluis
+
+[Timer]
+OnCalendar={{ sauvegarde_calendrier }}
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

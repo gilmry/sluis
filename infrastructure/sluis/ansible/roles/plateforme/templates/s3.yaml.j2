@@ -1,0 +1,15 @@
+{% for s in plateforme_s3 %}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ s.nom }}
+  namespace: {{ s.espace }}
+type: Opaque
+stringData:
+  ACCESS_KEY_ID: {{ infra_identifiants_s3[s.consommateur].access_key_id | to_json }}
+  ACCESS_SECRET_KEY: {{ infra_identifiants_s3[s.consommateur].secret_access_key | to_json }}
+  REGION: {{ infra_region_s3 | to_json }}
+  ENDPOINT: {{ infra_s3_endpoint | to_json }}
+  BUCKET: {{ infra_compartiments[s.compartiment] | to_json }}
+{% endfor %}

@@ -1,0 +1,105 @@
+# Instantané quotidien du stockage d'OpenBao, déposé à Paris en écriture
+# seule. Le contenu est chiffré par la barrière d'OpenBao : le relire exige
+# le KMS ou les parts de récupération, jamais présents ensemble avec lui.
+#
+# Le rôle `instantanes` (méthode kubernetes, politique de lecture de
+# sys/storage/raft/snapshot) se crée à l'amorce, par le superviseur
+# (ADR-037). Sans lui, la tâche échoue, et l'alerte le dit.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: instantanes
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: instantanes
+  annotations:
+    # Le script lit ses variables à l'exécution : Flux n'y substitue rien.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  schedule: "40 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: instantanes
+        spec:
+          serviceAccountName: instantanes
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          initContainers:
+            - name: instantane
+              image: ghcr.io/openbao/openbao:2.7.2@sha256:5046911075e137e154ce49ab051502f4ec7cf367d484ae4a4dce665d9b90561f
+              command: ["/bin/sh", "-ec"]
+              args:
+                - |
+                  jeton=$(bao write -field=token auth/kubernetes/login role=instantanes jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token)
+                  BAO_TOKEN=$jeton bao operator raft snapshot save /travail/openbao.snap
+              env:
+                - name: BAO_ADDR
+                  value: http://openbao-active:8200
+                - name: HOME
+                  value: /travail
+              volumeMounts:
+                - name: travail
+                  mountPath: /travail
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+          containers:
+            - name: depot
+              image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
+              command: ["/bin/sh", "-ec"]
+              args:
+                - |
+                  rclone copyto --no-check-dest /travail/openbao.snap \
+                    ":s3:$BUCKET/openbao/$(date -u +%Y%m%dT%H%M%SZ).snap"
+              env:
+                - name: RCLONE_CONFIG
+                  value: /travail/rclone.conf
+                - name: RCLONE_S3_PROVIDER
+                  value: Other
+                - name: RCLONE_S3_NO_CHECK_BUCKET
+                  value: "true"
+                - name: RCLONE_S3_NO_HEAD
+                  value: "true"
+                - name: RCLONE_S3_ENDPOINT
+                  valueFrom:
+                    secretKeyRef: {name: s3-instantanes, key: ENDPOINT}
+                - name: RCLONE_S3_REGION
+                  valueFrom:
+                    secretKeyRef: {name: s3-instantanes, key: REGION}
+                - name: BUCKET
+                  valueFrom:
+                    secretKeyRef: {name: s3-instantanes, key: BUCKET}
+                - name: RCLONE_S3_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef: {name: s3-instantanes, key: ACCESS_KEY_ID}
+                - name: RCLONE_S3_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef: {name: s3-instantanes, key: ACCESS_SECRET_KEY}
+              volumeMounts:
+                - name: travail
+                  mountPath: /travail
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+          volumes:
+            - name: travail
+              emptyDir:
+                medium: Memory
+                sizeLimit: 256Mi

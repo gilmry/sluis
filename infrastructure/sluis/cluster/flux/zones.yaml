@@ -1,0 +1,47 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: zone-1
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: configuration
+    - name: operateur-keycloak-saas
+  interval: 1h
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: sluis
+  path: ./infrastructure/sluis/cluster/zone-1
+  # Pas d'élagage : retirer un manifeste ne doit jamais effacer une base.
+  # Une suppression se fait à la main, par le superviseur.
+  prune: false
+  wait: true
+  timeout: 15m
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: parametres-plateforme
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: zone-2
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: configuration
+    - name: operateur-keycloak-plateforme
+  interval: 1h
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: sluis
+  path: ./infrastructure/sluis/cluster/zone-2
+  prune: false
+  wait: true
+  timeout: 15m
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: parametres-plateforme

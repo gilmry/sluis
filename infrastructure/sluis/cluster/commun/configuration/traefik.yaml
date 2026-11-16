@@ -1,0 +1,12 @@
+# Traefik de K3s, reconfiguré. `Local` garde l'adresse source réelle, que
+# Keycloak journalise et que les limiteurs de débit lisent.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    service:
+      spec:
+        externalTrafficPolicy: Local

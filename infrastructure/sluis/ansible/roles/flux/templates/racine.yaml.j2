@@ -1,0 +1,35 @@
+# {{ ansible_managed }}
+# Le seul objet Flux posé par Ansible : la source et la racine. Tout le reste
+# (contrôleurs, zones, ordre) est dans {{ flux_chemin }}, relu par commit.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: sluis
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: {{ flux_depot_url }}
+  ref:
+    branch: {{ flux_reference_branche }}
+  verify:
+    mode: HEAD
+    secretRef:
+      name: signataires
+  # Le cluster ne lit que son propre dossier.
+  ignore: |
+    /*
+    !/infrastructure/sluis/cluster/
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: racine
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: GitRepository
+    name: sluis
+  path: {{ flux_chemin }}
+  prune: true
+  wait: true

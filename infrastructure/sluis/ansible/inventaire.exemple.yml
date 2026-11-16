@@ -1,35 +1,69 @@
 # Copier HORS du dépôt (~/.config/sluis-infra/inventaire.yml), puis remplir.
-# Rien de secret ici, mais rien de générique non plus : le domaine, le
+# Rien de secret ici, mais rien de générique non plus : les domaines, le
 # courriel ACME et les sources SSH admises ne regardent pas un dépôt public.
 #
-# L'adresse de la machine ne s'écrit pas : deployer.sh la tire de l'état
-# d'OpenTofu et la passe dans SLUIS_HOTE.
+# Les adresses ne s'écrivent pas : deployer.sh les tire de l'état d'OpenTofu
+# du site (sortie `machines`) et les passe dans SLUIS_HOTE_<MACHINE>.
 all:
-  hosts:
+  vars:
+    # Utilisateur créé par l'image Debian d'OVHcloud, qui porte la clé
+    # injectée à la livraison.
+    ansible_user: debian
+    ansible_ssh_private_key_file: "{{ lookup('ansible.builtin.env', 'SLUIS_CLE_SSH') }}"
+
+    # Sources admises en SSH, en CIDR, les mêmes que `ssh_sources_admises`
+    # du site OpenTofu. Obligatoire et sans valeur par défaut : ouvrir SSH à
+    # tout Internet est une décision, pas un oubli (point ouvert d'ADR-029).
+    ssh_sources_admises:
+      - 192.0.2.10/32
+
+    # Méthode SSH (ADR-045) : totp par défaut (clé puis code TOTP), ou
+    # cle_materielle (YubiKey seule) une fois toutes les clés matérielles.
+    socle_ssh_methode: totp
+
+    # Plage de la zone 1 dans le vRack (`plan_zone_1` du site).
+    socle_vlan: 10.101.0.0/24
+
+    # Courriel du compte ACME (Let's Encrypt), pour Traefik et cert-manager.
+    acme_courriel: exploitation@example.org
+
+    # Supervision : point d'écriture Prometheus du serveur de supervision,
+    # en HTTPS. Les identifiants sont dans le fichier SOPS.
+    supervision_ecriture: https://supervision.example.org/api/v1/write
+
+    # Clés publiques age des destinataires des sauvegardes de la machine
+    # Sluis. La clé privée reste hors de toute machine (poste, copie hors
+    # ligne).
+    sauvegarde_destinataires_age:
+      - age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
+
+  children:
     sluis:
-      ansible_host: "{{ lookup('ansible.builtin.env', 'SLUIS_HOTE') }}"
-      # Utilisateur créé par l'image Debian d'OVHcloud, qui porte la clé
-      # injectée à la livraison.
-      ansible_user: debian
-      ansible_ssh_private_key_file: "{{ lookup('ansible.builtin.env', 'SLUIS_CLE_SSH') }}"
+      hosts:
+        sluis:
+          ansible_host: "{{ lookup('ansible.builtin.env', 'SLUIS_HOTE_SLUIS') }}"
 
-      # Nom public du Sluis : règle Traefik ET issuer OAuth (stable, ADR-044).
-      sluis_domaine: sluis.example.org
-      # Courriel du compte ACME (Let's Encrypt).
-      acme_courriel: exploitation@example.org
+          # Nom public du Sluis : règle Traefik ET issuer OAuth (stable, ADR-044).
+          sluis_domaine: sluis.example.org
 
-      # Sources admises en SSH, en CIDR. Obligatoire et sans valeur par
-      # défaut : ouvrir SSH à tout Internet est une décision, pas un oubli
-      # (tunnel d'administration, point ouvert d'ADR-029).
-      ssh_sources_admises:
-        - 192.0.2.10/32
+          # Déployer aussi le Sluis exécutant (ADR-043, point 3). Exige la
+          # configuration réelle de l'exécutant sur le poste et les secrets du
+          # bac à sable dans le fichier SOPS.
+          sluis_executant: false
+          sluis_executant_config: ~/.config/sluis-infra/sluis.executant.toml
 
-      # Méthode SSH (ADR-045) : totp par défaut (clé puis code TOTP), ou
-      # cle_materielle (YubiKey seule) une fois toutes les clés matérielles.
-      socle_ssh_methode: totp
+    k3s:
+      hosts:
+        k3s:
+          ansible_host: "{{ lookup('ansible.builtin.env', 'SLUIS_HOTE_K3S') }}"
 
-      # Déployer aussi le Sluis exécutant (ADR-043, point 3). Exige la
-      # configuration réelle de l'exécutant sur le poste et les secrets du
-      # bac à sable dans le fichier SOPS.
-      sluis_executant: false
-      sluis_executant_config: ~/.config/sluis-infra/sluis.executant.toml
+          # Nom public du Keycloak des SaaS (zone 1). Le Keycloak de
+          # plateforme n'a pas de nom public (ADR-042) : on l'atteint par un
+          # tunnel SSH (deployer.sh tunnel).
+          keycloak_saas_domaine: auth.example.org
+
+          # Référence suivie par Flux (point ouvert d'ADR-029 : branche ou
+          # étiquette signée). Les commits doivent porter une signature SSH
+          # d'une des clés de `flux_cles_verification`.
+          flux_reference_branche: main
+          flux_cles_verification: ~/.config/sluis-infra/signataires-flux.pub

@@ -1,10 +1,16 @@
-# Volume chiffré qui porte tout ce que la machine sait : données de Docker
-# (images, volumes de Sluis, journal d'audit, dépôt OAuth), certificats TLS,
-# dépôt de déploiement et son .env. Le système lui-même reste en clair.
+# Volume chiffré qui porte tout ce que la machine sait. Machine Sluis :
+# données de Docker (images, volumes de Sluis, journal d'audit, dépôt OAuth),
+# certificats TLS, dépôt de déploiement et son .env. Nœud K3s : base et
+# secrets du cluster, conteneurs, volumes des pods (bases CloudNativePG,
+# stockage d'OpenBao). Le système lui-même reste en clair.
 #
-# Un fichier LUKS2 sur le disque du VPS, et non le disque entier : un VPS
-# OVHcloud se livre sur une image non chiffrée, et chiffrer sa racine exige le
-# mode secours et un déverrouillage dans l'initramfs (point ouvert d'ADR-032).
+# Un fichier LUKS2 sur le disque de l'instance, et non le disque entier : une
+# instance OVHcloud se livre sur une image non chiffrée, et chiffrer sa racine
+# exige le mode secours et un déverrouillage dans l'initramfs (point ouvert
+# d'ADR-032).
 chiffrement_fichier: /srv/chiffre.luks
 chiffrement_nom: sluis_chiffre
+
+# Unités systemd qui écrivent sur le volume et doivent l'attendre.
+chiffrement_services: "{{ ['k3s.service'] if 'k3s' in group_names else ['docker.service'] }}"
 chiffrement_point: /srv/chiffre
