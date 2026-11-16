@@ -1,0 +1,16 @@
+# Flux (ADR-029), installé sans `flux bootstrap` : bootstrap exige un jeton
+# d'écriture sur le dépôt, et le cluster n'écrit jamais dans Git. Le manifeste
+# d'installation est épinglé par version et par empreinte.
+flux_version: v2.10.0
+flux_install_sha256: a8c838ccd9be5d30eba9df87cd229b7c4eb80c0049fba1bc3b9840829f267f28
+flux_install_url: "https://github.com/fluxcd/flux2/releases/download/{{ flux_version }}/install.yaml"
+
+flux_depot_url: https://github.com/gilmry/sluis.git
+flux_reference_branche: main
+flux_chemin: ./infrastructure/sluis/cluster/flux
+
+# Fichier authorized_keys des signataires admis, sur le poste. Flux refuse un
+# commit de tête qui n'est signé par aucune de ces clés (ADR-029).
+flux_cles_verification: ""
+
+flux_manifeste: /var/lib/sluis/flux-{{ flux_version }}.yaml

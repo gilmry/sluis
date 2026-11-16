@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+{% for espace, zone in plateforme_espaces.items() %}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ espace }}
+  labels:
+    sluis.zone: {{ zone }}
+    # baseline imposé, restricted signalé : les manifestes amont de
+    # l'opérateur Keycloak et du chart OpenBao ne posent pas tous le profil
+    # seccomp. Passer à restricted une fois chaque avertissement levé.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+{% endfor %}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flux-system

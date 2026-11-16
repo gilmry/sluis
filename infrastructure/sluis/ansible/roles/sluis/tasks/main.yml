@@ -1,0 +1,135 @@
+- name: Utilisateur système de Sluis
+  ansible.builtin.user:
+    name: "{{ sluis_utilisateur }}"
+    system: true
+    home: "{{ sluis_racine }}"
+    shell: /usr/sbin/nologin
+    # Le groupe docker vaut root sur l'hôte : c'est l'accès dont deploy.sh a
+    # besoin, et la raison pour laquelle personne d'autre n'y est.
+    groups: [docker]
+    append: true
+
+- name: Racine de Sluis
+  ansible.builtin.file:
+    path: "{{ sluis_racine }}"
+    state: directory
+    owner: "{{ sluis_utilisateur }}"
+    group: "{{ sluis_utilisateur }}"
+    mode: "0750"
+
+- name: Cloner le dépôt de déploiement
+  ansible.builtin.git:
+    repo: "{{ sluis_depot_url }}"
+    dest: "{{ sluis_depot }}"
+    version: "{{ sluis_branche }}"
+    # deploy.sh fait lui-même l'avance rapide : Ansible ne pose que le clone
+    # initial et ne le déplace plus, sans quoi les deux se disputeraient le
+    # commit déployé.
+    update: false
+  become: true
+  become_user: "{{ sluis_utilisateur }}"
+
+- name: Configuration du Sluis public
+  ansible.builtin.copy:
+    src: "{{ sluis_depot }}/config/sluis.prod.toml"
+    dest: "{{ sluis_depot }}/sluis.toml"
+    remote_src: true
+    force: false
+    owner: "{{ sluis_utilisateur }}"
+    group: "{{ sluis_utilisateur }}"
+    mode: "0640"
+
+# ── Exécutant (ADR-043, point 3) ─────────────────────────────────────────────
+
+- name: Exiger la configuration réelle de l'exécutant
+  ansible.builtin.assert:
+    that:
+      - sluis_executant_config is defined
+      - lookup('ansible.builtin.file', sluis_executant_config) is not search('a-remplacer-par-l-identifiant-du-projet-ovh')
+    fail_msg: >-
+      sluis_executant est vrai mais sa configuration manque ou porte encore
+      l'identifiant de projet du gabarit.
+  when: sluis_executant | bool
+
+- name: Configuration du Sluis exécutant
+  ansible.builtin.copy:
+    src: "{{ sluis_executant_config }}"
+    dest: "{{ sluis_depot }}/sluis.executant.toml"
+    owner: "{{ sluis_utilisateur }}"
+    group: "{{ sluis_utilisateur }}"
+    mode: "0640"
+  when: sluis_executant | bool
+
+# Sans exécutant, son fichier ne doit pas exister : c'est lui qui décide,
+# dans deploy.sh, du déploiement du second conteneur.
+- name: Retirer la configuration de l'exécutant
+  ansible.builtin.file:
+    path: "{{ sluis_depot }}/sluis.executant.toml"
+    state: absent
+  when: not (sluis_executant | bool)
+
+- name: Racine des dépôts mesurés
+  ansible.builtin.file:
+    path: "{{ sluis_depots_mesures }}"
+    state: directory
+    owner: "{{ sluis_utilisateur }}"
+    group: "{{ sluis_utilisateur }}"
+    mode: "0750"
+  when: sluis_executant | bool
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+
+- name: Fichier .env du serveur
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ sluis_depot }}/.env"
+    owner: "{{ sluis_utilisateur }}"
+    group: "{{ sluis_utilisateur }}"
+    mode: "0600"
+  no_log: true
+  diff: false
+
+- name: Vérifier que Compose a toutes ses variables
+  ansible.builtin.command:
+    cmd: >-
+      docker compose -f docker-compose.yml
+      {{ '-f docker-compose.executant.yml' if sluis_executant | bool else '' }}
+      --profile prod config -q
+    chdir: "{{ sluis_depot }}"
+  become: true
+  become_user: "{{ sluis_utilisateur }}"
+  changed_when: false
+
+# ── Boucle GitOps ────────────────────────────────────────────────────────────
+
+- name: Programmer deploy.sh
+  ansible.builtin.cron:
+    name: sluis-auto-deploy
+    user: "{{ sluis_utilisateur }}"
+    minute: "{{ sluis_cron.split()[0] }}"
+    hour: "{{ sluis_cron.split()[1] }}"
+    day: "{{ sluis_cron.split()[2] }}"
+    month: "{{ sluis_cron.split()[3] }}"
+    weekday: "{{ sluis_cron.split()[4] }}"
+    job: "cd {{ sluis_depot }} && ./deploy.sh --run"
+
+- name: Premier déploiement, sans attendre le cron
+  ansible.builtin.command:
+    cmd: ./deploy.sh --run
+    chdir: "{{ sluis_depot }}"
+    creates: "{{ sluis_depot }}/.deployed_rev"
+  become: true
+  become_user: "{{ sluis_utilisateur }}"
+
+- name: Sluis répond sous son nom public
+  ansible.builtin.uri:
+    url: "https://{{ sluis_domaine }}/sante"
+    status_code: 200
+  register: sluis_sante
+  retries: 12
+  delay: 10
+  until: sluis_sante.status == 200
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  changed_when: false

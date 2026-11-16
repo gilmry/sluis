@@ -1,0 +1,6 @@
+# Image épinglée par empreinte (ADR-044, palier 0). Version publiée le
+# 2026-10-26 ; Renovate propose les suivantes.
+traefik_image: traefik:v3.7.16@sha256:1336e85aaed293bd63d005086e0dd013b04078b26aaeb1c18b26a2f928af7e65
+traefik_repertoire: "{{ chiffrement_point }}/traefik"
+# Nom attendu par docker-compose.yml de Sluis (réseau externe).
+traefik_reseau: ecosolva-web

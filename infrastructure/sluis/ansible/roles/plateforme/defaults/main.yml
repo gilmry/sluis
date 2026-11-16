@@ -1,0 +1,38 @@
+# Ce que le cluster reçoit du poste et que le dépôt public ne doit pas porter :
+# identifiants S3, coordonnées du KMS, noms de domaine. Rien de cela n'est
+# chiffré par SOPS dans Git (ADR-016) : le dépôt est public, et un secret
+# chiffré reste un secret publié. Ansible les écrit directement en Secrets,
+# chiffrés au repos par K3s (secrets-encryption).
+#
+# Sorties de ../../tofu/durable, passées par deployer.sh dans l'environnement
+# du processus, jamais écrites sur le disque (voir site.yml) :
+#   infra_s3_endpoint, infra_region_s3, infra_compartiments,
+#   infra_identifiants_s3, infra_kms
+
+# Clé privée du client du KMS : elle naît sur le nœud et n'en sort jamais.
+# deployer.sh kms rapatrie la demande de certificat (publique) vers le poste,
+# OpenTofu la fait signer par le KMS, le passage suivant pose le certificat.
+plateforme_okms: "{{ chiffrement_point }}/okms"
+
+# Espaces de noms et leur zone (ADR-043, mesures conservatoires 1 à 8). La
+# zone 2 vit sur ce nœud pendant la dérogation ; ses secrets n'y sont jamais
+# lisibles par un compte de la zone 1.
+plateforme_espaces:
+  keycloak-saas: zone-1
+  keycloak-plateforme: zone-2
+  openbao: zone-2
+
+# Identifiant S3 de chaque espace : un par zone, jamais partagé.
+plateforme_s3:
+  - espace: keycloak-saas
+    nom: s3-wal
+    consommateur: cnpg-zone-1
+    compartiment: wal-zone-1
+  - espace: keycloak-plateforme
+    nom: s3-wal
+    consommateur: cnpg-zone-2
+    compartiment: wal-zone-2
+  - espace: openbao
+    nom: s3-instantanes
+    consommateur: openbao
+    compartiment: openbao

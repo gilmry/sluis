@@ -1,0 +1,11 @@
+sluis_utilisateur: sluis
+# Sur le volume chiffré : le .env du serveur y vit.
+sluis_racine: "{{ chiffrement_point }}/sluis"
+sluis_depot: "{{ sluis_racine }}/depot"
+sluis_depot_url: https://github.com/gilmry/sluis.git
+# deploy.sh suit origin/main en avance rapide : le clone reste sur main.
+sluis_branche: main
+# Racine des dépôts que l'exécutant mesure (SLUIS_DEPOTS de docker-compose).
+sluis_depots_mesures: "{{ sluis_racine }}/depots"
+sluis_cron: "*/5 * * * *"
+sluis_executant: false

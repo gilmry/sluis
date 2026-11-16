@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+services:
+  traefik:
+    image: {{ traefik_image }}
+    container_name: traefik
+    restart: unless-stopped
+    read_only: true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      # Le socket Docker, en lecture : c'est le prix de la découverte par
+      # étiquettes, et c'est un accès équivalent à root sur l'hôte. Point
+      # assumé du palier 0, à remplacer par un mandataire du socket filtré.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - certificats:/certificats
+    networks:
+      - {{ traefik_reseau }}
+
+volumes:
+  certificats:
+
+networks:
+  {{ traefik_reseau }}:
+    external: true

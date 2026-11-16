@@ -1,0 +1,28 @@
+// {{ ansible_managed }}
+prometheus.exporter.unix "machine" {
+  textfile {
+    directory = "{{ supervision_metriques_locales }}"
+  }
+}
+
+prometheus.scrape "machine" {
+  targets         = prometheus.exporter.unix.machine.targets
+  forward_to      = [prometheus.remote_write.supervision.receiver]
+  scrape_interval = "60s"
+}
+
+prometheus.remote_write "supervision" {
+  external_labels = {
+    machine = "{{ inventory_hostname }}",
+    plateforme = "sluis",
+  }
+
+  endpoint {
+    url = "{{ supervision_ecriture }}"
+
+    basic_auth {
+      username = sys.env("SUPERVISION_IDENTIFIANT")
+      password = sys.env("SUPERVISION_MOT_DE_PASSE")
+    }
+  }
+}

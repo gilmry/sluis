@@ -1,0 +1,56 @@
+# Rien n'entre dans l'espace sans y être admis ici. La sortie reste ouverte :
+# les sauvegardes vont à Paris, les images viennent des registres.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: refus-par-defaut
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: meme-espace
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+---
+# L'opérateur CloudNativePG interroge l'état de chaque instance.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: operateur-cnpg
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: keycloak-db
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - port: 8000
+---
+# OpenBao vérifie les jetons OIDC des administrateurs auprès de ce Keycloak.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openbao-vers-keycloak
+spec:
+  podSelector:
+    matchLabels:
+      app: keycloak
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openbao
+      ports:
+        - port: 8080

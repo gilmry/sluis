@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+# Valeurs substituées par Flux dans les manifestes de infrastructure/sluis/
+# cluster/ (postBuild.substituteFrom). Rien de secret, rien de public non plus.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: parametres-plateforme
+  namespace: flux-system
+data:
+  acme_courriel: {{ acme_courriel | to_json }}
+  keycloak_saas_domaine: {{ keycloak_saas_domaine | to_json }}
+  s3_endpoint: {{ infra_s3_endpoint | to_json }}
+  s3_region: {{ infra_region_s3 | to_json }}
+  compartiment_wal_zone_1: {{ infra_compartiments['wal-zone-1'] | to_json }}
+  compartiment_wal_zone_2: {{ infra_compartiments['wal-zone-2'] | to_json }}
+  compartiment_openbao: {{ infra_compartiments['openbao'] | to_json }}
+  kms_endpoint: {{ infra_kms.endpoint | to_json }}
+  kms_id: {{ infra_kms.kms_id | to_json }}
+  kms_cle: {{ infra_kms.key_id | to_json }}

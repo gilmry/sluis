@@ -1,0 +1,36 @@
+# Keycloak de plateforme (zone 2) : les administrateurs de la plateforme et
+# OpenBao. Aucune entrée publique (ADR-042) : on l'atteint par un tunnel SSH
+# puis un renvoi de port (deployer.sh tunnel). Le nom d'hôte suit donc la
+# requête.
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: keycloak
+spec:
+  instances: 1
+  image: quay.io/keycloak/keycloak:26.8.2@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0
+  db:
+    vendor: postgres
+    host: keycloak-db-rw
+    database: keycloak
+    usernameSecret:
+      name: keycloak-db-app
+      key: username
+    passwordSecret:
+      name: keycloak-db-app
+      key: password
+  # TLS terminé par Traefik ; dans le cluster, HTTP derrière les
+  # NetworkPolicy.
+  http:
+    httpEnabled: true
+  proxy:
+    headers: xforwarded
+  hostname:
+    strict: false
+  ingress:
+    enabled: false
+  resources:
+    requests:
+      memory: 1280Mi
+    limits:
+      memory: 1280Mi

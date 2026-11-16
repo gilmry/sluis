@@ -1,0 +1,12 @@
+# Agent de supervision (Grafana Alloy) : métriques de la machine, plus les
+# fichiers de métriques que posent les tâches (sauvegarde), écrites vers le
+# serveur de supervision actuel (ADR-043, point 2). Aucune donnée
+# personnelle : des compteurs de machine, jamais de journal applicatif.
+supervision_alloy_version: 1.21.3
+supervision_depot_cle: https://apt.grafana.com/gpg.key
+supervision_depot_empreinte: B53AE77BADB630A683046005963FA27710458545
+supervision_metriques_locales: /var/lib/sluis-metriques
+
+# Point d'écriture Prometheus (inventaire), identifiants dans le fichier SOPS :
+# supervision_identifiant, supervision_mot_de_passe.
+supervision_ecriture: ""

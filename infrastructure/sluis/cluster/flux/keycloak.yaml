@@ -1,0 +1,100 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: crd-keycloak
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: keycloak-crd
+  path: ./kubernetes
+  # Supprimer une définition supprime toutes les ressources Keycloak du
+  # cluster : jamais d'élagage ici.
+  prune: false
+  wait: true
+---
+# Opérateur Keycloak de la zone 1, qui ne surveille que son espace
+# (JOSDK_WATCH_CURRENT). Le suffixe sépare ses rôles de ceux de l'autre zone.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: operateur-keycloak-saas
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: crd-keycloak
+  interval: 1h
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: keycloak-operateur
+  path: ./kubernetes
+  prune: true
+  wait: true
+  targetNamespace: keycloak-saas
+  nameSuffix: -saas
+  images:
+    - name: quay.io/keycloak/keycloak-operator
+      newTag: "26.8.2"
+      digest: sha256:df890db951b595fe46f3f985301a38b76fcfcc264f06201c54dfaf28adeba19e
+  patches:
+    # Le manifeste amont nomme l'espace « keycloak » en dur dans la liaison
+    # du rôle de grappe.
+    - target:
+        kind: ClusterRoleBinding
+      patch: |
+        - op: replace
+          path: /subjects/0/namespace
+          value: keycloak-saas
+    # Ni image flottante ni tirage à chaque démarrage.
+    - target:
+        kind: Deployment
+        name: keycloak-operator
+      patch: |
+        - op: replace
+          path: /spec/template/spec/containers/0/imagePullPolicy
+          value: IfNotPresent
+---
+# Opérateur Keycloak de la zone 2, qui ne surveille que son espace
+# (JOSDK_WATCH_CURRENT). Le suffixe sépare ses rôles de ceux de l'autre zone.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: operateur-keycloak-plateforme
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: crd-keycloak
+  interval: 1h
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: keycloak-operateur
+  path: ./kubernetes
+  prune: true
+  wait: true
+  targetNamespace: keycloak-plateforme
+  nameSuffix: -plateforme
+  images:
+    - name: quay.io/keycloak/keycloak-operator
+      newTag: "26.8.2"
+      digest: sha256:df890db951b595fe46f3f985301a38b76fcfcc264f06201c54dfaf28adeba19e
+  patches:
+    # Le manifeste amont nomme l'espace « keycloak » en dur dans la liaison
+    # du rôle de grappe.
+    - target:
+        kind: ClusterRoleBinding
+      patch: |
+        - op: replace
+          path: /subjects/0/namespace
+          value: keycloak-plateforme
+    # Ni image flottante ni tirage à chaque démarrage.
+    - target:
+        kind: Deployment
+        name: keycloak-operator
+      patch: |
+        - op: replace
+          path: /spec/template/spec/containers/0/imagePullPolicy
+          value: IfNotPresent

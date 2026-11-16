@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+#
+# Une archive par volume, chiffrée par age, déposée à Paris. Les conteneurs
+# qui écrivent dans le volume sont suspendus le temps de l'archive : SQLite et
+# le journal d'audit sont copiés au repos, jamais au milieu d'une écriture.
+set -euo pipefail
+
+compartiment={{ infra_compartiments['sluis'] | quote }}
+temporaire={{ sauvegarde_temporaire | quote }}
+metriques={{ sauvegarde_metriques | quote }}
+horodatage=$(date -u +%Y%m%dT%H%M%SZ)
+destinataires=(
+{% for d in sauvegarde_destinataires_age %}
+  -r {{ d | quote }}
+{% endfor %}
+)
+
+mkdir -p "$temporaire"
+trap 'rm -f "$temporaire"/*.tar.age' EXIT
+
+for volume in {{ sauvegarde_volumes | map('quote') | join(' ') }}; do
+  racine=$(docker volume inspect -f '{{ '{{' }} .Mountpoint {{ '}}' }}' "$volume" 2>/dev/null) || continue
+  conteneurs=$(docker ps -q --filter "volume=$volume")
+  # shellcheck disable=SC2086  # une liste d'identifiants, à découper
+  [ -z "$conteneurs" ] || docker pause $conteneurs >/dev/null
+  code=0
+  tar -C "$racine" -cf - . | age "${destinataires[@]}" -o "$temporaire/$volume.tar.age" || code=$?
+  # shellcheck disable=SC2086
+  [ -z "$conteneurs" ] || docker unpause $conteneurs >/dev/null
+  [ "$code" -eq 0 ] || exit "$code"
+  rclone --config /etc/sluis-sauvegarde/rclone.conf copyto --no-check-dest \
+    "$temporaire/$volume.tar.age" "paris:$compartiment/$(hostname -s)/$horodatage/$volume.tar.age"
+done
+
+# Lue par l'agent de supervision : une sauvegarde muette est une sauvegarde
+# absente (alerte quand la dernière réussite a plus de 26 heures).
+printf 'sluis_sauvegarde_derniere_reussite_secondes %s\n' "$(date +%s)" > "$metriques/sauvegarde.prom.tmp"
+mv "$metriques/sauvegarde.prom.tmp" "$metriques/sauvegarde.prom"

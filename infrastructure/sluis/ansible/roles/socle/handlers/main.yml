@@ -1,0 +1,15 @@
+- name: Recharger sshd
+  ansible.builtin.systemd_service:
+    name: ssh
+    state: reloaded
+
+# `nft -f` et non un redémarrage : le fichier ne touche que la table
+# `inet sluis_filtre`, jamais les règles que Docker pose de son côté.
+- name: Recharger nftables
+  ansible.builtin.command: /usr/sbin/nft -f /etc/nftables.conf
+  changed_when: true
+
+- name: Redémarrer journald
+  ansible.builtin.systemd_service:
+    name: systemd-journald
+    state: restarted

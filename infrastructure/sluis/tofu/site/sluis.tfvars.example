@@ -1,0 +1,38 @@
+# Variables d'un SITE : les machines d'un centre de données. Copier HORS du
+# dépôt (~/.config/sluis-infra/site-<site>.tfvars), puis remplir. Rien de
+# secret ici : la phrase de l'état et les identifiants OVH viennent de
+# l'environnement.
+
+# Nom court du site. Reconstruire après la perte d'un centre de données, c'est
+# un site neuf, avec son propre état : par exemple gra1, puis sbg1.
+site = "gra1"
+
+# projet et reseau_zone_1 ne s'écrivent pas ici :
+# deployer.sh les lit dans les sorties de ../durable (TF_VAR_*). Un fichier de
+# variables l'emporterait sur eux.
+
+# Production à Gravelines. SBG ou RBX pour une reconstruction ; jamais Paris,
+# qui porte les sauvegardes (../durable).
+region_cloud = "GRA11"
+plan_zone_1  = "10.101.0.0/24"
+
+# Gabarits d2 seulement, par leur nom ; l'identifiant est résolu dans la
+# région au plan. Sluis tient dans 2 Go, le nœud K3s demande 8 Go.
+gabarit_sluis = "d2-2"
+gabarit_k3s   = "d2-8"
+image         = "Debian 13"
+
+# Clé publique d'administration, ligne complète. Par défaut une ed25519
+# logicielle, complétée par le TOTP ; ou celle de la YubiKey
+# (ssh-keygen -t ed25519-sk) pour la deuxième méthode.
+cle_ssh_publique = "ssh-ed25519 AAAA-a-remplacer superviseur"
+
+# Sources admises en SSH, en CIDR : les mêmes que ssh_sources_admises dans
+# l'inventaire Ansible. Premier filtre chez OVHcloud, nftables derrière.
+ssh_sources_admises = ["192.0.2.10/32"]
+
+# Zone DNS technique, gérée chez OVHcloud. Laisser vide pour ne publier aucun
+# enregistrement. Le jeton DNS vient du .env du poste (TF_VAR_dns_*).
+zone_dns_technique = ""
+sous_domaine       = "sluis"
+noms_k3s           = ["auth", "plateforme"]

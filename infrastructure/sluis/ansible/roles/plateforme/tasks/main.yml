@@ -1,0 +1,99 @@
+- name: Exiger les sorties de l'état durable
+  ansible.builtin.assert:
+    that:
+      - infra_s3_endpoint is defined
+      - infra_region_s3 is defined
+      - infra_compartiments is defined
+      - infra_identifiants_s3 is defined
+      - infra_kms is defined
+      - keycloak_saas_domaine is defined
+      - acme_courriel is defined
+    fail_msg: "Sorties de tofu/durable absentes : lancer par `deployer.sh configurer`."
+
+- name: Espaces de noms et zones
+  ansible.builtin.command:
+    cmd: kubectl apply -f -
+    stdin: "{{ lookup('ansible.builtin.template', 'espaces.yaml.j2') }}"
+  register: plateforme_espaces_apply
+  changed_when: plateforme_espaces_apply.stdout is search('(created|configured)')
+
+- name: Paramètres substitués par Flux
+  ansible.builtin.command:
+    cmd: kubectl apply -f -
+    stdin: "{{ lookup('ansible.builtin.template', 'parametres.yaml.j2') }}"
+  register: plateforme_parametres_apply
+  changed_when: plateforme_parametres_apply.stdout is search('(created|configured)')
+
+- name: Identifiants S3, un par zone
+  ansible.builtin.command:
+    cmd: kubectl apply -f -
+    stdin: "{{ lookup('ansible.builtin.template', 's3.yaml.j2') }}"
+  register: plateforme_s3_apply
+  changed_when: plateforme_s3_apply.stdout is search('(created|configured)')
+  no_log: true
+
+# ── Client du KMS d'OpenBao ──────────────────────────────────────────────────
+
+- name: Répertoire de la clé du client du KMS
+  ansible.builtin.file:
+    path: "{{ plateforme_okms }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Clé privée du client du KMS, née sur le nœud
+  ansible.builtin.command:
+    cmd: openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out {{ plateforme_okms }}/client.key
+    creates: "{{ plateforme_okms }}/client.key"
+
+- name: Protéger la clé du client du KMS
+  ansible.builtin.file:
+    path: "{{ plateforme_okms }}/client.key"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Demande de certificat du client du KMS (publique)
+  ansible.builtin.command:
+    cmd: openssl req -new -key {{ plateforme_okms }}/client.key -subj /CN=openbao -out {{ plateforme_okms }}/client.csr
+    creates: "{{ plateforme_okms }}/client.csr"
+
+- name: Certificat signé par le KMS, s'il existe déjà
+  ansible.builtin.copy:
+    dest: "{{ plateforme_okms }}/client.crt"
+    content: "{{ infra_kms.certificat }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: infra_kms.certificat | length > 0
+
+- name: Lire le certificat posé
+  ansible.builtin.stat:
+    path: "{{ plateforme_okms }}/client.crt"
+  register: plateforme_okms_crt
+
+- name: Secret du client du KMS, lu par OpenBao seul
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      kubectl -n openbao create secret generic okms \
+        --from-file=client.key={{ plateforme_okms }}/client.key \
+        --from-file=client.crt={{ plateforme_okms }}/client.crt \
+        --from-literal=ca.crt="$OKMS_CA" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    executable: /bin/bash
+  environment:
+    OKMS_CA: "{{ infra_kms.ca }}"
+  register: plateforme_okms_apply
+  changed_when: plateforme_okms_apply.stdout is search('(created|configured)')
+  when: plateforme_okms_crt.stat.exists
+  no_log: true
+
+- name: Signaler qu'OpenBao attend son certificat
+  ansible.builtin.debug:
+    msg: >-
+      Pas encore de certificat pour le client du KMS : OpenBao ne démarrera
+      pas scellé par le KMS. Lancer `deployer.sh kms`, puis relancer
+      `deployer.sh configurer`.
+  when: not plateforme_okms_crt.stat.exists

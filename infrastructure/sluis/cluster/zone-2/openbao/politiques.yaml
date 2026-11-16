@@ -1,0 +1,22 @@
+# OpenBao n'est joint que depuis son espace (instantanés, membres Raft) ; le
+# superviseur passe par un renvoi de port. Aucun SaaS de la zone 1 ne
+# l'atteint tant que la dérogation dure : leurs secrets leur sont posés par
+# Ansible, pas lus ici.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: refus-par-defaut
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: meme-espace
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}

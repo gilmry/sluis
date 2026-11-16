@@ -1,0 +1,23 @@
+# Variables de ce qui survit à la perte d'un centre de données. Copier HORS du
+# dépôt (~/.config/sluis-infra/durable.tfvars), puis remplir.
+
+# Préfixe des compartiments, unique chez OVHcloud.
+prefixe = "a-remplacer"
+
+# Paris, trois zones de disponibilité. Seule valeur admise.
+region_sauvegardes = "EU-WEST-PAR"
+
+# 30 jours (ADR-045). « compliance » rend le verrou irrévocable, même par le
+# titulaire du compte : décision du superviseur.
+retention_verrou_jours = 30
+mode_verrou            = "governance"
+
+# Régions où les réseaux des zones existent : production et reconstruction.
+regions_cloud = ["GRA11", "SBG5"]
+
+# Ni Gravelines ni Paris.
+region_kms = "eu-west-rbx"
+
+# csr_openbao ne s'écrit pas ici : deployer.sh kms rapatrie la demande de
+# certificat du nœud K3s et la passe par TF_VAR_csr_openbao. Un fichier de
+# variables l'emporterait sur elle.

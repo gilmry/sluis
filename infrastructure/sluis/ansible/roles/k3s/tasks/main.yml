@@ -1,0 +1,91 @@
+- name: Exiger l'adresse du nœud dans le VLAN
+  ansible.builtin.assert:
+    that:
+      - k3s_ip_vlan | length > 0
+      - k3s_ip_vlan is match('^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$')
+    fail_msg: "SLUIS_VLAN_K3S est vide : lancer par deployer.sh, qui le tire de l'état du site."
+
+- name: Trouver l'interface du VLAN
+  ansible.builtin.set_fact:
+    k3s_interface_vlan: >-
+      {{ ansible_facts.interfaces
+         | map('regex_replace', '-', '_')
+         | map('extract', ansible_facts)
+         | selectattr('ipv4', 'defined')
+         | selectattr('ipv4.address', 'equalto', k3s_ip_vlan)
+         | map(attribute='device') | first | default('') }}
+
+- name: Exiger l'interface du VLAN
+  ansible.builtin.assert:
+    that: k3s_interface_vlan | length > 0
+    fail_msg: "Aucune interface ne porte {{ k3s_ip_vlan }} : le réseau privé n'est pas monté."
+
+- name: Installer le binaire K3s, vérifié par son empreinte
+  ansible.builtin.get_url:
+    url: "{{ k3s_url }}"
+    dest: /usr/local/bin/k3s
+    checksum: "sha256:{{ k3s_sha256 }}"
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Redémarrer k3s
+
+- name: Raccourcis kubectl et crictl
+  ansible.builtin.file:
+    src: /usr/local/bin/k3s
+    dest: /usr/local/bin/{{ item }}
+    state: link
+  loop: [kubectl, crictl]
+
+- name: Répertoires de K3s sur le volume chiffré
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ k3s_donnees }}"
+    - "{{ k3s_kubelet }}"
+    - "{{ k3s_stockage_local }}"
+
+- name: Répertoire de configuration de K3s
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Configuration de K3s
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Redémarrer k3s
+
+- name: Unité systemd de K3s
+  ansible.builtin.template:
+    src: k3s.service.j2
+    dest: /etc/systemd/system/k3s.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Redémarrer k3s
+
+- name: Démarrer K3s
+  ansible.builtin.systemd_service:
+    name: k3s
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Appliquer un redémarrage demandé avant d'attendre le nœud
+  ansible.builtin.meta: flush_handlers
+
+- name: Attendre que le nœud soit prêt
+  ansible.builtin.command: kubectl wait --for=condition=Ready node --all --timeout=300s
+  changed_when: false
+  check_mode: false

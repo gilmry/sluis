@@ -1,0 +1,86 @@
+- name: Répertoire des clés apt
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Télécharger la clé du dépôt Docker
+  ansible.builtin.get_url:
+    url: "{{ docker_cle_url }}"
+    dest: /etc/apt/keyrings/docker.asc
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Lire l'empreinte de la clé téléchargée
+  ansible.builtin.command: gpg --show-keys --with-colons /etc/apt/keyrings/docker.asc
+  register: docker_cle
+  changed_when: false
+
+- name: Refuser une clé dont l'empreinte n'est pas celle attendue
+  ansible.builtin.assert:
+    that:
+      - docker_cle_empreinte in (docker_cle.stdout_lines | select('match', '^fpr:') | map('split', ':') | map(attribute=9) | list)
+    fail_msg: "La clé du dépôt Docker n'a pas l'empreinte attendue : rien n'est installé."
+
+- name: Déclarer le dépôt Docker
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/docker.sources
+    content: |
+      Types: deb
+      URIs: https://download.docker.com/linux/debian
+      Suites: {{ ansible_facts.distribution_release }}
+      Components: stable
+      Signed-By: /etc/apt/keyrings/docker.asc
+    owner: root
+    group: root
+    mode: "0644"
+  register: docker_depot
+
+- name: Répertoire de configuration de Docker
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# Avant l'installation : le paquet démarre le démon, qui doit naître sur le
+# volume chiffré et jamais sur le disque en clair.
+- name: Configurer le démon Docker
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: "{{ docker_demon | to_nice_json }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+  vars:
+    docker_demon:
+      # Journaux bornés : sans rotation, un conteneur bavard remplit le disque.
+      log-driver: local
+      log-opts:
+        max-size: 20m
+        max-file: "5"
+      # Les conteneurs survivent à un redémarrage du démon (mise à jour).
+      live-restore: true
+      # Aucun processus d'un conteneur ne gagne de privilège par setuid. Hors
+      # snap, ce réglage ne casse pas AppArmor (voir docker-compose.yml).
+      no-new-privileges: true
+      userland-proxy: false
+      # Images, conteneurs et volumes sur le volume chiffré (rôle chiffrement).
+      data-root: "{{ chiffrement_point }}/docker"
+  notify: Redémarrer Docker
+
+- name: Installer Docker
+  ansible.builtin.apt:
+    name: "{{ docker_paquets }}"
+    state: present
+    update_cache: "{{ docker_depot.changed }}"
+
+- name: Démarrer Docker
+  ansible.builtin.systemd_service:
+    name: docker
+    enabled: true
+    state: started

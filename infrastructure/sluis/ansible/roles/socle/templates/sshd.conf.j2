@@ -1,0 +1,28 @@
+# {{ ansible_managed }}
+# Préfixe 10 : sshd retient la PREMIÈRE valeur lue, et ce fichier passe avant
+# celui que cloud-init dépose (50-cloud-init.conf).
+#
+# Méthode : {{ socle_ssh_methode }} (ADR-045, point 4).
+{% if socle_ssh_methode == 'totp' %}
+# Clé publique, PUIS code TOTP par PAM. Jamais de mot de passe Unix.
+AuthenticationMethods publickey,keyboard-interactive:pam
+KbdInteractiveAuthentication yes
+UsePAM yes
+{% else %}
+# Clé matérielle seule (ADR-042) : la présence physique de la YubiKey est le
+# second facteur.
+AuthenticationMethods publickey
+KbdInteractiveAuthentication no
+{% endif %}
+PubkeyAuthentication yes
+PubkeyAcceptedAlgorithms {{ socle_ssh_algorithmes[socle_ssh_methode] | join(',') }}
+PasswordAuthentication no
+PermitRootLogin no
+PermitEmptyPasswords no
+
+AllowUsers {{ socle_admin }}
+MaxAuthTries 3
+LoginGraceTime 30
+X11Forwarding no
+AllowAgentForwarding no
+PermitTunnel no

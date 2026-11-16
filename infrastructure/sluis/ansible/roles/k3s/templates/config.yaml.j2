@@ -1,0 +1,24 @@
+# {{ ansible_managed }}
+data-dir: {{ k3s_donnees }}
+default-local-storage-path: {{ k3s_stockage_local }}
+kubelet-arg:
+  - root-dir={{ k3s_kubelet }}
+
+node-ip: {{ k3s_ip_vlan }}
+node-external-ip: {{ ansible_host }}
+flannel-iface: {{ k3s_interface_vlan }}
+# L'API s'annonce sur le VLAN. Depuis Internet, 6443 est fermé deux fois :
+# groupe de sécurité d'OVHcloud et nftables. Le superviseur l'atteint par un
+# tunnel SSH (deployer.sh tunnel).
+advertise-address: {{ k3s_ip_vlan }}
+tls-san:
+  - {{ k3s_ip_vlan }}
+  - 127.0.0.1
+
+# Secrets chiffrés dans la base du cluster (ADR-016). La clé est dans le
+# répertoire de données, donc sur le volume chiffré.
+secrets-encryption: true
+write-kubeconfig-mode: "0600"
+
+# Traefik reste celui de K3s, reconfiguré par Flux (HelmChartConfig) ; le
+# répartiteur de charge intégré publie ses ports 80 et 443.

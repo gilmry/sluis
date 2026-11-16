@@ -1,0 +1,70 @@
+# Configuration complète des deux machines du palier 2 (ADR-044) :
+#
+#   toutes  socle (SSH, pare-feu, mises à jour), volume chiffré, agent de
+#           supervision
+#   sluis   Docker, Traefik, Sluis, sauvegarde de ses données vers Paris
+#   k3s     K3s, secrets du cluster, Flux, qui pose le reste depuis
+#           infrastructure/sluis/cluster/
+#
+# Idempotent : un second passage rend changed=0, et c'est la preuve de
+# convergence d'ADR-032 (règle 5), que `deployer.sh verifier` exige.
+- name: Socle commun
+  hosts: all
+  become: true
+
+  vars:
+    # Partagé par les rôles chiffrement, docker, traefik, sluis et k3s.
+    chiffrement_point: /srv/chiffre
+
+  pre_tasks:
+    - name: Déchiffrer les secrets du serveur (sur le poste, par l'action de la collection)
+      community.sops.load_vars:
+        file: "{{ lookup('ansible.builtin.env', 'SLUIS_SECRETS_SOPS') }}"
+        expressions: ignore
+      no_log: true
+      tags: [toujours]
+
+    # Sorties de tofu/durable, identifiants S3 compris, passées par
+    # deployer.sh dans l'environnement du processus : rien sur le disque du
+    # poste, rien sur la ligne de commande.
+    - name: Lire les sorties de l'état durable
+      ansible.builtin.set_fact:
+        infra_s3_endpoint: "{{ site_infra.infra_s3_endpoint }}"
+        infra_region_s3: "{{ site_infra.infra_region_s3 }}"
+        infra_compartiments: "{{ site_infra.infra_compartiments }}"
+        infra_identifiants_s3: "{{ site_infra.infra_identifiants_s3 }}"
+        infra_kms: "{{ site_infra.infra_kms }}"
+      vars:
+        site_infra: "{{ lookup('ansible.builtin.env', 'SLUIS_INFRA_JSON') | from_json }}"
+      no_log: true
+      tags: [toujours]
+
+  roles:
+    - socle
+    - chiffrement
+    - supervision
+
+- name: Machine Sluis
+  hosts: machine_sluis
+  become: true
+
+  vars:
+    chiffrement_point: /srv/chiffre
+
+  roles:
+    - docker
+    - traefik
+    - sluis
+    - sauvegarde
+
+- name: Nœud K3s
+  hosts: noeud_k3s
+  become: true
+
+  vars:
+    chiffrement_point: /srv/chiffre
+
+  roles:
+    - k3s
+    - plateforme
+    - flux

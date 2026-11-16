@@ -1,0 +1,63 @@
+- name: Exiger des destinataires age
+  ansible.builtin.assert:
+    that:
+      - sauvegarde_destinataires_age | length > 0
+      - sauvegarde_destinataires_age | select('match', '^age1[0-9a-z]{58}$') | list | length == sauvegarde_destinataires_age | length
+    fail_msg: >-
+      sauvegarde_destinataires_age est vide ou mal formé. Les sauvegardes se
+      chiffrent pour une clé dont la partie privée n'est jamais sur la machine.
+
+- name: Installer age et rclone
+  ansible.builtin.apt:
+    name: [age, rclone]
+    state: present
+
+- name: Répertoires de la sauvegarde
+  ansible.builtin.file:
+    path: "{{ item.chemin }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { chemin: /etc/sluis-sauvegarde, mode: "0700" }
+    - { chemin: "{{ sauvegarde_temporaire }}", mode: "0700" }
+    - { chemin: "{{ sauvegarde_metriques }}", mode: "0755" }
+
+- name: Identifiant d'écriture seule vers Paris
+  ansible.builtin.template:
+    src: rclone.conf.j2
+    dest: /etc/sluis-sauvegarde/rclone.conf
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Script de sauvegarde
+  ansible.builtin.template:
+    src: sluis-sauvegarde.sh.j2
+    dest: /usr/local/sbin/sluis-sauvegarde
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Service et minuterie de la sauvegarde
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: /etc/systemd/system/{{ item }}
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - sluis-sauvegarde.service
+    - sluis-sauvegarde.timer
+  notify: Recharger systemd
+
+- name: Appliquer le rechargement de systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: Activer la minuterie
+  ansible.builtin.systemd_service:
+    name: sluis-sauvegarde.timer
+    enabled: true
+    state: started
