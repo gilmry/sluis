@@ -1,0 +1,5 @@
+- name: Relancer Traefik
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_repertoire }}"
+    files: [compose.yml]
+    state: restarted

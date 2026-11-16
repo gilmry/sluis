@@ -1,0 +1,8 @@
+# Jamais d'état, de plan ni de variables réelles dans le dépôt : tout vit sur
+# le poste du superviseur (voir ../README.md).
+.terraform/
+.terraform.lock.hcl.bak
+*.tfstate*
+*.tfplan
+*.tfvars
+!*.tfvars.example

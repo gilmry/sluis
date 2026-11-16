@@ -1,0 +1,35 @@
+# {{ ansible_managed }}
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+    http:
+      tls: {}
+
+# Défi HTTP : le serveur ne détient aucun droit sur le DNS.
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "{{ acme_courriel }}"
+      storage: /certificats/acme.json
+      httpChallenge:
+        entryPoint: web
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: {{ traefik_reseau }}
+
+# Ni tableau de bord, ni API : rien à exposer, rien à protéger.
+api:
+  dashboard: false
+
+log:
+  level: INFO
+accessLog: {}

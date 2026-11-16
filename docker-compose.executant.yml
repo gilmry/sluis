@@ -46,6 +46,18 @@ services:
       OVH_APPLICATION_SECRET: ${OVH_BAC_A_SABLE_APPLICATION_SECRET:-}
       OVH_CONSUMER_KEY: ${OVH_BAC_A_SABLE_CONSUMER_KEY:-}
       OVH_ENDPOINT: ${OVH_ENDPOINT:-https://eu.api.ovh.com/1.0}
+      # Utilisateur OpenStack du MÊME projet bac à sable, pour les modules qui
+      # louent par le fournisseur openstack. Vides par défaut : un module qui
+      # n'en a pas besoin ne les voit pas. Ils n'atteignent tofu que si
+      # `[tofu] variables_transmises` les nomme (ADR-034, point 4).
+      OS_AUTH_URL: ${OS_AUTH_URL:-}
+      OS_IDENTITY_API_VERSION: ${OS_IDENTITY_API_VERSION:-3}
+      OS_USER_DOMAIN_NAME: ${OS_USER_DOMAIN_NAME:-Default}
+      OS_PROJECT_DOMAIN_NAME: ${OS_PROJECT_DOMAIN_NAME:-Default}
+      OS_PROJECT_ID: ${OS_PROJECT_ID:-}
+      OS_USERNAME: ${OS_USERNAME:-}
+      OS_PASSWORD: ${OS_PASSWORD:-}
+      OS_REGION_NAME: ${OS_REGION_NAME:-}
       # OpenTofu écrit dans le HOME du processus. Le seul chemin inscriptible
       # est le volume ; sans cette ligne, `tofu init` échoue sur un HOME absent
       # et le message ne désigne pas la cause.

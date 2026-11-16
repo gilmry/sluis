@@ -1,0 +1,27 @@
+# Configuration complète du VPS Sluis : socle, volume chiffré, Docker,
+# Traefik, Sluis.
+#
+# Idempotent : un second passage rend changed=0, et c'est la preuve de
+# convergence d'ADR-032 (règle 5), que `deployer.sh verifier` exige.
+- name: VPS Sluis
+  hosts: sluis
+  become: true
+
+  vars:
+    # Partagé par les rôles chiffrement, docker, traefik et sluis.
+    chiffrement_point: /srv/chiffre
+
+  pre_tasks:
+    - name: Déchiffrer les secrets du serveur (sur le poste, par l'action de la collection)
+      community.sops.load_vars:
+        file: "{{ lookup('ansible.builtin.env', 'SLUIS_SECRETS_SOPS') }}"
+        expressions: ignore
+      no_log: true
+      tags: [toujours]
+
+  roles:
+    - socle
+    - chiffrement
+    - docker
+    - traefik
+    - sluis

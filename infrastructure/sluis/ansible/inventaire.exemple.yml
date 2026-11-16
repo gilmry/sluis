@@ -1,0 +1,35 @@
+# Copier HORS du dépôt (~/.config/sluis-infra/inventaire.yml), puis remplir.
+# Rien de secret ici, mais rien de générique non plus : le domaine, le
+# courriel ACME et les sources SSH admises ne regardent pas un dépôt public.
+#
+# L'adresse de la machine ne s'écrit pas : deployer.sh la tire de l'état
+# d'OpenTofu et la passe dans SLUIS_HOTE.
+all:
+  hosts:
+    sluis:
+      ansible_host: "{{ lookup('ansible.builtin.env', 'SLUIS_HOTE') }}"
+      # Utilisateur créé par l'image Debian d'OVHcloud, qui porte la clé
+      # injectée à la livraison.
+      ansible_user: debian
+      ansible_ssh_private_key_file: "{{ lookup('ansible.builtin.env', 'SLUIS_CLE_SSH') }}"
+
+      # Nom public du Sluis : règle Traefik ET issuer OAuth (stable, ADR-044).
+      sluis_domaine: sluis.example.org
+      # Courriel du compte ACME (Let's Encrypt).
+      acme_courriel: exploitation@example.org
+
+      # Sources admises en SSH, en CIDR. Obligatoire et sans valeur par
+      # défaut : ouvrir SSH à tout Internet est une décision, pas un oubli
+      # (tunnel d'administration, point ouvert d'ADR-029).
+      ssh_sources_admises:
+        - 192.0.2.10/32
+
+      # Méthode SSH (ADR-045) : totp par défaut (clé puis code TOTP), ou
+      # cle_materielle (YubiKey seule) une fois toutes les clés matérielles.
+      socle_ssh_methode: totp
+
+      # Déployer aussi le Sluis exécutant (ADR-043, point 3). Exige la
+      # configuration réelle de l'exécutant sur le poste et les secrets du
+      # bac à sable dans le fichier SOPS.
+      sluis_executant: false
+      sluis_executant_config: ~/.config/sluis-infra/sluis.executant.toml

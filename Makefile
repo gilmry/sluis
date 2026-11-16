@@ -63,7 +63,8 @@ sbom: ## Produit la nomenclature CycloneDX (plancher)
 
 # Les scripts shell livrés. shellcheck local s'il existe, sinon son image :
 # on ne saute pas la vérification faute d'outil.
-SCRIPTS_SH := tools/tireur-etiquette-signee.sh.example tests/tireur/tests.sh
+SCRIPTS_SH := tools/tireur-etiquette-signee.sh.example tests/tireur/tests.sh \
+	infrastructure/sluis/deployer.sh
 SHELLCHECK_IMAGE ?= koalaman/shellcheck:stable
 
 shellcheck: ## shellcheck des scripts du tireur (plancher)

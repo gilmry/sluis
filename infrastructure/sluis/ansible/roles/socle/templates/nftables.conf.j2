@@ -1,0 +1,46 @@
+#!/usr/sbin/nft -f
+# {{ ansible_managed }}
+#
+# PAS de `flush ruleset` : il effacerait les règles que Docker pose pour ses
+# réseaux. Ce fichier ne remplace que sa propre table.
+
+table inet sluis_filtre
+delete table inet sluis_filtre
+
+table inet sluis_filtre {
+  set ssh_v4 {
+    type ipv4_addr
+    flags interval
+{% set v4 = ssh_sources_admises | select('search', '^[0-9.]+(/[0-9]+)?$') | list %}
+{% if v4 %}
+    elements = { {{ v4 | join(', ') }} }
+{% endif %}
+  }
+
+  set ssh_v6 {
+    type ipv6_addr
+    flags interval
+{% set v6 = ssh_sources_admises | select('search', ':') | list %}
+{% if v6 %}
+    elements = { {{ v6 | join(', ') }} }
+{% endif %}
+  }
+
+  chain entree {
+    type filter hook input priority filter; policy drop;
+
+    ct state established,related accept
+    ct state invalid drop
+    iif "lo" accept
+
+    meta l4proto icmp accept
+    meta l4proto ipv6-icmp accept
+
+    tcp dport 22 ip saddr @ssh_v4 accept
+    tcp dport 22 ip6 saddr @ssh_v6 accept
+
+    # Traefik. Ses ports publiés par Docker passent en réalité par la chaîne
+    # de transfert que Docker gère ; cette règle couvre l'écoute directe.
+    tcp dport { {{ socle_ports_publics | join(', ') }} } accept
+  }
+}

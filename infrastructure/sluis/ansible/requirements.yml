@@ -1,0 +1,10 @@
+# ansible-galaxy collection install -r requirements.yml
+collections:
+  - name: community.sops
+    version: ">=2.0.0,<3.0.0"
+  - name: community.general
+    version: ">=10.0.0,<12.0.0"
+  - name: ansible.posix
+    version: ">=2.0.0,<3.0.0"
+  - name: community.docker
+    version: ">=4.0.0,<6.0.0"

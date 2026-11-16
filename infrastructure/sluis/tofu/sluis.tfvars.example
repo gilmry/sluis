@@ -1,0 +1,23 @@
+# Copier HORS du dépôt (le script cherche par défaut
+# ~/.config/sluis-infra/sluis.tfvars), puis remplir. Rien de secret ici :
+# la phrase de l'état et les identifiants OVH viennent de l'environnement.
+
+# Catalogue public OVHcloud (filiale FR), lu le 2026-11-16 :
+# vps-2027-model1 à 4,49 € HT par mois, sans engagement (P1M).
+# Vérifier la mémoire de l'offre avant de louer : deux Sluis et un Traefik.
+offre             = "vps-2027-model1"
+centre_de_donnees = "GRA"
+systeme           = "Debian 13"
+
+# GET /vps/{service}/images/available, image « Debian 13 ».
+image_id = "a-remplacer"
+
+# Clé publique d'administration, ligne complète. Par défaut une ed25519
+# logicielle, complétée par le TOTP ; ou celle de la YubiKey
+# (ssh-keygen -t ed25519-sk) pour la deuxième méthode.
+cle_ssh_publique = "ssh-ed25519 AAAA-a-remplacer superviseur"
+
+# Zone DNS technique, gérée chez OVHcloud. Laisser vide pour ne publier aucun
+# enregistrement. Le jeton DNS vient du .env du poste (TF_VAR_dns_*).
+zone_dns_technique = ""
+sous_domaine       = "sluis"

@@ -1,0 +1,141 @@
+- name: Exiger les sources SSH admises
+  ansible.builtin.assert:
+    that:
+      - ssh_sources_admises is defined
+      - ssh_sources_admises | length > 0
+    fail_msg: >-
+      ssh_sources_admises est vide ou absent. Ouvrir SSH à tout Internet est
+      une décision du superviseur : la poser explicitement dans l'inventaire.
+
+- name: Vérifier que le système est Debian 13
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == "Debian"
+      - ansible_facts.distribution_major_version == "13"
+    fail_msg: "Rôle écrit pour Debian 13 seulement."
+
+- name: Installer les paquets du socle
+  ansible.builtin.apt:
+    name: "{{ socle_paquets }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Mises à jour de sécurité automatiques
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Journal système persistant
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/10-sluis.conf
+    content: |
+      [Journal]
+      Storage=persistent
+      SystemMaxUse=500M
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Redémarrer journald
+
+# ── SSH ──────────────────────────────────────────────────────────────────────
+#
+# Chaque méthode vérifie d'abord que l'administrateur pourra encore entrer :
+# un durcissement qui enferme le superviseur dehors est une panne.
+
+- name: Exiger une méthode SSH connue
+  ansible.builtin.assert:
+    that: socle_ssh_methode in ['totp', 'cle_materielle']
+    fail_msg: "socle_ssh_methode vaut totp ou cle_materielle."
+
+- name: Lire les clés autorisées de l'administrateur
+  ansible.builtin.slurp:
+    src: "/home/{{ socle_admin }}/.ssh/authorized_keys"
+  register: socle_cles
+
+- name: Refuser une clé que la méthode retenue n'accepte pas
+  ansible.builtin.assert:
+    that:
+      - socle_lignes | length > 0
+      - socle_lignes | map('split', ' ') | map('first') | reject('in', socle_ssh_algorithmes[socle_ssh_methode]) | list | length == 0
+    fail_msg: >-
+      authorized_keys de {{ socle_admin }} porte une clé que la méthode
+      {{ socle_ssh_methode }} refuserait (ou aucune clé). Admises :
+      {{ socle_ssh_algorithmes[socle_ssh_methode] | join(', ') }}.
+  vars:
+    socle_lignes: "{{ (socle_cles.content | b64decode).splitlines() | map('trim') | reject('match', '^(#|$)') | list }}"
+
+- name: Vérifier que l'administrateur a enrôlé son TOTP
+  ansible.builtin.stat:
+    path: "/home/{{ socle_admin }}/.google_authenticator"
+  register: socle_totp
+  when: socle_ssh_methode == 'totp'
+
+# Le secret TOTP n'est jamais produit par Ansible : il naîtrait sur le poste
+# et transiterait par lui. L'administrateur l'engendre sur la machine, dans
+# son terminal (ADR-037, invariant 3).
+- name: Exiger l'enrôlement TOTP avant de l'imposer
+  ansible.builtin.assert:
+    that: socle_totp.stat.exists
+    fail_msg: >-
+      Aucun TOTP enrôlé pour {{ socle_admin }}. Lancer `deployer.sh totp`
+      (scanner le code dans l'application, garder les codes de secours en
+      zone 3), puis relancer `deployer.sh configurer`.
+  when: socle_ssh_methode == 'totp'
+
+- name: Protéger le secret TOTP
+  ansible.builtin.file:
+    path: "/home/{{ socle_admin }}/.google_authenticator"
+    owner: "{{ socle_admin }}"
+    mode: "0400"
+  when: socle_ssh_methode == 'totp'
+
+# Sans `nullok` : un compte sans secret TOTP est refusé, pas laissé passer.
+- name: PAM de sshd, code TOTP
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    regexp: '^auth\s+required\s+pam_google_authenticator\.so'
+    line: auth required pam_google_authenticator.so
+    insertbefore: BOF
+    state: "{{ 'present' if socle_ssh_methode == 'totp' else 'absent' }}"
+
+# Le mot de passe Unix n'est jamais demandé : le premier facteur est la clé.
+- name: PAM de sshd, pas de mot de passe Unix
+  ansible.builtin.replace:
+    path: /etc/pam.d/sshd
+    regexp: "{{ '^@include common-auth' if socle_ssh_methode == 'totp' else '^# sluis: @include common-auth' }}"
+    replace: "{{ '# sluis: @include common-auth' if socle_ssh_methode == 'totp' else '@include common-auth' }}"
+
+- name: Durcir le démon SSH
+  ansible.builtin.template:
+    src: sshd.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-sluis.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Recharger sshd
+
+# ── Pare-feu ─────────────────────────────────────────────────────────────────
+
+- name: Pare-feu nftables
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/nft -c -f %s
+  notify: Recharger nftables
+
+- name: Activer nftables au démarrage
+  ansible.builtin.systemd_service:
+    name: nftables
+    enabled: true
+    state: started

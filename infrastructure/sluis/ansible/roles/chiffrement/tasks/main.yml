@@ -1,0 +1,70 @@
+# Ansible ne formate ni n'ouvre jamais le volume : la phrase de passe ne
+# transite ni par lui ni par le poste, elle est tapée par le superviseur dans
+# son terminal (deployer.sh chiffrer, puis deployer.sh deverrouiller). Ce rôle
+# vérifie seulement que le volume existe, qu'il est LUKS2 et qu'il est ouvert.
+
+- name: Le conteneur chiffré existe-t-il
+  ansible.builtin.stat:
+    path: "{{ chiffrement_fichier }}"
+  register: chiffrement_stat
+
+- name: Exiger le conteneur chiffré
+  ansible.builtin.assert:
+    that: chiffrement_stat.stat.exists
+    fail_msg: "Aucun volume chiffré sur la machine : lancer `deployer.sh chiffrer`, puis relancer."
+
+- name: Lire l'en-tête LUKS
+  ansible.builtin.command: cryptsetup luksDump {{ chiffrement_fichier }}
+  register: chiffrement_entete
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Exiger un volume LUKS2 en AES-XTS
+  ansible.builtin.assert:
+    that:
+      - chiffrement_entete.rc == 0
+      - chiffrement_entete.stdout is search('Version:\s+2')
+      - chiffrement_entete.stdout is search('aes-xts-plain64')
+    fail_msg: "{{ chiffrement_fichier }} n'est pas un volume LUKS2 aes-xts : ne rien y écrire, vérifier à la main."
+
+- name: Lire le montage du volume
+  ansible.builtin.command: findmnt -n -o SOURCE {{ chiffrement_point }}
+  register: chiffrement_montage
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Exiger le volume ouvert et monté
+  ansible.builtin.assert:
+    that: chiffrement_montage.stdout | trim == '/dev/mapper/' ~ chiffrement_nom
+    fail_msg: "Volume verrouillé (après un redémarrage ?) : lancer `deployer.sh deverrouiller`."
+
+- name: Protéger le conteneur chiffré
+  ansible.builtin.file:
+    path: "{{ chiffrement_fichier }}"
+    owner: root
+    group: root
+    mode: "0600"
+
+# Aucune entrée dans /etc/crypttab : un déverrouillage automatique exigerait
+# la clé sur la machine. Docker attend le montage au lieu d'écrire, à vide,
+# sur le disque en clair.
+- name: Répertoire des surcharges de docker.service
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Docker attend le volume chiffré
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker.service.d/10-chiffre.conf
+    content: |
+      [Unit]
+      RequiresMountsFor={{ chiffrement_point }}
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Recharger systemd

@@ -1,0 +1,40 @@
+# Utilisateur d'administration : celui de l'image OVHcloud, porteur de la clé
+# injectée à la livraison.
+socle_admin: "{{ ansible_user }}"
+
+# Méthode d'authentification SSH de l'administrateur (ADR-045, point 4) :
+#
+#   totp            par défaut : clé publique PUIS code TOTP. Le code naît sur
+#                   la machine, par l'administrateur lui-même (deployer.sh totp).
+#   cle_materielle  deuxième méthode : clé sk-ssh-ed25519 sur YubiKey seule
+#                   (ADR-042). Ne s'active qu'une fois toutes les clés
+#                   autorisées matérielles, sans quoi l'accès serait coupé.
+socle_ssh_methode: totp
+
+socle_ssh_algorithmes:
+  totp:
+    - ssh-ed25519
+    - sk-ssh-ed25519@openssh.com
+    - sk-ssh-ed25519-cert-v01@openssh.com
+  cle_materielle:
+    - sk-ssh-ed25519@openssh.com
+    - sk-ssh-ed25519-cert-v01@openssh.com
+
+# Ports ouverts à tous : ceux de Traefik. SSH n'est ouvert qu'aux sources de
+# `ssh_sources_admises`, qui n'a pas de valeur par défaut.
+socle_ports_publics: [80, 443]
+
+socle_paquets:
+  - nftables
+  - unattended-upgrades
+  - apt-listchanges
+  - needrestart
+  - libpam-google-authenticator
+  - cryptsetup
+  - git
+  - ca-certificates
+  - curl
+  - gnupg
+  - jq
+  # Permet à Ansible de devenir un utilisateur non privilégié (sluis).
+  - acl

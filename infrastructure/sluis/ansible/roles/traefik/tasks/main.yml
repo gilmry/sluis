@@ -1,0 +1,42 @@
+- name: Exiger le courriel ACME
+  ansible.builtin.assert:
+    that: acme_courriel is defined and acme_courriel | length > 0
+    fail_msg: "acme_courriel manque dans l'inventaire."
+
+- name: Répertoire de Traefik
+  ansible.builtin.file:
+    path: "{{ traefik_repertoire }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Réseau partagé avec les services exposés
+  community.docker.docker_network:
+    name: "{{ traefik_reseau }}"
+    state: present
+
+- name: Configuration statique de Traefik
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: "{{ traefik_repertoire }}/traefik.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Relancer Traefik
+
+- name: Description Compose de Traefik
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ traefik_repertoire }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Relancer Traefik
+
+- name: Démarrer Traefik
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_repertoire }}"
+    files: [compose.yml]
+    state: present
+    pull: missing

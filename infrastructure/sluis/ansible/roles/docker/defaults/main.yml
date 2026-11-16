@@ -1,0 +1,11 @@
+# Dépôt officiel de Docker. L'empreinte de sa clé est vérifiée avant tout
+# usage : une clé téléchargée sans contrôle ne prouve rien.
+docker_cle_url: https://download.docker.com/linux/debian/gpg
+docker_cle_empreinte: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+docker_paquets:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-compose-plugin
+  # Exigé par les modules community.docker côté machine.
+  - python3-docker
