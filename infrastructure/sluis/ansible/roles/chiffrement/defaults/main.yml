@@ -12,5 +12,5 @@ chiffrement_fichier: /srv/chiffre.luks
 chiffrement_nom: sluis_chiffre
 
 # Unités systemd qui écrivent sur le volume et doivent l'attendre.
-chiffrement_services: "{{ ['k3s.service'] if 'k3s' in group_names else ['docker.service'] }}"
+chiffrement_services: "{{ ['k3s.service'] if 'noeud_k3s' in group_names else ['docker.service'] }}"
 chiffrement_point: /srv/chiffre

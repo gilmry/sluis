@@ -4,10 +4,10 @@
 # chiffré reste un secret publié. Ansible les écrit directement en Secrets,
 # chiffrés au repos par K3s (secrets-encryption).
 #
-# Sorties de ../../tofu/durable, passées par deployer.sh dans un fichier de
-# variables lu par un descripteur, jamais écrit sur le disque :
-#   infra_s3_endpoint, infra_compartiments, infra_identifiants_s3, infra_kms
-infra_region_s3: eu-west-par
+# Sorties de ../../tofu/durable, passées par deployer.sh dans l'environnement
+# du processus, jamais écrites sur le disque (voir site.yml) :
+#   infra_s3_endpoint, infra_region_s3, infra_compartiments,
+#   infra_identifiants_s3, infra_kms
 
 # Clé privée du client du KMS : elle naît sur le nœud et n'en sort jamais.
 # deployer.sh kms rapatrie la demande de certificat (publique) vers le poste,

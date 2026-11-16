@@ -31,7 +31,7 @@ socle_vlan: ""
 # Règles d'entrée propres à une machine, en syntaxe nft. Sur le nœud K3s : les
 # pods et leurs interfaces, qui joignent le kubelet, le DNS du cluster et
 # l'API de K3s (plages par défaut de K3s).
-socle_entrees_supplementaires: "{{ socle_entrees_k3s if 'k3s' in group_names else [] }}"
+socle_entrees_supplementaires: "{{ socle_entrees_k3s if 'noeud_k3s' in group_names else [] }}"
 socle_entrees_k3s:
   - ip saddr 10.42.0.0/16 accept
   - ip saddr 10.43.0.0/16 accept

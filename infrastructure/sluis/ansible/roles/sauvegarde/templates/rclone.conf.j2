@@ -3,7 +3,7 @@
 type = s3
 provider = Other
 endpoint = {{ infra_s3_endpoint }}
-region = {{ infra_region_s3 | default('eu-west-par') }}
+region = {{ infra_region_s3 }}
 access_key_id = {{ infra_identifiants_s3['sluis'].access_key_id }}
 secret_access_key = {{ infra_identifiants_s3['sluis'].secret_access_key }}
 # Écriture seule : ni lecture du compartiment, ni vérification après envoi.

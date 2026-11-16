@@ -24,13 +24,28 @@
       no_log: true
       tags: [toujours]
 
+    # Sorties de tofu/durable, identifiants S3 compris, passées par
+    # deployer.sh dans l'environnement du processus : rien sur le disque du
+    # poste, rien sur la ligne de commande.
+    - name: Lire les sorties de l'état durable
+      ansible.builtin.set_fact:
+        infra_s3_endpoint: "{{ site_infra.infra_s3_endpoint }}"
+        infra_region_s3: "{{ site_infra.infra_region_s3 }}"
+        infra_compartiments: "{{ site_infra.infra_compartiments }}"
+        infra_identifiants_s3: "{{ site_infra.infra_identifiants_s3 }}"
+        infra_kms: "{{ site_infra.infra_kms }}"
+      vars:
+        site_infra: "{{ lookup('ansible.builtin.env', 'SLUIS_INFRA_JSON') | from_json }}"
+      no_log: true
+      tags: [toujours]
+
   roles:
     - socle
     - chiffrement
     - supervision
 
 - name: Machine Sluis
-  hosts: sluis
+  hosts: machine_sluis
   become: true
 
   vars:
@@ -43,7 +58,7 @@
     - sauvegarde
 
 - name: Nœud K3s
-  hosts: k3s
+  hosts: noeud_k3s
   become: true
 
   vars:

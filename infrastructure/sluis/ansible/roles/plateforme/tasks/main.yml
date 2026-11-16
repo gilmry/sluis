@@ -2,6 +2,7 @@
   ansible.builtin.assert:
     that:
       - infra_s3_endpoint is defined
+      - infra_region_s3 is defined
       - infra_compartiments is defined
       - infra_identifiants_s3 is defined
       - infra_kms is defined

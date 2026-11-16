@@ -1,5 +1,5 @@
-# Lues par ../../deployer.sh et passées à Ansible par un descripteur de
-# fichier, jamais écrites en clair sur le disque.
+# Lues par ../../deployer.sh et passées à Ansible par l'environnement de son
+# processus, jamais écrites en clair sur le disque.
 
 output "projet" {
   description = "Identifiant du projet Public Cloud."

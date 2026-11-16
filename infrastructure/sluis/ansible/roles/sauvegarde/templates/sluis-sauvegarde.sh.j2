@@ -21,13 +21,14 @@ trap 'rm -f "$temporaire"/*.tar.age' EXIT
 
 for volume in {{ sauvegarde_volumes | map('quote') | join(' ') }}; do
   racine=$(docker volume inspect -f '{{ '{{' }} .Mountpoint {{ '}}' }}' "$volume" 2>/dev/null) || continue
-  mapfile -t conteneurs < <(docker ps -q --filter "volume=$volume")
-  ((${#conteneurs[@]})) && docker pause "${conteneurs[@]}" >/dev/null
-  if ! tar -C "$racine" -cf - . | age "${destinataires[@]}" -o "$temporaire/$volume.tar.age"; then
-    ((${#conteneurs[@]})) && docker unpause "${conteneurs[@]}" >/dev/null
-    exit 1
-  fi
-  ((${#conteneurs[@]})) && docker unpause "${conteneurs[@]}" >/dev/null
+  conteneurs=$(docker ps -q --filter "volume=$volume")
+  # shellcheck disable=SC2086  # une liste d'identifiants, à découper
+  [ -z "$conteneurs" ] || docker pause $conteneurs >/dev/null
+  code=0
+  tar -C "$racine" -cf - . | age "${destinataires[@]}" -o "$temporaire/$volume.tar.age" || code=$?
+  # shellcheck disable=SC2086
+  [ -z "$conteneurs" ] || docker unpause $conteneurs >/dev/null
+  [ "$code" -eq 0 ] || exit "$code"
   rclone --config /etc/sluis-sauvegarde/rclone.conf copyto --no-check-dest \
     "$temporaire/$volume.tar.age" "paris:$compartiment/$(hostname -s)/$horodatage/$volume.tar.age"
 done

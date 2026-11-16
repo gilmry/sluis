@@ -38,7 +38,7 @@ all:
       - age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
 
   children:
-    sluis:
+    machine_sluis:
       hosts:
         sluis:
           ansible_host: "{{ lookup('ansible.builtin.env', 'SLUIS_HOTE_SLUIS') }}"
@@ -52,7 +52,7 @@ all:
           sluis_executant: false
           sluis_executant_config: ~/.config/sluis-infra/sluis.executant.toml
 
-    k3s:
+    noeud_k3s:
       hosts:
         k3s:
           ansible_host: "{{ lookup('ansible.builtin.env', 'SLUIS_HOTE_K3S') }}"
