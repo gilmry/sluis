@@ -19,6 +19,7 @@
 #   ./deployer.sh sauvegardes <compartiment> [préfixe]   liste ce qui est à Paris
 #   ./deployer.sh rapatrier <compartiment> <préfixe> <dossier>   relit des sauvegardes
 #   ./deployer.sh identifiant-superviseur    l'identifiant S3 du poste, à ranger hors ligne
+#   ./deployer.sh identifiant-console        l'identifiant S3 d'écriture seule de la console
 #
 # <machine> : sluis ou k3s. Le site est celui de SLUIS_SITE (gra1 par défaut) ;
 # reconstruire après la perte d'un centre de données, c'est rejouer les mêmes
@@ -26,7 +27,8 @@
 #
 # Le script ne conserve rien d'autre que ce qu'OpenTofu et Ansible écrivent
 # dans SLUIS_INFRA_ETAT, hors du dépôt. Il n'affiche jamais un secret, sauf
-# `identifiant-superviseur`, et dans un terminal seulement. Il ne rend jamais
+# `identifiant-superviseur` et `identifiant-console`, et dans un terminal
+# seulement. Il ne rend jamais
 # une machine ni un compartiment : `prevent_destroy` l'interdit, et le jeton
 # d'infrastructure n'a aucune route de suppression.
 set -euo pipefail
@@ -489,7 +491,7 @@ rclone_paris() {
 
 compartiment() {
   sortie_json durable compartiments | jq -er --arg c "$1" '.[$c]' \
-    || die "compartiment inconnu : $1 (wal-zone-1, wal-zone-2, openbao, sluis, etat)"
+    || die "compartiment inconnu : $1 (wal-zone-1, wal-zone-2, openbao, sluis, etat, console)"
 }
 
 # Ce qu'il faut pour reconstruire si le poste disparaît aussi : états
@@ -532,6 +534,16 @@ identifiant_superviseur() {
   phrase_etat
   echo "À ranger hors ligne (zone 3), avec la phrase de l'état :" >&2
   sortie_json durable identifiant_superviseur | jq -r '"access_key_id     \(.access_key_id)\nsecret_access_key \(.secret_access_key)"'
+  sortie_json durable s3_endpoint | jq -r '"endpoint          \(.)"'
+}
+
+# Identifiant d'écriture seule que poste/sauvegarder-console.ps1 demande à
+# son initialisation, côté Windows.
+identifiant_console() {
+  [ -t 1 ] || die "cette commande n'écrit que dans un terminal : jamais dans un fichier ni un tube"
+  charger_env
+  sortie_json durable identifiants_s3 | jq -r '.console | "access_key_id     \(.access_key_id)\nsecret_access_key \(.secret_access_key)"'
+  sortie_json durable compartiments | jq -r '"compartiment      \(.console)"'
   sortie_json durable s3_endpoint | jq -r '"endpoint          \(.)"'
 }
 
@@ -628,5 +640,6 @@ case "${1:-}" in
   sauvegardes) sauvegardes "${2:-}" "${3:-}" ;;
   rapatrier) rapatrier "${2:-}" "${3:-}" "${4:-}" ;;
   identifiant-superviseur) identifiant_superviseur ;;
-  *) sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//' ; exit 2 ;;
+  identifiant-console) identifiant_console ;;
+  *) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//' ; exit 2 ;;
 esac

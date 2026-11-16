@@ -20,6 +20,9 @@ locals {
     # États OpenTofu chiffrés, inventaires et fichier SOPS : ce qu'il faut pour
     # reconstruire, si le poste du superviseur disparaît aussi.
     "etat" = "États OpenTofu chiffrés"
+    # Console du superviseur (distribution WSL et disque externe), chiffrée
+    # par GPG sur le poste avant l'envoi : poste/sauvegarder-console.ps1.
+    "console" = "Console du superviseur, chiffrée par GPG avant l'envoi"
   }
 
   s3_endpoint = "https://s3.${lower(var.region_sauvegardes)}.io.cloud.ovh.net"
@@ -44,6 +47,12 @@ locals {
     }
     sluis = {
       compartiment = "sluis"
+      actions      = ["s3:PutObject", "s3:GetBucketLocation", "s3:ListMultipartUploadParts", "s3:AbortMultipartUpload"]
+    }
+    # Le poste Windows du superviseur : il dépose sa propre sauvegarde, et
+    # rien d'autre. Distinct de l'identifiant du superviseur, qui relit tout.
+    console = {
+      compartiment = "console"
       actions      = ["s3:PutObject", "s3:GetBucketLocation", "s3:ListMultipartUploadParts", "s3:AbortMultipartUpload"]
     }
   }

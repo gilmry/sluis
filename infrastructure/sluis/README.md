@@ -96,10 +96,35 @@ attend le volume chiffré et reste arrêté jusque-là.
 | OpenBao | `openbao` | instantané Raft chaque nuit | écrire seulement |
 | Données de Sluis (audit, OAuth) | `sluis` | archive chiffrée par age chaque nuit | écrire seulement |
 | États, inventaires, fichier SOPS | `etat` | `deployer.sh sauvegarder-etat` | aucun (poste seul) |
+| Console du superviseur (WSL, disque externe) | `console` | `poste/sauvegarder-console.ps1`, chiffrée par GPG | écrire seulement |
 
 Aucune machine ne peut lever un verrou ni effacer une version verrouillée.
 Les clés qui déchiffrent restent hors des machines : clé age et phrase de
 l'état chez le superviseur, parts de récupération d'OpenBao hors ligne.
+
+## Console du superviseur
+
+La console est une distribution WSL dédiée, sauvegardée sur un disque
+externe. `poste/sauvegarder-console.ps1` (PowerShell, côté Windows) exporte
+la distribution, la chiffre par GPG au fil de l'eau, l'écrit sur le disque
+externe, puis dépose à Paris cette archive et celle du reste du disque.
+
+```
+.\sauvegarder-console.ps1 -Initialiser    # configuration, identifiant S3 (deployer.sh identifiant-console)
+.\sauvegarder-console.ps1                 # sauvegarde complète
+.\sauvegarder-console.ps1 -Verifier <archive.tar.gpg>   # preuve de relecture, clé matérielle branchée
+```
+
+Deux invariants :
+
+1. **Le poste ne détient que des clés publiques.** La clé privée qui
+   déchiffre vit sur clé matérielle, avec un second destinataire de secours
+   hors ligne. Elle n'est ni sur le poste ni dans la distribution : une
+   sauvegarde qu'on ne relit qu'avec ce qu'elle contient ne sauve rien.
+2. **Les ancres n'y sont pas** (ADR-037, invariant 3 ; ADR-040) : clé GPG
+   maîtresse, racine de step-ca et parts de récupération d'OpenBao naissent
+   et restent hors ligne. Ce script sauvegarde un poste d'exploitation, il
+   ne remplace pas la zone 3.
 
 ## Reconstruire après la perte du centre de données
 
